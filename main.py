@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/main.py ---
+
 from config.config import Config
 from sys import modules
 from importlib.util import spec_from_file_location, module_from_spec
@@ -45,22 +47,44 @@ async def get_me(client):
 async def set_bot_commands(command_file):
         LOGGER.info("🔶Setting Up Bot Commands")
         try:
-                with open(command_file, "r", encoding="utf-8") as f:
-                            commands_data = [x.split("-") for x in f.read().split("\n")]
                 commands = []
-                for i in range(len(commands_data)):
-                    commands.append(BotCommand(
-                                                command=commands_data[i][0].strip(),
-                                                description=commands_data[i][1].strip()
+                with open(command_file, "r", encoding="utf-8") as f:
+                    # Highlighted change: Process lines one by one with checks
+                    for line in f:
+                        cleaned_line = line.strip()
+                        # Skip empty lines and comments
+                        if not cleaned_line or cleaned_line.startswith("#"):
+                            continue
+                        # Split the valid line
+                        parts = cleaned_line.split("-", 1) # Split only once
+                        # Ensure we got exactly two parts after splitting
+                        if len(parts) == 2:
+                            command_text = parts[0].strip()
+                            description_text = parts[1].strip()
+                            # Ensure command is not empty after stripping
+                            if command_text:
+                                commands.append(BotCommand(
+                                    command=command_text,
+                                    description=description_text
+                                ))
+                        else:
+                            LOGGER.warning(f"Skipping malformed line in {command_file}: {cleaned_line}")
+                    # End of highlighted change
+
+                # Check if any valid commands were found
+                if commands:
+                    result = await Telegram.TELETHON_CLIENT(bots.SetBotCommandsRequest(
+                                                scope=BotCommandScopeDefault(),
+                                                lang_code='en',
+                                                commands=commands
                                             ))
-                result = await Telegram.TELETHON_CLIENT(bots.SetBotCommandsRequest(
-                                            scope=BotCommandScopeDefault(),
-                                            lang_code='en',
-                                            commands=commands
-                                        ))
-                LOGGER.info(f"🔶Commands Setup Result: {str(result)}")
+                    LOGGER.info(f"🔶Commands Setup Result: {str(result)}")
+                else:
+                    LOGGER.warning(f"No valid commands found in {command_file} to set.")
+
         except Exception as e:
-                LOGGER.info(f"❗Failed To Setup Result: {str(e)}")
+                # Log the exception with traceback for better debugging if needed
+                LOGGER.exception(f"❗Failed To Setup Bot Commands: {str(e)}")
         return
 
 
@@ -123,3 +147,5 @@ if __name__ == "__main__":
     LOGGER.info(f'✅@{telethob_bot.username} Started Successfully!✅')
     LOGGER.info(f"⚡Bot By Sahil Nolia⚡")
     Telegram.TELETHON_CLIENT.run_until_disconnected()
+
+# --- END OF FILE VideoFlux-Re-master/main.py ---
