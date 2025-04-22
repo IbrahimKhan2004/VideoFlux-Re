@@ -137,6 +137,9 @@ async def new_user(user_id, dbsave):
         # Added ABR defaults
         DATA[user_id]['use_abr'] = False
         DATA[user_id]['abr'] = '1500k'
+        # Highlighted change: Added CBR defaults
+        DATA[user_id]['use_cbr'] = False
+        DATA[user_id]['cbr'] = '1500k'
         DATA[user_id]['use_abit'] = False
         DATA[user_id]['abit'] = '128k'
         DATA[user_id]['use_crf'] = False
