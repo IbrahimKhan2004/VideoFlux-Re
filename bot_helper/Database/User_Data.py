@@ -111,8 +111,6 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['ss_no'] = 5
         DATA[user_id]['gen_sample'] = False
         # REMOVED: tgdownload and tgupload defaults
-        # DATA[user_id]['tgdownload'] = "Pyrogram"
-        # DATA[user_id]['tgupload'] = "Pyrogram"
         # REMOVED: Multi-task defaults
         if dbsave:
             data = await db.save_data(str(DATA))
@@ -126,7 +124,6 @@ async def saveoptions(user_id, dname, value, dbsave):
         if user_id not in DATA:
             DATA[user_id] = {}
             # MODIFIED: Removed nested dict creation as it's handled below
-            # DATA[user_id][dname] = {}
             DATA[user_id][dname] = value
         else:
             DATA[user_id][dname] = value
