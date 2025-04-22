@@ -34,6 +34,9 @@ TELETHON_CLIENT = Telegram.TELETHON_CLIENT
 punc = ['!', '|', '{', '}', ';', ':', "'", '=', '"', '\\', ',', '<', '>', '/', '?', '@', '#', '$', '%', '^', '&', '*', '~', "  ", "\t", "+", "b'", "'"]
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 LOGGER = Config.LOGGER
+# Highlighted change: Added upload destination list
+upload_destination_list = ['Rclone', 'Gofile']
+# End of highlighted change
 
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
@@ -67,6 +70,10 @@ async def callback(event):
              await saveconfig(user_id, 'convert', 'type', 'CRF', SAVE_TO_DATABASE)
         if 'convert' not in user_data or 'encode' not in user_data.get('convert', {}):
              await saveconfig(user_id, 'convert', 'encode', 'Video', SAVE_TO_DATABASE)
+# Highlighted change: Added check for upload_destination key
+        if 'upload_destination' not in user_data:
+            await saveoptions(user_id, 'upload_destination', 'Rclone', SAVE_TO_DATABASE)
+# End of highlighted change
         # --- End of Key Check ---
 
         if txt.startswith("settings"):
@@ -437,11 +444,20 @@ async def general_callback(event, txt, user_id, chat_id):
                 await event.answer(f"✅Custom Metadata - {str(new_position)}")
             elif txt.startswith("generaluploadtg"):
                 if not eval(new_position):
-                    if not (check_config and drive_name):
-                        await event.answer(f"❗First Save Rclone ConfigFile/Account", alert=True)
+                    # Highlighted change: Check for Rclone config OR Gofile (no config needed for Gofile yet)
+                    current_destination = user_data.get('upload_destination', 'Rclone')
+                    if current_destination == 'Rclone' and not (check_config and drive_name):
+                        await event.answer(f"❗Rclone destination selected, but no config/account found. Save Rclone Config first.", alert=True)
                         return
+                    # No check needed if destination is Gofile
+                # End of highlighted change
                 await saveoptions(user_id, 'upload_tg', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Upload On TG - {str(new_position)}")
+# Highlighted change: Added handler for upload destination
+            elif txt.startswith("generalupload_destination"):
+                await saveoptions(user_id, 'upload_destination', new_position, SAVE_TO_DATABASE)
+                await event.answer(f"✅Upload Destination Set To - {str(new_position)}")
+# End of highlighted change
             elif txt.startswith("generaldrivename"):
                 await saveoptions(user_id, 'drive_name', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Rclone Account - {str(new_position)}")
@@ -480,6 +496,9 @@ async def general_callback(event, txt, user_id, chat_id):
             # multi_tasks = user_data.get('multi_tasks', False)
             # upload_all = user_data.get('upload_all', True)
             upload_tg = user_data.get('upload_tg', True)
+# Highlighted change: Get upload_destination setting
+            upload_destination = user_data.get('upload_destination', 'Rclone')
+# End of highlighted change
             custom_metadata = user_data.get('custom_metadata', False)
             drive_name = user_data.get('drive_name', False)
             auto_drive = user_data.get('auto_drive', False)
@@ -512,6 +531,19 @@ async def general_callback(event, txt, user_id, chat_id):
             KeyBoard.append([Button.inline(f'🧵Upload On TG - {str(upload_tg)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, upload_tg, "generaluploadtg", 2, False):
                 KeyBoard.append(board)
+# Highlighted change: Conditionally add Upload Destination button
+            if not upload_tg:
+                KeyBoard.append([Button.inline(f'📤Upload Destination - {str(upload_destination)}', 'nik66bots')])
+                for board in gen_keyboard(upload_destination_list, upload_destination, "generalupload_destination", 2, False):
+                    KeyBoard.append(board)
+                # Conditionally add Rclone account selection only if Rclone is the chosen destination
+                if upload_destination == 'Rclone' and check_config:
+                    accounts = await get_config(r_config)
+                    if accounts:
+                        KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
+                        for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
+                            KeyBoard.append(board)
+# End of highlighted change
             KeyBoard.append([Button.inline(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, auto_drive, "generalautodrive", 2, False):
                 KeyBoard.append(board)
@@ -531,12 +563,14 @@ async def general_callback(event, txt, user_id, chat_id):
             # KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'nik66bots')])
             # for board in gen_keyboard(bool_list, upload_all, "generaluploadall", 2, False):
             #     KeyBoard.append(board)
-            if check_config:
-                accounts = await get_config(r_config)
-                if accounts:
-                    KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
-                    for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
-                        KeyBoard.append(board)
+            # Highlighted change: Moved Rclone account selection inside the conditional block above
+            # if check_config:
+            #     accounts = await get_config(r_config)
+            #     if accounts:
+            #         KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
+            #         for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
+            #             KeyBoard.append(board)
+            # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
                 try:
