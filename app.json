@@ -1,8 +1,8 @@
 {
   "name": "VideoFlux2",
   "description": "Bot With Muti Features",
-  "website": "<mark>https://t.me/BashAFK</mark>",  # Changed nik66 to BashAFK
-  "repository": "<mark>https://github.com/BashAFK/VideoFlux2_Beta</mark>", # Changed sahilgit55 to BashAFK
+  "website": "https://t.me/BashAFK",
+  "repository": "https://github.com/BashAFK/VideoFlux2_Beta",
   "logo": "https://cdn.wapka.org/007cic/d976484d086b76a4ec858ba2fc260b03/myapp.jpg",
   "env": {
     "CONFIG_FILE_URL": {
