@@ -3,13 +3,14 @@
 from telethon import events
 from telethon.tl.custom import Button
 from config.config import Config
-# Highlighted change: Import ask_text_event
-from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file, get_text_data, ask_text_event
+# Highlighted change: Import the module instead of specific functions
+# from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file, get_text_data, ask_text_event
+from bot_helper.Others import Helper_Functions
 # End of highlighted change
 from bot_helper.Database.User_Data import get_data, new_user, saveconfig, saveoptions, resetdatabase
 from os.path import exists
 from bot_helper.Telegram.Telegram_Client import Telegram
-# Highlighted change: Import ButtonMaker
+# Highlighted change: Import ButtonMaker (already present from previous step)
 from bot_helper.telegram_helper.button_build import ButtonMaker
 # End of highlighted change
 
@@ -137,7 +138,9 @@ async def callback(event):
 
         elif txt.startswith("env"):
             position = txt.split("_", 1)[1]
-            value_result = await get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
+            # Highlighted change: Use Helper_Functions.get_text_data
+            value_result = await Helper_Functions.get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
+            # End of highlighted change
             if value_result:
                 if exists("./userdata/botconfig.env"):
                     config_dict = get_env_dict('./userdata/botconfig.env')
@@ -153,7 +156,9 @@ async def callback(event):
             new_position = eval(txt.split("_", 1)[1])
             if new_position:
                 if exists(Config.DOWNLOAD_DIR):
-                    await delete_all(Config.DOWNLOAD_DIR)
+                    # Highlighted change: Use Helper_Functions.delete_all
+                    await Helper_Functions.delete_all(Config.DOWNLOAD_DIR)
+                    # End of highlighted change
                     text = f"✔Successfully Deleted {Config.DOWNLOAD_DIR}"
                     try:
                             await event.answer(text, alert=True)
@@ -239,7 +244,9 @@ async def callback(event):
 
         elif txt.startswith("change"):
             if "_queue_size" in txt:
-                queue_size_input= await get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
+                # Highlighted change: Use Helper_Functions.get_text_data
+                queue_size_input= await Helper_Functions.get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
+                # End of highlighted change
                 if queue_size_input:
                     try:
                         queue_size = int(queue_size_input.message.message)
@@ -445,17 +452,10 @@ async def get_abit(chat_id, user_id, event, timeout, message):
             return abit
 # End of Added from VFBITMOD-update
 
+# Highlighted change: Use Helper_Functions.get_text_data
 async def get_text_data(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]') # Kept original emoji
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            return new_event
+    return await Helper_Functions.get_text_data(chat_id, user_id, event, timeout, message)
+# End of highlighted change
 
 
 #////////////////////////////////////Callbacks_Functions////////////////////////////////////#
@@ -1153,7 +1153,9 @@ async def gofile_settings_callback(event, txt, user_id, chat_id):
     new_position = txt.split("_", 1)[1]
     edit = True
     if txt.startswith("general_set_gofile_api"):
-        api_key_event = await ask_text_event(chat_id, user_id, event, 120, "Send Gofile API Key")
+        # Highlighted change: Use Helper_Functions.ask_text_event
+        api_key_event = await Helper_Functions.ask_text_event(chat_id, user_id, event, 120, "Send Gofile API Key")
+        # End of highlighted change
         if api_key_event and api_key_event.message.message:
             api_key = api_key_event.message.message.strip()
             # Optional: Add API key validation here if needed
@@ -1176,12 +1178,15 @@ async def gofile_settings_callback(event, txt, user_id, chat_id):
     gofile_api_key = user_data.get('gofile_api_key', None)
     api_key_status = "Exists ✅" if gofile_api_key else "Not Exists ❌"
 
-    KeyBoard = []
-    KeyBoard.append([Button.inline(f'🔑 Gofile API Key Status: {api_key_status}', 'BashAFK')])
-    KeyBoard.append([Button.inline('✏️ Set API Key', 'general_set_gofile_api')])
+    # Highlighted change: Use ButtonMaker
+    buttons = ButtonMaker()
+    buttons.ibutton(f'🔑 Gofile API Key Status: {api_key_status}', 'BashAFK')
+    buttons.ibutton('✏️ Set API Key', 'general_set_gofile_api')
     if gofile_api_key: # Only show delete button if key exists
-        KeyBoard.append([Button.inline('🗑️ Delete API Key', 'general_delete_gofile_api')])
-    KeyBoard.append([Button.inline('↩ Back to General Settings', 'general_back_gofile')])
+        buttons.ibutton('🗑️ Delete API Key', 'general_delete_gofile_api')
+    buttons.ibutton('↩ Back to General Settings', 'general_back_gofile')
+    KeyBoard = buttons.build_menu(1) # Build the menu
+    # End of highlighted change
 
     if edit:
         try:
