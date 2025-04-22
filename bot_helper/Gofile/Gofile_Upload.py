@@ -1,5 +1,3 @@
-# --- START OF FILE VideoFlux-Re-master/bot_helper/Gofile/Gofile_Upload.py ---
-
 import aiohttp
 import aiofiles
 import os
@@ -11,8 +9,9 @@ from bot_helper.Others.Helper_Functions import get_human_size
 from time import time
 # Highlighted change: Import ClientTimeout
 from aiohttp import ClientTimeout
+# Highlighted change: Import Union for older Python compatibility
+from typing import Union
 from asyncio import Lock # Import Lock for thread safety if needed for root folder ID caching
-# End of highlighted change
 
 # --- Gofile API Configuration ---
 GOFILE_API_TOKEN = "lBZPR77YTHyquQPpDlCoMbiYWh8B0mbK" # Hardcoded API Token
@@ -32,7 +31,9 @@ root_folder_id_cache = None
 root_folder_id_lock = Lock()
 # --- End Root Folder ID Caching ---
 
-async def get_gofile_root_folder_id(session: aiohttp.ClientSession) -> str | None:
+# Highlighted change: Use Union for Python < 3.10 compatibility
+async def get_gofile_root_folder_id(session: aiohttp.ClientSession) -> Union[str, None]:
+# End of highlighted change
     """Fetches the Gofile account's root folder ID using the API token."""
     global root_folder_id_cache
     async with root_folder_id_lock:
@@ -195,7 +196,8 @@ async def upload_gofile(process_status):
 
             except aiohttp.ClientError as e:
                 # Highlighted change: Check if the error is specifically a timeout error
-                if isinstance(e, asyncio.TimeoutError):
+                # Check for timeout explicitly (ClientTimeoutError is raised in newer aiohttp)
+                if isinstance(e, aiohttp.ClientTimeoutError) or isinstance(e, TimeoutError) : # Add TimeoutError for broader compatibility
                      await event.reply(f"❌ Gofile upload timed out for `{filename}` after {UPLOAD_TIMEOUT_SECONDS}s. Server might be slow or network unstable.")
                      LOGGER.error(f"Gofile upload timed out for {filename}.")
                 else:
@@ -212,5 +214,3 @@ async def upload_gofile(process_status):
                     LOGGER.exception(f"Unexpected error during Gofile upload for {filename}:") # Log full traceback
 
     LOGGER.info(f"Gofile upload process finished for {process_id}")
-
-# --- END OF FILE VideoFlux-Re-master/bot_helper/Gofile/Gofile_Upload.py ---
