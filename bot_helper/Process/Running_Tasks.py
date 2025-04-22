@@ -10,7 +10,9 @@ from shutil import rmtree
 from bot_helper.Others.Names import Names
 from bot_helper.FFMPEG.FFMPEG_Commands import get_commands
 from bot_helper.FFMPEG.FFMPEG_Status import FfmpegStatus
+# Highlighted change: Import get_data
 from bot_helper.Database.User_Data import get_task_limit, get_data
+# End of highlighted change
 from time import time
 from bot_helper.FFMPEG.FFMPEG_Processes import FFMPEG
 from os.path import exists
@@ -77,16 +79,16 @@ async def clear_trash(task, trash_objects, multi_tasks): # MODIFIED: Kept multi_
 # Highlighted change: Modified upload_files to handle different destinations
 async def upload_files(process_status):
     # First check if Telegram upload is enabled
-    if get_data()[process_status.user_id]['upload_tg']:
+    if get_data().get(process_status.user_id, {}).get('upload_tg', True): # Use .get() for safety
         await Telegram.upload_videos(process_status)
         return
 
     # If Telegram upload is disabled, check the chosen destination
-    upload_destination = get_data()[process_status.user_id].get('upload_destination', 'Rclone') # Default to Rclone
+    upload_destination = get_data().get(process_status.user_id, {}).get('upload_destination', 'Rclone') # Default to Rclone
 
     if upload_destination == 'Rclone':
         r_config = f'./userdata/{str(process_status.user_id)}_rclone.conf'
-        drive_name = get_data()[process_status.user_id].get('drive_name', False)
+        drive_name = get_data().get(process_status.user_id, {}).get('drive_name', False) # Use .get()
         if exists(r_config) and drive_name and verify_rclone_account(r_config, drive_name):
             await upload_drive(process_status)
         else:
@@ -94,8 +96,10 @@ async def upload_files(process_status):
             LOGGER.warning(f"Rclone upload skipped for user {process_status.user_id} due to missing/invalid config or drive name.")
 
     elif upload_destination == 'Gofile':
-        # Call the Gofile upload function (to be implemented)
-        await upload_gofile(process_status)
+        # Highlighted change: Retrieve and pass Gofile API key
+        api_key = get_data().get(process_status.user_id, {}).get('gofile_api_key', None)
+        await upload_gofile(process_status, api_key=api_key)
+        # End of highlighted change
 
     else:
         # Handle potential unknown destination? Default to skipping?
@@ -289,7 +293,7 @@ async def start_task(task):
             # Updated logic for convert list based on VFBITMOD-update
             if process_status.process_type==Names.convert:
                     # Use the new quality setting directly
-                    convert_list = [get_data()[process_status.user_id]['video']['qubality']]
+                    convert_list = [get_data().get(process_status.user_id, {}).get('video', {}).get('qubality', '480p [720x480]')] # Use .get()
             else:
                     convert_list = [1] # Keep original logic for non-convert tasks
             ffmpeg_range = len(convert_list)
