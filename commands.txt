@@ -1,17 +1,19 @@
-compress - Compress Video
+# --- START OF FILE VideoFlux-Re-master/commands.txt ---
+
+# REMOVED: compress - Compress Video
 merge - Merge Video
-watermark - Add Watermark To Video
+# REMOVED: watermark - Add Watermark To Video
 convert - Convert Video
 hardmux - Hardmux Video
 softmux - Softmux Video
-softremux - Softremux Video
+# REMOVED: softremux - Softremux Video
 gensample - Generate Sample Video
 genss - Generate Screenshots
 changemetadata - Change Video Metadata
 changeindex - Change Index Or Remove Stream
 mirror - Mirror File
 leech - Leech File
-savewatermark - Save Watermark Image
+# REMOVED: savewatermark - Save Watermark Image
 savethumb - Save Static Thumbnail
 saveconfig - Save Rclone Config
 tasklimit - Change Task Limit
@@ -30,4 +32,6 @@ stats - Get Stats
 speedtest - SpeedTest
 settings - Settings Section
 restart - Restart Bot
-herokurestart - Restart Heroku Dyno
+# REMOVED: herokurestart - Restart Heroku Dyno
+
+# --- END OF FILE VideoFlux-Re-master/commands.txt ---
