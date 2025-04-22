@@ -30,18 +30,20 @@ presets_list =  ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium
 bool_list = [True, False]
 ws_name = {'5:5': 'Top Left', 'main_w-overlay_w-5:5': 'Top Right', '5:main_h-overlay_h': 'Bottom Left', 'main_w-overlay_w-5:main_h-overlay_h-5': 'Bottom Right'}
 ws_value = {'Top Left': '5:5', 'Top Right': 'main_w-overlay_w-5:5', 'Bottom Left': '5:main_h-overlay_h', 'Bottom Right': 'main_w-overlay_w-5:main_h-overlay_h-5'}
-TELETHON_CLIENT = Telegram.TELETHON_CLIENT
+# REMOVED: TELETHON_CLIENT variable (no longer needed)
+# TELETHON_CLIENT = Telegram.TELETHON_CLIENT
 punc = ['!', '|', '{', '}', ';', ':', "'", '=', '"', '\\', ',', '<', '>', '/', '?', '@', '#', '$', '%', '^', '&', '*', '~', "  ", "\t", "+", "b'", "'"]
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 LOGGER = Config.LOGGER
 
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
-@TELETHON_CLIENT.on(events.CallbackQuery)
-async def callback(event):
-        txt = event.data.decode()
-        chat_id = event.chat.id
-        user_id = event.sender.id
+# MODIFIED: Removed TELETHON_CLIENT reference
+@Telegram.PYROGRAM_CLIENT.on_callback_query() # Use Pyrogram decorator
+async def callback(client, event): # Use Pyrogram arguments
+        txt = event.data # Use event.data directly
+        chat_id = event.message.chat.id # Use event.message.chat.id
+        user_id = event.from_user.id # Use event.from_user.id
         if user_id not in get_data():
             await new_user(user_id, SAVE_TO_DATABASE)
 
@@ -71,28 +73,24 @@ async def callback(event):
 
         if txt.startswith("settings"):
             text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
-            await event.edit(text, buttons=[
-            [Button.inline('#️⃣ General', 'general_settings')],
-            [Button.inline('❣ Telegram', 'telegram_settings')],
-            [Button.inline('📝 Progress Bar', 'progress_settings')],
-            # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
-            # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
-            [Button.inline('🍧 Merge', 'merge_settings')],
-            # Modified menu items below based on VFBITMOD-update
-            [Button.inline('💻 Encode', 'convert_settings')],
-            [Button.inline('🎬 Video ', 'video_settings')],
-            [Button.inline('🔊 Audio', 'audio_settings')],
-            [Button.inline('❤ VBR / 🖤CRF', 'vbrcrf_settings')],
-            # End of Modified menu items
-            [Button.inline('🚍 HardMux', 'hardmux_settings')],
-            [Button.inline('🎮 SoftMux', 'softmux_settings')],
-            # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
-            [Button.inline('⭕Close Settings', 'close_settings')]
-        ])
+            # MODIFIED: Use event.edit_message_text for Pyrogram
+            await event.edit_message_text(text, reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+                [InlineKeyboardButton('#️⃣ General', callback_data='general_settings')], # Use Pyrogram InlineKeyboardButton
+                # [InlineKeyboardButton('❣ Telegram', callback_data='telegram_settings')], # REMOVED: Telegram settings button
+                [InlineKeyboardButton('📝 Progress Bar', callback_data='progress_settings')],
+                [InlineKeyboardButton('🍧 Merge', callback_data='merge_settings')],
+                [InlineKeyboardButton('💻 Encode', callback_data='convert_settings')],
+                [InlineKeyboardButton('🎬 Video ', callback_data='video_settings')],
+                [InlineKeyboardButton('🔊 Audio', callback_data='audio_settings')],
+                [InlineKeyboardButton('❤ VBR / 🖤CRF', callback_data='vbrcrf_settings')],
+                [InlineKeyboardButton('🚍 HardMux', callback_data='hardmux_settings')],
+                [InlineKeyboardButton('🎮 SoftMux', callback_data='softmux_settings')],
+                [InlineKeyboardButton('⭕Close Settings', callback_data='close_settings')]
+            ]))
             return
 
         elif txt=="close_settings":
-            await event.delete()
+            await event.message.delete() # Use event.message.delete()
             return
 
         elif txt.startswith("resetdb"):
@@ -103,23 +101,25 @@ async def callback(event):
                     text = f"✔Database Reset Successfull"
                 else:
                     text = f"❌Database Reset Failed"
-                await event.answer(text, alert=True)
+                await event.answer(text, show_alert=True) # Use show_alert=True
             else:
-                await event.answer(f"Why You Wasting My Time.", alert=True)
+                await event.answer(f"Why You Wasting My Time.", show_alert=True)
             return
 
 
         elif txt.startswith("env"):
             position = txt.split("_", 1)[1]
-            value_result = await get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
-            if value_result:
-                if exists("./userdata/botconfig.env"):
-                    config_dict = get_env_dict('./userdata/botconfig.env')
-                else:
-                    config_dict = get_env_dict('config.env')
-                config_dict[position] = value_result.message.message
-                export_env_file("./userdata/botconfig.env", config_dict)
-                await value_result.reply(f"✅{position} Value Changed Successfully, Restart Bot To Reflect Changes.")
+            # MODIFIED: Need to adapt get_text_data for Pyrogram or implement differently
+            # value_result = await get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
+            await event.answer("Environment variable editing needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+            # if value_result:
+            #     if exists("./userdata/botconfig.env"):
+            #         config_dict = get_env_dict('./userdata/botconfig.env')
+            #     else:
+            #         config_dict = get_env_dict('config.env')
+            #     config_dict[position] = value_result.message.text # Use .text for Pyrogram
+            #     export_env_file("./userdata/botconfig.env", config_dict)
+            #     await value_result.reply(f"✅{position} Value Changed Successfully, Restart Bot To Reflect Changes.")
             return
 
 
@@ -130,137 +130,115 @@ async def callback(event):
                     await delete_all(Config.DOWNLOAD_DIR)
                     text = f"✔Successfully Deleted {Config.DOWNLOAD_DIR}"
                     try:
-                            await event.answer(text, alert=True)
+                            await event.answer(text, show_alert=True)
                     except:
-                        await event.edit(text)
+                         # MODIFIED: Use event.edit_message_text
+                        await event.edit_message_text(text)
                 else:
-                    await event.answer(f"Nothing to clear 🙄", alert=True)
+                    await event.answer(f"Nothing to clear 🙄", show_alert=True)
                     return
             else:
-                await event.answer(f"Why You Wasting My Time.", alert=True)
+                await event.answer(f"Why You Wasting My Time.", show_alert=True)
                 return
 
 
         elif txt.startswith("general"):
-            await general_callback(event, txt, user_id, chat_id)
+            await general_callback(client, event, txt, user_id, chat_id) # Pass client
             return
 
-        # Added from VFBITMOD-update
+        # REMOVED: Telegram callback trigger
+        # elif txt.startswith("telegram"):
+        #     await telegram_callback(event, txt, user_id, chat_id)
+        #     return
+
         elif txt.startswith("vbrcrf"):
-            await vbrcrf_callback(event, txt, user_id, chat_id)
-            return
-        # End of Added from VFBITMOD-update
-
-        elif txt.startswith("telegram"):
-            await telegram_callback(event, txt, user_id, chat_id)
+            await vbrcrf_callback(client, event, txt, user_id, chat_id) # Pass client
             return
 
         elif txt.startswith("progress"):
-            await progress_callback(event, txt, user_id)
+            await progress_callback(client, event, txt, user_id) # Pass client
             return
-
-        # REMOVED: Compression callback trigger
-        # elif txt.startswith("compression"):
-        #     await compress_callback(event, txt, user_id, True)
-        #     return
 
         elif txt.startswith("convert"):
-            await convert_callback(event, txt, user_id, True)
+            await convert_callback(client, event, txt, user_id, True) # Pass client
             return
 
-        # Added from VFBITMOD-update
         elif txt.startswith("video"):
-            await video_callback(event, txt, user_id, True)
+            await video_callback(client, event, txt, user_id, True) # Pass client
             return
 
         elif txt.startswith("audio"):
-            await audio_callback(event, txt, user_id, chat_id, True)
+            await audio_callback(client, event, txt, user_id, chat_id, True) # Pass client
             return
-        # End of Added from VFBITMOD-update
 
         elif txt.startswith("hardmux"):
-            await hardmux_callback(event, txt, user_id, True)
+            await hardmux_callback(client, event, txt, user_id, True) # Pass client
             return
 
         elif txt.startswith("softmux"):
-            await softmux_callback(event, txt, user_id, True)
+            await softmux_callback(client, event, txt, user_id, True) # Pass client
             return
-
-        # REMOVED: SoftReMux callback trigger
-        # elif txt.startswith("softremux"):
-        #     await softremux_callback(event, txt, user_id, True)
-        #     return
 
         elif txt.startswith("merge"):
-            await merge_callback(event, txt, user_id)
+            await merge_callback(client, event, txt, user_id) # Pass client
             return
 
-        # REMOVED: Watermark callback trigger
-        # elif txt.startswith("watermark"):
-        #     await watermark_callback(event, txt, user_id, True)
-        #     return
-
-
         elif txt=="nik66bots":
-            await event.answer(f"⚡Bot By Sahil⚡", alert=True) # Kept original message
+            await event.answer(f"⚡Bot By Sahil⚡", show_alert=True)
             return
 
 
         elif txt.startswith("change"):
-            if "_queue_size" in txt:
-                queue_size_input= await get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
-                if queue_size_input:
-                    try:
-                        queue_size = int(queue_size_input.message.message)
-                    except:
-                        await queue_size_input.reply("❗Invalid Input")
-                        return
-                    # REMOVED: Compress queue size change
-                    # if txt=="change_compress_queue_size":
-                    #     await saveconfig(user_id, 'compress', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                    #     await compress_callback(event, "compression_settings", user_id, False)
-                    # REMOVED: Watermark queue size change
-                    # elif txt=="change_watermark_queue_size":
-                    #     await saveconfig(user_id, 'watermark', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                    #     await watermark_callback(event, "watermark_settings", user_id, False)
-                    if txt=="change_convert_queue_size": # MODIFIED: Adjusted elif
-                        await saveconfig(user_id, 'convert', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                        await convert_callback(event, "convert_settings", user_id, False)
-                    elif txt=="change_hardmux_queue_size":
-                        await saveconfig(user_id, 'hardmux', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                        await hardmux_callback(event, "hardmux_settings", user_id, False)
+             # MODIFIED: Need to adapt get_text_data for Pyrogram or implement differently
+            await event.answer("Queue size changing needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+            # if "_queue_size" in txt:
+            #     queue_size_input= await get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
+            #     if queue_size_input:
+            #         try:
+            #             queue_size = int(queue_size_input.message.text) # Use .text
+            #         except:
+            #             await queue_size_input.reply("❗Invalid Input")
+            #             return
+            #         if txt=="change_convert_queue_size":
+            #             await saveconfig(user_id, 'convert', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
+            #             await convert_callback(client, event, "convert_settings", user_id, False) # Pass client
+            #         elif txt=="change_hardmux_queue_size":
+            #             await saveconfig(user_id, 'hardmux', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
+            #             await hardmux_callback(client, event, "hardmux_settings", user_id, False) # Pass client
             return
 
 
         elif txt=="custom_metedata":
-            cmetadata = get_data().get(user_id, {}).get('metadata', "Nik66Bots") # Use .get() with default
-            await event.answer(f"✅Current Metadata: {str(cmetadata)}", alert=True) # Kept original message
+            cmetadata = get_data().get(user_id, {}).get('metadata', "Nik66Bots")
+            await event.answer(f"✅Current Metadata: {str(cmetadata)}", show_alert=True)
             return
 
-        # Added from VFBITMOD-update
         elif txt=="vbr_value":
-            cvbr = get_data().get(user_id, {}).get('vbr', '220k') # Use .get() with default
-            await event.answer(f"❤ Current VBR 🖤: {str(cvbr)}", alert=True)
+            cvbr = get_data().get(user_id, {}).get('vbr', '220k')
+            await event.answer(f"❤ Current VBR 🖤: {str(cvbr)}", show_alert=True)
             return
 
         elif txt=="crf_value":
-            ccrf = get_data().get(user_id, {}).get('crf', '22') # Use .get() with default
-            await event.answer(f"❤ Current CRF 🖤: {str(ccrf)}", alert=True)
+            ccrf = get_data().get(user_id, {}).get('crf', '22')
+            await event.answer(f"❤ Current CRF 🖤: {str(ccrf)}", show_alert=True)
             return
 
         elif txt=="abit_value":
-            cabit = get_data().get(user_id, {}).get('abit', '128k') # Use .get() with default
-            await event.answer(f"❤ Current AudioBit 🖤: {str(cabit)}", alert=True)
+            cabit = get_data().get(user_id, {}).get('abit', '128k')
+            await event.answer(f"❤ Current AudioBit 🖤: {str(cabit)}", show_alert=True)
             return
-        # End of Added from VFBITMOD-update
 
 
         return
 
 
 #////////////////////////////////////Functions////////////////////////////////////#
+# MODIFIED: Use Pyrogram event structure
 def get_mention(event):
-    return "["+event.sender.first_name+"](tg://user?id="+str(event.sender.id)+")"
+    return f"[{event.from_user.first_name}](tg://user?id={event.from_user.id})"
+
+# MODIFIED: Import Pyrogram types
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 def gen_keyboard(values_list, current_value, callvalue, items, hide):
     boards = []
@@ -273,212 +251,130 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             boards.append(current_list)
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
-        if current_value!=x:
-            if callvalue!="watermarkposition":
-                text = f"{str(x)}"
-            else:
-                    text = f"{str(ws_name[x])}"
-        else:
-            if not hide:
-                if callvalue!="watermarkposition":
-                    text = f"{str(x)} 🟢" # Kept original emoji
-                else:
-                    text = f"{str(ws_name[x])} 🟢" # Kept original emoji
-            else:
-                text = f"🟢" # Kept original emoji
-        keyboard = Button.inline(text, value)
+        # REMOVED: Watermark specific logic
+        # if current_value!=x:
+        #     if callvalue!="watermarkposition":
+        #         text = f"{str(x)}"
+        #     else:
+        #             text = f"{str(ws_name[x])}"
+        # else:
+        #     if not hide:
+        #         if callvalue!="watermarkposition":
+        #             text = f"{str(x)} 🟢"
+        #         else:
+        #             text = f"{str(ws_name[x])} 🟢"
+        #     else:
+        #         text = f"🟢"
+        # MODIFIED: Simplified text generation
+        text = f"{str(x)}"
+        if current_value == x:
+            text += " 🟢"
+
+        # MODIFIED: Use Pyrogram InlineKeyboardButton
+        keyboard = InlineKeyboardButton(text, callback_data=value)
         current_list.append(keyboard)
     boards.append(current_list)
     return boards
 
-
+# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
 async def get_metadata(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]')
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            metadata = new_event.message.message
-            for ele in punc:
-                if ele in metadata:
-                        metadata = metadata.replace(ele, '')
-            return metadata
+    # Placeholder - Pyrogram conversation logic is different
+    await event.answer("Metadata input needs adaptation for Pyrogram.", show_alert=True)
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
-# Added from VFBITMOD-update
+# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
 async def get_vbr(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'❤ {str(message)} [{str(timeout)} secs]')
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🤦‍♂️Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            vbr = new_event.message.message
-            for ele in punc:
-                if ele in vbr:
-                        vbr = vbr.replace(ele, '')
-            return vbr
+    # Placeholder - Pyrogram conversation logic is different
+    await event.answer("VBR input needs adaptation for Pyrogram.", show_alert=True)
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
 async def get_crf(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'❤ {str(message)} [{str(timeout)} secs]')
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🤦‍♂️Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            crf = new_event.message.message
-            for ele in punc:
-                if ele in crf:
-                        crf = crf.replace(ele, '')
-            return crf
+     # Placeholder - Pyrogram conversation logic is different
+    await event.answer("CRF input needs adaptation for Pyrogram.", show_alert=True)
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
 async def get_abit(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'❤ {str(message)} [{str(timeout)} secs]')
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🤦‍♂️Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            abit = new_event.message.message
-            for ele in punc:
-                if ele in abit:
-                        abit = abit.replace(ele, '')
-            return abit
-# End of Added from VFBITMOD-update
+     # Placeholder - Pyrogram conversation logic is different
+    await event.answer("AudioBit input needs adaptation for Pyrogram.", show_alert=True)
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
 async def get_text_data(chat_id, user_id, event, timeout, message):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]') # Kept original emoji
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Tasked Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            return new_event
+    # Placeholder - Pyrogram conversation logic is different
+    await event.answer("Text input needs adaptation for Pyrogram.", show_alert=True)
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
 
 #////////////////////////////////////Callbacks_Functions////////////////////////////////////#
 
+# REMOVED: telegram_callback function
+# ###############------General------###############
+# async def telegram_callback(event, txt, user_id, chat_id):
+#             ... (function content removed) ...
 
+# MODIFIED: Add client argument
 ###############------General------###############
-async def telegram_callback(event, txt, user_id, chat_id):
-            new_position = txt.split("_", 1)[1]
-            if txt.startswith("telegramupload"):
-                await saveoptions(user_id, 'tgupload', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Telegram Upload Client - {str(new_position)}")
-            elif txt.startswith("telegramdownload"):
-                await saveoptions(user_id, 'tgdownload', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Telegram Download Client - {str(new_position)}")
-            telegram_upload = get_data().get(user_id, {}).get('tgupload', "Pyrogram") # Use .get()
-            telegram_download = get_data().get(user_id, {}).get('tgdownload', "Pyrogram") # Use .get()
-            KeyBoard = []
-            KeyBoard.append([Button.inline(f'🔼Telegram Upload Client - {str(telegram_upload)}', 'nik66bots')])
-            for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_upload, "telegramupload", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🔽Telegram Download Client - {str(telegram_download)}', 'nik66bots')])
-            for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_download, "telegramdownload", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            try:
-                await event.edit("⚙ Telegram Settings", buttons=KeyBoard)
-            except:
-                pass
-            return
-
-###############------General------###############
-async def general_callback(event, txt, user_id, chat_id):
+async def general_callback(client, event, txt, user_id, chat_id):
             new_position = txt.split("_", 1)[1]
             r_config = f'./userdata/{str(user_id)}_rclone.conf'
             check_config = exists(r_config)
             user_data = get_data().get(user_id, {}) # Use .get()
             drive_name = user_data.get('drive_name', False) # Use .get()
             edit = True
-            # REMOVED: Audio selection logic
-            # if txt.startswith("generalselectstream"):
-            #     await saveoptions(user_id, 'select_stream', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Auto Select Audio - {str(new_position)}")
-            # elif txt.startswith("generalstream"):
-            #     await saveoptions(user_id, 'stream', new_position, SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Select Audio - {str(new_position)}")
-            # REMOVED: Split logic
-            # elif txt.startswith("generalsplitvideo"):
-            #     await saveoptions(user_id, 'split_video', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Split Video - {str(new_position)}")
-            # elif txt.startswith("generalsplit"):
-            #     await saveoptions(user_id, 'split', new_position, SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Split Size - {str(new_position)}")
-            # REMOVED: Dynamic thumbnail logic
-            # elif txt.startswith("generalcustomthumbnail"):
-            #     await saveoptions(user_id, 'custom_thumbnail', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Dynamic Thumbnail - {str(new_position)}")
             if txt.startswith("generalcustommetadata"): # MODIFIED: Adjusted elif chain
                 if eval(new_position):
-                        metadata = await get_metadata(chat_id, user_id, event, 120, "Send Metadata Title")
+                        # MODIFIED: Needs adaptation for Pyrogram
+                        # metadata = await get_metadata(chat_id, user_id, event, 120, "Send Metadata Title")
+                        await event.answer("Metadata input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+                        metadata = None # Placeholder
                         if metadata:
                             await saveoptions(user_id, 'metadata', metadata, SAVE_TO_DATABASE)
                             edit = False
                         else:
                             return
                 await saveoptions(user_id, 'custom_metadata', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Custom Metadata - {str(new_position)}")
+                await event.answer(f"✅Custom Metadata - {str(new_position)}", show_alert=True)
             elif txt.startswith("generaluploadtg"):
                 if not eval(new_position):
                     if not (check_config and drive_name):
-                        await event.answer(f"❗First Save Rclone ConfigFile/Account", alert=True)
+                        await event.answer(f"❗First Save Rclone ConfigFile/Account", show_alert=True)
                         return
                 await saveoptions(user_id, 'upload_tg', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Upload On TG - {str(new_position)}")
+                await event.answer(f"✅Upload On TG - {str(new_position)}", show_alert=True)
             elif txt.startswith("generaldrivename"):
                 await saveoptions(user_id, 'drive_name', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Rclone Account - {str(new_position)}")
+                await event.answer(f"✅Rclone Account - {str(new_position)}", show_alert=True)
             elif txt.startswith("generalautodrive"):
                 if eval(new_position):
                     if not (check_config and drive_name):
-                        await event.answer(f"❗First Save Rclone ConfigFile/Account", alert=True)
+                        await event.answer(f"❗First Save Rclone ConfigFile/Account", show_alert=True)
                         return
                 await saveoptions(user_id, 'auto_drive', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Auto Upload Big File To Drive - {str(new_position)}")
+                await event.answer(f"✅Auto Upload Big File To Drive - {str(new_position)}", show_alert=True)
             elif txt.startswith("generalgenss"):
                 await saveoptions(user_id, 'gen_ss', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Generate Screenshots - {str(new_position)}")
+                await event.answer(f"✅Generate Screenshots - {str(new_position)}", show_alert=True)
             elif txt.startswith("generalssno"):
                 await saveoptions(user_id, 'ss_no', int(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅No Of Screenshots - {str(new_position)}")
+                await event.answer(f"✅No Of Screenshots - {str(new_position)}", show_alert=True)
             elif txt.startswith("generalgensample"):
                 await saveoptions(user_id, 'gen_sample', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Generate Sample Video - {str(new_position)}")
-            # REMOVED: Multi-task related settings
-            # elif txt.startswith("generaluploadall"):
-            #     await saveoptions(user_id, 'upload_all', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Upload Every Multi Task File - {str(new_position)}")
-            # elif txt.startswith("generalmultitasks"):
-            #     await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Multi Tasks - {str(new_position)}")
+                await event.answer(f"✅Generate Sample Video - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults for all settings
             user_data = get_data().get(user_id, {})
-            # REMOVED: Fetching removed settings
-            # select_stream = user_data.get('select_stream', False)
-            # stream = user_data.get('stream', 'ENG')
-            # split_video = user_data.get('split_video', False)
-            # split = user_data.get('split', '2GB')
-            # custom_thumbnail = user_data.get('custom_thumbnail', False)
-            # multi_tasks = user_data.get('multi_tasks', False)
-            # upload_all = user_data.get('upload_all', True)
             upload_tg = user_data.get('upload_tg', True)
             custom_metadata = user_data.get('custom_metadata', False)
             drive_name = user_data.get('drive_name', False)
@@ -488,87 +384,65 @@ async def general_callback(event, txt, user_id, chat_id):
             gen_sample = user_data.get('gen_sample', False)
 
             KeyBoard = []
-            # REMOVED: Audio selection buttons
-            # KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'nik66bots')])
-            # for board in gen_keyboard(bool_list, select_stream, "generalselectstream", 2, False):
-            #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'🍭Select Audio - {str(stream)}', 'nik66bots')])
-            # for board in gen_keyboard(['ENG', 'HIN'], stream, "generalstream", 2, False):
-            #     KeyBoard.append(board)
-            # REMOVED: Split buttons
-            # KeyBoard.append([Button.inline(f'🪓Split Video - {str(split_video)}', 'nik66bots')])
-            # for board in gen_keyboard(bool_list, split_video, "generalsplitvideo", 2, False):
-            #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'🛢Split Size - {str(split)}', 'nik66bots')])
-            # for board in gen_keyboard(['2GB', '4GB'], split, "generalsplit", 2, False):
-            #     KeyBoard.append(board)
-            # REMOVED: Dynamic thumbnail button
-            # KeyBoard.append([Button.inline(f'🖼Dynamic Thumbnail - {str(custom_thumbnail)}', 'nik66bots')])
-            # for board in gen_keyboard(bool_list, custom_thumbnail, "generalcustomthumbnail", 2, False):
-            #     KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🪀Custom Metadata - {str(custom_metadata)} [Click To See]', 'custom_metedata')])
+            KeyBoard.append([InlineKeyboardButton(f'🪀Custom Metadata - {str(custom_metadata)} [Click To See]', callback_data='custom_metedata')])
             for board in gen_keyboard(bool_list, custom_metadata, "generalcustommetadata", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🧵Upload On TG - {str(upload_tg)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🧵Upload On TG - {str(upload_tg)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, upload_tg, "generaluploadtg", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, auto_drive, "generalautodrive", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📷Generate Screenshots - {str(gen_ss)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📷Generate Screenshots - {str(gen_ss)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, gen_ss, "generalgenss", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎶No Of Screenshots - {str(ss_no)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🎶No Of Screenshots - {str(ss_no)}', callback_data='nik66bots')])
             for board in gen_keyboard([3,5,7,10], ss_no, "generalssno", 4, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎞Generate Sample Video - {str(gen_sample)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🎞Generate Sample Video - {str(gen_sample)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, gen_sample, "generalgensample", 2, False):
                 KeyBoard.append(board)
-            # REMOVED: Multi-task buttons
-            # KeyBoard.append([Button.inline(f'🛰Multi Tasks - {str(multi_tasks)}', 'nik66bots')])
-            # for board in gen_keyboard(bool_list, multi_tasks, "generalmultitasks", 2, False):
-            #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'nik66bots')])
-            # for board in gen_keyboard(bool_list, upload_all, "generaluploadall", 2, False):
-            #     KeyBoard.append(board)
             if check_config:
                 accounts = await get_config(r_config)
                 if accounts:
-                    KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
+                    KeyBoard.append([InlineKeyboardButton(f'🔮Rclone Account - {str(drive_name)}', callback_data='nik66bots')])
                     for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
                         KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("⚙ General Settings", buttons=KeyBoard)
+                    # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("⚙ General Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
-                await TELETHON_CLIENT.send_message(chat_id, "⚙ General Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(chat_id, "⚙ General Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
+# MODIFIED: Add client argument
 ###############------Progress------###############
-async def progress_callback(event, txt, user_id):
+async def progress_callback(client, event, txt, user_id):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("progressdetailedprogress"):
                 await saveoptions(user_id, 'detailed_messages', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Show Detailed Messages - {str(new_position)}")
+                await event.answer(f"✅Show Detailed Messages - {str(new_position)}", show_alert=True)
             elif txt.startswith("progressshowstats"):
                 await saveoptions(user_id, 'show_stats', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Show Stats - {str(new_position)}")
+                await event.answer(f"✅Show Stats - {str(new_position)}", show_alert=True)
             elif txt.startswith("progressupdatetime"):
                 await saveoptions(user_id, 'update_time', int(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Progress Update Time - {str(new_position)} secs")
+                await event.answer(f"✅Progress Update Time - {str(new_position)} secs", show_alert=True)
             elif txt.startswith("progressffmpegsize"):
                 await saveoptions(user_id, 'ffmpeg_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Show FFMPEG Output File Size - {str(new_position)}")
+                await event.answer(f"✅Show FFMPEG Output File Size - {str(new_position)}", show_alert=True)
             elif txt.startswith("progressffmpegptime"):
                 await saveoptions(user_id, 'ffmpeg_ptime', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Show Process Time - {str(new_position)}")
+                await event.answer(f"✅Show Process Time - {str(new_position)}", show_alert=True)
             elif txt.startswith("progressshowtime"):
                 await saveoptions(user_id, 'show_time', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Show Current Time - {str(new_position)}")
+                await event.answer(f"✅Show Current Time - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             user_data = get_data().get(user_id, {})
@@ -579,98 +453,93 @@ async def progress_callback(event, txt, user_id):
             ffmpeg_ptime = user_data.get('ffmpeg_ptime', True)
             show_time = user_data.get('show_time', True)
 
-            KeyBoard.append([Button.inline(f'📋Show Detailed Messages - {str(detailed_messages)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📋Show Detailed Messages - {str(detailed_messages)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, detailed_messages, "progressdetailedprogress", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📊Show Stats - {str(show_stats)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📊Show Stats - {str(show_stats)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, show_stats, "progressshowstats", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📀Show FFMPEG Output File Size - {str(ffmpeg_size)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📀Show FFMPEG Output File Size - {str(ffmpeg_size)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, ffmpeg_size, "progressffmpegsize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⏲Show Process Time- {str(ffmpeg_ptime)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'⏲Show Process Time- {str(ffmpeg_ptime)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, ffmpeg_ptime, "progressffmpegptime", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⌚Show Current Time- {str(show_time)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'⌚Show Current Time- {str(show_time)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, show_time, "progressshowtime", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⏱Progress Update Time - {str(update_time)} secs', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'⏱Progress Update Time - {str(update_time)} secs', callback_data='nik66bots')])
             for board in gen_keyboard([5, 6, 7, 8, 9, 10], update_time, "progressupdatetime", 3, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             try:
-                await event.edit("⚙ Progress Bar Settings", buttons=KeyBoard)
+                 # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                await event.edit_message_text("⚙ Progress Bar Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             except:
                 pass
             return
 
 # REMOVED: compress_callback function
-# ###############------Compress------###############
-# async def compress_callback(event, txt, user_id, edit):
-#             ... (function content removed) ...
 
-# REMOVED: watermark_callback function
-# ###############------Watermark------###############
-# async def watermark_callback(event, txt, user_id, edit):
-#             ... (function content removed) ...
-
-
+# MODIFIED: Add client argument
 ###############------Merge------###############
-async def merge_callback(event, txt, user_id):
+async def merge_callback(client, event, txt, user_id):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("mergemap"):
                 await saveconfig(user_id, 'merge', 'map', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Merge Map - {str(new_position)}")
+                await event.answer(f"✅Merge Map - {str(new_position)}", show_alert=True)
             elif txt.startswith("mergefixblank"):
                 await saveconfig(user_id, 'merge', 'fix_blank', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Merge Fix Blank - {str(new_position)}")
+                await event.answer(f"✅Merge Fix Blank - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             merge_settings = get_data().get(user_id, {}).get('merge', {})
             merge_map = merge_settings.get('map', True)
             merge_fix_blank = merge_settings.get('fix_blank', False)
 
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(merge_map)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🍓Map  - {str(merge_map)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, merge_map, "mergemap", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🚢Fix Blank Outro  - {str(merge_fix_blank)} [Use Only When Necessary]', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🚢Fix Blank Outro  - {str(merge_fix_blank)} [Use Only When Necessary]', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, merge_fix_blank, "mergefixblank", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             try:
-                await event.edit("⚙ Merge Settings", buttons=KeyBoard)
+                 # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                await event.edit_message_text("⚙ Merge Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             except:
                 pass
             return
 
+# MODIFIED: Add client argument
 ###############------Convert------###############
-async def convert_callback(event, txt, user_id, edit):
+async def convert_callback(client, event, txt, user_id, edit):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             # Added from VFBITMOD-update
             if txt.startswith("convertencode"):
                 await saveconfig(user_id, 'convert', 'encode', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Encode - {str(new_position)}")
+                await event.answer(f"✅Encode - {str(new_position)}", show_alert=True)
             elif txt.startswith("converttype"):
                 await saveconfig(user_id, 'convert', 'type', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Encode Type - {str(new_position)}")
+                await event.answer(f"✅Encode Type - {str(new_position)}", show_alert=True)
             # End of Added from VFBITMOD-update
             elif txt.startswith("convertpreset"):
                 await saveconfig(user_id, 'convert', 'preset', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Preset - {str(new_position)}")
+                await event.answer(f"✅Convert Preset - {str(new_position)}", show_alert=True)
             elif txt.startswith("convertcopysub"):
                 await saveconfig(user_id, 'convert', 'copy_sub', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Copy Subtitles - {str(new_position)}")
+                await event.answer(f"✅Convert Copy Subtitles - {str(new_position)}", show_alert=True)
             elif txt.startswith("convertmap"):
                 await saveconfig(user_id, 'convert', 'map', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Map - {str(new_position)}")
+                await event.answer(f"✅Convert Map - {str(new_position)}", show_alert=True)
             elif txt.startswith("convertusequeuesize"):
                 await saveconfig(user_id, 'convert', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Use Queue Size - {str(new_position)}")
+                await event.answer(f"✅Convert Use Queue Size - {str(new_position)}", show_alert=True)
             elif txt.startswith("convertsync"):
                 await saveconfig(user_id, 'convert', 'sync', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Use SYNC - {str(new_position)}")
+                await event.answer(f"✅Convert Use SYNC - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             convert_settings = get_data().get(user_id, {}).get('convert', {})
@@ -684,67 +553,70 @@ async def convert_callback(event, txt, user_id, edit):
             convert_sync = convert_settings.get('sync', False)
 
             # Added from VFBITMOD-update
-            KeyBoard.append([Button.inline(f'🎧Encode - {str(convert_encode)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🎧Encode - {str(convert_encode)}', callback_data='nik66bots')])
             for board in gen_keyboard(encode_list, convert_encode, "convertencode", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎧Encode Type - {str(convert_type)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🎧Encode Type - {str(convert_type)}', callback_data='nik66bots')])
             for board in gen_keyboard(type_list, convert_type, "converttype", 2, False):
                 KeyBoard.append(board)
             # End of Added from VFBITMOD-update
 
-            KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(convert_copysub)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🍄Copy Subtitles - {str(convert_copysub)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, convert_copysub, "convertcopysub", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(convert_map)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🍓Map  - {str(convert_map)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, convert_map, "convertmap", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(convert_use_queue_size)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📻Use FFMPEG Queue Size  - {str(convert_use_queue_size)}', callback_data='nik66bots')])
             if convert_use_queue_size:
-                KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(convert_queue_size)} (Click To Change)', 'change_convert_queue_size')])
+                KeyBoard.append([InlineKeyboardButton(f'🎹FFMPEG Queue Size Value  - {str(convert_queue_size)} (Click To Change)', callback_data='change_convert_queue_size')])
             for board in gen_keyboard(bool_list, convert_use_queue_size, "convertusequeuesize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(convert_sync)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🌳Use SYNC - {str(convert_sync)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, convert_sync, "convertsync", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(convert_preset)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'♒Preset - {str(convert_preset)}', callback_data='nik66bots')])
             for board in gen_keyboard(presets_list, convert_preset, "convertpreset", 3, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("⚙ Convert Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("⚙ Convert Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.message.delete() # Use event.message.delete()
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Convert Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(event.message.chat.id, "⚙ Convert Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
+# MODIFIED: Add client argument
 ###############------Hardmux------###############
-async def hardmux_callback(event, txt, user_id, edit):
+async def hardmux_callback(client, event, txt, user_id, edit):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("hardmuxencoder"):
                 await saveconfig(user_id, 'hardmux', 'encoder', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux Encoder - {str(new_position)}")
+                await event.answer(f"✅Hardmux Encoder - {str(new_position)}", show_alert=True)
             elif txt.startswith("hardmuxencodevideo"):
                 await saveconfig(user_id, 'hardmux', 'encode_video', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux Use Encoder - {str(new_position)}")
+                await event.answer(f"✅Hardmux Use Encoder - {str(new_position)}", show_alert=True)
             elif txt.startswith("hardmuxpreset"):
                 await saveconfig(user_id, 'hardmux', 'preset', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux Preset - {str(new_position)}")
+                await event.answer(f"✅Hardmux Preset - {str(new_position)}", show_alert=True)
             elif txt.startswith("hardmuxcrf"):
                 await saveconfig(user_id, 'hardmux', 'crf', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux CRF - {str(new_position)}")
+                await event.answer(f"✅Hardmux CRF - {str(new_position)}", show_alert=True)
             elif txt.startswith("hardmuxusequeuesize"):
                 await saveconfig(user_id, 'hardmux', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux Use Queue Size - {str(new_position)}")
+                await event.answer(f"✅Hardmux Use Queue Size - {str(new_position)}", show_alert=True)
             elif txt.startswith("hardmuxsync"):
                 await saveconfig(user_id, 'hardmux', 'sync', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Hardmux Use SYNC - {str(new_position)}")
+                await event.answer(f"✅Hardmux Use SYNC - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             hardmux_settings = get_data().get(user_id, {}).get('hardmux', {})
@@ -756,89 +628,91 @@ async def hardmux_callback(event, txt, user_id, edit):
             hardmux_queue_size = hardmux_settings.get('queue_size', '9999')
             hardmux_sync = hardmux_settings.get('sync', False)
 
-            KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(hardmux_encode_video)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🎧Use Encoder - {str(hardmux_encode_video)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, hardmux_encode_video, "hardmuxencodevideo", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍬Encoder - {str(hardmux_encoder)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🍬Encoder - {str(hardmux_encoder)}', callback_data='nik66bots')])
             for board in gen_keyboard(encoders_list, hardmux_encoder, "hardmuxencoder", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(hardmux_use_queue_size)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'📻Use FFMPEG Queue Size  - {str(hardmux_use_queue_size)}', callback_data='nik66bots')])
             if hardmux_use_queue_size:
-                KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(hardmux_queue_size)} (Click To Change)', 'change_hardmux_queue_size')])
+                KeyBoard.append([InlineKeyboardButton(f'🎹FFMPEG Queue Size Value  - {str(hardmux_queue_size)} (Click To Change)', callback_data='change_hardmux_queue_size')])
             for board in gen_keyboard(bool_list, hardmux_use_queue_size, "hardmuxusequeuesize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(hardmux_sync)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🌳Use SYNC - {str(hardmux_sync)}', callback_data='nik66bots')])
             for board in gen_keyboard(bool_list, hardmux_sync, "hardmuxsync", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(hardmux_preset)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'♒Preset - {str(hardmux_preset)}', callback_data='nik66bots')])
             for board in gen_keyboard(presets_list, hardmux_preset, "hardmuxpreset", 3, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⚡CRF  - {str(hardmux_crf)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'⚡CRF  - {str(hardmux_crf)}', callback_data='nik66bots')])
             for board in gen_keyboard(crf_list, hardmux_crf, "hardmuxcrf", 6, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("⚙ Hardmux Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("⚙ Hardmux Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.message.delete() # Use event.message.delete()
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Hardmux Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(event.message.chat.id, "⚙ Hardmux Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
-
+# MODIFIED: Add client argument
 ###############------Softmux------###############
-async def softmux_callback(event, txt, user_id, edit):
+async def softmux_callback(client, event, txt, user_id, edit):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("softmuxsubcodec"):
                 await saveconfig(user_id, 'softmux', 'sub_codec', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Softmux Sub Codec - {str(new_position)}")
+                await event.answer(f"✅Softmux Sub Codec - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             softmux_settings = get_data().get(user_id, {}).get('softmux', {})
             softmux_sub_codec = softmux_settings.get('sub_codec', 'copy')
 
-            KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softmux_sub_codec)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🍄Subtitles Codec - {str(softmux_sub_codec)}', callback_data='nik66bots')])
             for board in gen_keyboard(['copy', 'mov_text'], softmux_sub_codec, "softmuxsubcodec", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("⚙ Softmux Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("⚙ Softmux Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.message.delete() # Use event.message.delete()
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Softmux Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(event.message.chat.id, "⚙ Softmux Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
 # REMOVED: softremux_callback function
-# ###############------Softremux------###############
-# async def softremux_callback(event, txt, user_id, edit):
-#             ... (function content removed) ...
 
 # Added from VFBITMOD-update
+# MODIFIED: Add client argument
 ###############------Video------###############
-async def video_callback(event, txt, user_id, edit):
+async def video_callback(client, event, txt, user_id, edit):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("videoencude"):
                 await saveconfig(user_id, 'video', 'encude', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅FOrmant - {str(new_position)}")
+                await event.answer(f"✅FOrmant - {str(new_position)}", show_alert=True)
             elif txt.startswith("videovbit"):
                 await saveconfig(user_id, 'video', 'vbit', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert VideoBit - {str(new_position)}")
+                await event.answer(f"✅Convert VideoBit - {str(new_position)}", show_alert=True)
             elif txt.startswith("videoquality"):
                 await saveconfig(user_id, 'video', 'qubality', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Quality - {str(new_position)}")
+                await event.answer(f"✅Convert Quality - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             video_settings = get_data().get(user_id, {}).get('video', {})
@@ -846,50 +720,56 @@ async def video_callback(event, txt, user_id, edit):
             video_encude = video_settings.get('encude', 'HEVC')
             video_qubality = video_settings.get('qubality', '480p [720x480]')
 
-            KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'❤ Encoder - {str(video_encude)}', callback_data='nik66bots')])
             for board in gen_keyboard(encude_list, video_encude, "videoencude", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'❤ VideoBit - {str(video_vbit)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'❤ VideoBit - {str(video_vbit)}', callback_data='nik66bots')])
             for board in gen_keyboard(vbit_list, video_vbit, "videovbit", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'❤ Resolution - {str(video_qubality)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'❤ Resolution - {str(video_qubality)}', callback_data='nik66bots')])
             for board in gen_keyboard(qubality_list, video_qubality, "videoquality", 2, False):
                 KeyBoard.append(board)
 
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("🎬 Video Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("🎬 Video Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.message.delete() # Use event.message.delete()
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🎬 Video Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(event.message.chat.id, "🎬 Video Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
+# MODIFIED: Add client argument
 ###############-----Audio------###############
-async def audio_callback(event, txt, user_id, chat_id, edit):
+async def audio_callback(client, event, txt, user_id, chat_id, edit):
             new_position = txt.split("_", 1)[1]
             KeyBoard = []
             if txt.startswith("audioachannel"):
                 await saveconfig(user_id, 'audio', 'achannel', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Audio Channel - {str(new_position)}")
+                await event.answer(f"✅Convert Audio Channel - {str(new_position)}", show_alert=True)
             elif txt.startswith("audioacodec"):
                 await saveconfig(user_id, 'audio', 'acodec', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Audio codec - {str(new_position)}")
+                await event.answer(f"✅Convert Audio codec - {str(new_position)}", show_alert=True)
             elif txt.startswith("audioabit"):
                 if eval(new_position):
-                        metadata = await get_abit(chat_id, user_id, event, 120, "**Send AudioBit Value\n\n****Example :** `128k`, `760k` etc.")
+                        # MODIFIED: Needs adaptation for Pyrogram
+                        # metadata = await get_abit(chat_id, user_id, event, 120, "**Send AudioBit Value\n\n****Example :** `128k`, `760k` etc.")
+                        await event.answer("AudioBit input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+                        metadata = None # Placeholder
                         if metadata:
                             await saveoptions(user_id, 'abit', metadata, SAVE_TO_DATABASE)
                             edit = False
                         else:
                             return
                 await saveoptions(user_id, 'use_abit', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"❤ AudioBit 🖤 - {str(new_position)}")
+                await event.answer(f"❤ AudioBit 🖤 - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             user_data = get_data().get(user_id, {})
@@ -898,54 +778,63 @@ async def audio_callback(event, txt, user_id, chat_id, edit):
             audio_acodec = audio_settings.get('acodec', 'AAC')
             audio_achannel = audio_settings.get('achannel', '2')
 
-            KeyBoard.append([Button.inline(f'🖤 Audio Codec - {str(audio_acodec)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🖤 Audio Codec - {str(audio_acodec)}', callback_data='nik66bots')])
             for board in gen_keyboard(acodec_list, audio_acodec, "audioacodec", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🖤 Audio Channel - {str(audio_achannel)}', 'nik66bots')])
+            KeyBoard.append([InlineKeyboardButton(f'🖤 Audio Channel - {str(audio_achannel)}', callback_data='nik66bots')])
             for board in gen_keyboard(achannel_list, audio_achannel, "audioachannel", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🖤 AudioBit - {str(use_abit)} [Click To See]', 'abit_value')])
+            KeyBoard.append([InlineKeyboardButton(f'🖤 AudioBit - {str(use_abit)} [Click To See]', callback_data='abit_value')])
             for board in gen_keyboard(bool_list, use_abit, "audioabit", 2, False):
                 KeyBoard.append(board)
 
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("🔊 Audio Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("🔊 Audio Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.message.delete() # Use event.message.delete()
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🔊 Audio Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(event.message.chat.id, "🔊 Audio Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 
+# MODIFIED: Add client argument
 ###############-----CRF By Word------###############
-async def vbrcrf_callback(event, txt, user_id, chat_id):
+async def vbrcrf_callback(client, event, txt, user_id, chat_id):
             new_position = txt.split("_", 1)[1]
             edit = True
             if txt.startswith("vbrcrfvbr"):
                 if eval(new_position):
-                        metadata = await get_vbr(chat_id, user_id, event, 120, "**Send VBR Value**\n\n**Example :** `400k`, `900k` etc.")
+                        # MODIFIED: Needs adaptation for Pyrogram
+                        # metadata = await get_vbr(chat_id, user_id, event, 120, "**Send VBR Value**\n\n**Example :** `400k`, `900k` etc.")
+                        await event.answer("VBR input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+                        metadata = None # Placeholder
                         if metadata:
                             await saveoptions(user_id, 'vbr', metadata, SAVE_TO_DATABASE)
                             edit = False
                         else:
                             return
                 await saveoptions(user_id, 'use_vbr', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"❤ VBR 🖤 - {str(new_position)}")
+                await event.answer(f"❤ VBR 🖤 - {str(new_position)}", show_alert=True)
             elif txt.startswith("vbrcrfcrf"):
                 if eval(new_position):
-                        metadata = await get_crf(chat_id, user_id, event, 120, "**Send CRF Value**\n\n**Example :** `22`, `28` etc.")
+                        # MODIFIED: Needs adaptation for Pyrogram
+                        # metadata = await get_crf(chat_id, user_id, event, 120, "**Send CRF Value**\n\n**Example :** `22`, `28` etc.")
+                        await event.answer("CRF input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+                        metadata = None # Placeholder
                         if metadata:
                             await saveoptions(user_id, 'crf', metadata, SAVE_TO_DATABASE)
                             edit = False
                         else:
                             return
                 await saveoptions(user_id, 'use_crf', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"❤ CRF 🖤 - {str(new_position)}")
+                await event.answer(f"❤ CRF 🖤 - {str(new_position)}", show_alert=True)
 
             # Use .get() with defaults
             user_data = get_data().get(user_id, {})
@@ -953,21 +842,23 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
             use_crf = user_data.get('use_crf', False)
 
             KeyBoard = []
-            KeyBoard.append([Button.inline(f'❤ VBR - {str(use_vbr)} [Click To See]', 'vbr_value')])
+            KeyBoard.append([InlineKeyboardButton(f'❤ VBR - {str(use_vbr)} [Click To See]', callback_data='vbr_value')])
             for board in gen_keyboard(bool_list, use_vbr, "vbrcrfvbr", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🖤 CRF - {str(use_crf)} [Click To See]', 'crf_value')])
+            KeyBoard.append([InlineKeyboardButton(f'🖤 CRF - {str(use_crf)} [Click To See]', callback_data='crf_value')])
             for board in gen_keyboard(bool_list, use_crf, "vbrcrfcrf", 2, False):
                 KeyBoard.append(board)
 
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            KeyBoard.append([InlineKeyboardButton(f'↩Back', callback_data='settings')])
             if edit:
                 try:
-                    await event.edit("❤ VBR / 🖤 CRF Settings", buttons=KeyBoard)
+                     # MODIFIED: Use event.edit_message_text and InlineKeyboardMarkup
+                    await event.edit_message_text("❤ VBR / 🖤 CRF Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
                 except:
                     pass
             else:
-                await TELETHON_CLIENT.send_message(chat_id, "❤ VBR / 🖤 CRF Settings", buttons=KeyBoard)
+                 # MODIFIED: Use client.send_message and InlineKeyboardMarkup
+                await client.send_message(chat_id, "❤ VBR / 🖤 CRF Settings", reply_markup=InlineKeyboardMarkup(KeyBoard))
             return
 # End of Added from VFBITMOD-update
 
