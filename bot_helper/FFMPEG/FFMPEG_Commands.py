@@ -186,7 +186,7 @@ def get_commands(process_status):
                     command += ['-tune', 'fastdecode']
                     # Set pools and slices in x265-params (without tune)
                     # Using 16 pools and 15 slices based on the last log output
-                    x265_custom_params = "pools=16:slices=15"
+                    x265_custom_params = "pools=8:slices=8"
                     command += ['-x265-params', x265_custom_params]
                     # <<< END OF MODIFICATION >>>
                 else: # H.264
@@ -305,7 +305,7 @@ def get_commands(process_status):
                         command += ['-tune', 'fastdecode']
                         # Set pools and slices in x265-params (without tune)
                         # Using 16 pools and 15 slices based on the last log output
-                        x265_custom_params_hm = "pools=16:slices=15"
+                        x265_custom_params_hm = "pools=8:slices=8"
                         command += ['-x265-params', x265_custom_params_hm]
                         # <<< END OF MODIFICATION >>>
                         # Add preset *after* codec and tune/params
