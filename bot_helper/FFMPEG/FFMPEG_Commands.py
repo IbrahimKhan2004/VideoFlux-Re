@@ -5,6 +5,8 @@ from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
 from os.path import isdir, splitext, exists
 from os import makedirs, remove
+# Highlighted change: Import math for ceil used in bufsize calculation
+from math import ceil
 
 def create_direc(direc):
     if not isdir(direc):
@@ -132,11 +134,12 @@ def get_commands(process_status):
             convert_sync = get_data()[process_status.user_id]['convert']['sync']
             convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Video, Audio, Both
             convert_quality = get_data()[process_status.user_id]['video']['qubality'] # e.g., '720p [1280x720]'
-            convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR or ABR
+            convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR or ABR or CBR
             convert_crf = get_data()[process_status.user_id]['crf'] if get_data()[process_status.user_id]['use_crf'] else None # Use custom if enabled
             convert_vbr = get_data()[process_status.user_id]['vbr'] if get_data()[process_status.user_id]['use_vbr'] else None # Use custom if enabled
-            # Highlighted change: Removed leading diff marker '+'
             convert_abr = get_data()[process_status.user_id]['abr'] if get_data()[process_status.user_id]['use_abr'] else None # Use custom if enabled
+            # Highlighted change: Get CBR setting
+            convert_cbr = get_data()[process_status.user_id]['cbr'] if get_data()[process_status.user_id]['use_cbr'] else None # Use custom if enabled
             # --- End of VFBITMOD-update Integration ---
 
             create_direc(f"{process_status.dir}/convert/")
@@ -181,13 +184,36 @@ def get_commands(process_status):
                 else: # H.264
                     command+= ['-vcodec','libx264']
 
-                # Rate Control (CRF, VBR, or ABR)
+                # Rate Control (CRF, VBR, ABR, or CBR)
                 if convert_type=='CRF' and convert_crf is not None:
                     command+= ['-crf', f'{str(convert_crf)}']
                 elif convert_type=='VBR' and convert_vbr is not None:
                     command+= ['-b:v', f'{str(convert_vbr)}']
                 elif convert_type=='ABR' and convert_abr is not None:
                     command+= ['-b:v', f'{str(convert_abr)}'] # ABR (1-pass) uses -b:v
+                # Highlighted change: Added CBR handling
+                elif convert_type=='CBR' and convert_cbr is not None:
+                    # For CBR, set minrate, maxrate same as bitrate, and bufsize (e.g., 2*bitrate)
+                    bitrate_str = str(convert_cbr)
+                    bufsize_str = bitrate_str # Default bufsize = bitrate if parsing fails
+                    try:
+                        if bitrate_str.lower().endswith('k'):
+                            bitrate_val = int(bitrate_str[:-1]) * 1000
+                        elif bitrate_str.lower().endswith('m'):
+                            bitrate_val = int(float(bitrate_str[:-1]) * 1000000)
+                        else:
+                            bitrate_val = int(bitrate_str) # Assume bps if no suffix
+
+                        bufsize_val = bitrate_val * 2 # Calculate bufsize
+                        # Format bufsize back to string with 'k' suffix
+                        bufsize_str = f"{ceil(bufsize_val / 1000)}k"
+                    except ValueError:
+                        # Use default if parsing fails
+                        bitrate_str = "1500k"
+                        bufsize_str = "3000k"
+                        pass # Keep default bufsize if parsing fails
+
+                    command += ['-b:v', bitrate_str, '-minrate', bitrate_str, '-maxrate', bitrate_str, '-bufsize', bufsize_str]
                 # If type is set but value is None (not enabled), FFmpeg might use defaults or error.
                 # Consider adding a default CRF/VBR if type is selected but value isn't enabled.
                 elif convert_type=='CRF': # Default CRF if enabled but no value set
@@ -196,6 +222,9 @@ def get_commands(process_status):
                      command+= ['-b:v', '1500k'] # Example default
                 elif convert_type=='ABR': # Default ABR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
+                # Highlighted change: Added CBR default fallback
+                elif convert_type=='CBR': # Default CBR if enabled but no value set
+                     command += ['-b:v', '1500k', '-minrate', '1500k', '-maxrate', '1500k', '-bufsize', '3000k'] # Example default
 
             else: # Only Audio encode or no video encode
                 command+=['-c:v', 'copy']
