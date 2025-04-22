@@ -22,8 +22,8 @@ achannel_list = ['2', '6']
 qubality_list = ['480p [720x360]', '480p [720x480]', '720p [1280x640]', '720p [1280x720]', '1080p [1920x960]', '1080p [1920x1080]']
 encode_list = ['Video', 'Audio', 'Video Audio [Both]']
 encude_list = ['H.264', 'HEVC']
-# Highlighted change: Corrected line, removed leading '-'
-type_list = ['CRF', 'VBR', 'ABR'] # Added ABR
+# Highlighted change: Added CBR to type_list
+type_list = ['CRF', 'VBR', 'ABR', 'CBR'] # Added CBR
 # End of Added from VFBITMOD-update
 crf_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51']
 wsize_list =['12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23']
@@ -64,12 +64,16 @@ async def callback(event):
         if 'use_crf' not in user_data:
             await saveoptions(user_id, 'use_crf', False, SAVE_TO_DATABASE)
             await saveoptions(user_id, 'crf', '22', SAVE_TO_DATABASE)
-        # Highlighted change: Corrected check for ABR keys (removed '+')
         # Added check for ABR keys
         if 'use_abr' not in user_data:
             await saveoptions(user_id, 'use_abr', False, SAVE_TO_DATABASE)
             await saveoptions(user_id, 'abr', '1500k', SAVE_TO_DATABASE)
         # End of added check for ABR keys
+        # Highlighted change: Added check for CBR keys
+        if 'use_cbr' not in user_data:
+            await saveoptions(user_id, 'use_cbr', False, SAVE_TO_DATABASE)
+            await saveoptions(user_id, 'cbr', '1500k', SAVE_TO_DATABASE)
+        # End of added check for CBR keys
         if 'use_abit' not in user_data:
             await saveoptions(user_id, 'use_abit', False, SAVE_TO_DATABASE)
             await saveoptions(user_id, 'abit', '128k', SAVE_TO_DATABASE)
@@ -96,8 +100,8 @@ async def callback(event):
             [Button.inline('💻 Encode', 'convert_settings')],
             [Button.inline('🎬 Video ', 'video_settings')],
             [Button.inline('🔊 Audio', 'audio_settings')],
-            # Highlighted change: Corrected button text
-            [Button.inline('❤ Rate Control (VBR/CRF/ABR)', 'vbrcrf_settings')], # Modified button text
+            # Highlighted change: Updated button text for Rate Control
+            [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
             # End of Modified menu items
             [Button.inline('🚍 HardMux', 'hardmux_settings')],
             [Button.inline('🎮 SoftMux', 'softmux_settings')],
@@ -263,11 +267,16 @@ async def callback(event):
             await event.answer(f"❤ Current CRF 🖤: {str(ccrf)}", alert=True)
             return
 
-        # Highlighted change: Corrected ABR value display callback (removed '+')
         # Added ABR value display
         elif txt=="abr_value":
             cabr = get_data().get(user_id, {}).get('abr', '1500k') # Use .get() with default
             await event.answer(f"❤ Current ABR 🖤: {str(cabr)}", alert=True)
+            return
+
+        # Highlighted change: Added CBR value display callback
+        elif txt=="cbr_value":
+            ccbr = get_data().get(user_id, {}).get('cbr', '1500k') # Use .get() with default
+            await event.answer(f"❤ Current CBR 🖤: {str(ccbr)}", alert=True)
             return
 
         elif txt=="abit_value":
@@ -365,7 +374,6 @@ async def get_crf(chat_id, user_id, event, timeout, message):
                         crf = crf.replace(ele, '')
             return crf
 
-# Highlighted change: Corrected ABR input function (removed '+')
 # Added ABR input function
 async def get_abr(chat_id, user_id, event, timeout, message):
     async with TELETHON_CLIENT.conversation(chat_id) as conv:
@@ -386,6 +394,27 @@ async def get_abr(chat_id, user_id, event, timeout, message):
                 await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
                 return False
             return abr
+
+# Highlighted change: Added CBR input function
+async def get_cbr(chat_id, user_id, event, timeout, message):
+    async with TELETHON_CLIENT.conversation(chat_id) as conv:
+            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
+            ask = await event.reply(f'❤ {str(message)} [{str(timeout)} secs]')
+            try:
+                new_event = await handle
+            except Exception as e:
+                await ask.reply('🤦‍♂️Timed Out! Tasked Has Been Cancelled.')
+                LOGGER.info(e)
+                return False
+            cbr = new_event.message.message
+            for ele in punc:
+                if ele in cbr:
+                        cbr = cbr.replace(ele, '')
+            # Basic validation (ends with 'k' or 'M') - can be improved
+            if not (cbr.lower().endswith('k') or cbr.lower().endswith('m')):
+                await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
+                return False
+            return cbr
 
 async def get_abit(chat_id, user_id, event, timeout, message):
     async with TELETHON_CLIENT.conversation(chat_id) as conv:
@@ -767,8 +796,8 @@ async def convert_callback(event, txt, user_id, edit):
             for board in gen_keyboard(encode_list, convert_encode, "convertencode", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'🎧Encode Type - {str(convert_type)}', 'nik66bots')])
-            # Highlighted change: Corrected items per row for type_list
-            for board in gen_keyboard(type_list, convert_type, "converttype", 3, False): # Changed items per row to 3 for ABR
+            # Highlighted change: Updated items per row for type_list
+            for board in gen_keyboard(type_list, convert_type, "converttype", 4, False): # Changed items per row to 4 for CBR
                 KeyBoard.append(board)
             # End of Added from VFBITMOD-update
 
@@ -1026,7 +1055,6 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                             return
                 await saveoptions(user_id, 'use_crf', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"❤ CRF 🖤 - {str(new_position)}")
-            # Highlighted change: Corrected ABR handling (removed '+')
             # Added ABR handling
             elif txt.startswith("vbrcrfabr"):
                 if eval(new_position):
@@ -1038,13 +1066,25 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                             return
                 await saveoptions(user_id, 'use_abr', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"❤ ABR 🖤 - {str(new_position)}")
+            # Highlighted change: Added CBR handling
+            elif txt.startswith("vbrcrfcbr"):
+                if eval(new_position):
+                        metadata = await get_cbr(chat_id, user_id, event, 120, "**Send CBR Value**\n\n**Example :** `1500k`, `2M` etc.")
+                        if metadata:
+                            await saveoptions(user_id, 'cbr', metadata, SAVE_TO_DATABASE)
+                            edit = False
+                        else:
+                            return
+                await saveoptions(user_id, 'use_cbr', eval(new_position), SAVE_TO_DATABASE)
+                await event.answer(f"❤ CBR 🖤 - {str(new_position)}")
 
             # Use .get() with defaults
             user_data = get_data().get(user_id, {})
             use_vbr = user_data.get('use_vbr', False)
             use_crf = user_data.get('use_crf', False)
-            # Highlighted change: Corrected getting ABR setting (removed '+')
             use_abr = user_data.get('use_abr', False) # Get ABR setting
+            # Highlighted change: Get CBR setting
+            use_cbr = user_data.get('use_cbr', False) # Get CBR setting
 
             KeyBoard = []
             KeyBoard.append([Button.inline(f'❤ VBR - {str(use_vbr)} [Click To See]', 'vbr_value')])
@@ -1053,22 +1093,25 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
             KeyBoard.append([Button.inline(f'🖤 CRF - {str(use_crf)} [Click To See]', 'crf_value')])
             for board in gen_keyboard(bool_list, use_crf, "vbrcrfcrf", 2, False):
                 KeyBoard.append(board)
-            # Highlighted change: Corrected ABR button row (removed '+')
             # Added ABR button row
             KeyBoard.append([Button.inline(f'💙 ABR - {str(use_abr)} [Click To See]', 'abr_value')])
             for board in gen_keyboard(bool_list, use_abr, "vbrcrfabr", 2, False):
+                KeyBoard.append(board)
+            # Highlighted change: Added CBR button row
+            KeyBoard.append([Button.inline(f'💚 CBR - {str(use_cbr)} [Click To See]', 'cbr_value')])
+            for board in gen_keyboard(bool_list, use_cbr, "vbrcrfcbr", 2, False):
                 KeyBoard.append(board)
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
                 try:
-                    # Highlighted change: Corrected title
-                    await event.edit("❤ Rate Control (VBR/CRF/ABR) Settings", buttons=KeyBoard) # Modified title
+                    # Highlighted change: Updated title
+                    await event.edit("❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
                 except:
                     pass
             else:
-                # Highlighted change: Corrected title
-                await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR) Settings", buttons=KeyBoard) # Modified title
+                # Highlighted change: Updated title
+                await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
             return
 # End of Added from VFBITMOD-update
 
