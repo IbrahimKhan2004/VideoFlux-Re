@@ -16,6 +16,9 @@ class Names:
     telethon = "Telethon"
     pyrogram = "Pyrogram"
     rclone = "Rclone"
+# Highlighted change: Added Gofile name
+    gofile = "Gofile"
+# End of highlighted change
     gensample = "VideoSample"
     genss ="GenSS"
 # <<<< START OF DELETED BLOCK >>>>
