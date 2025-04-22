@@ -155,7 +155,7 @@ if __name__ == "__main__":
     else:
         LOGGER.info("🔶Not Setting Up Bot Commands")
     LOGGER.info(f'✅@{telethob_bot.username} Started Successfully!✅')
-    LOGGER.info(f"⚡Bot By Sahil Nolia⚡")
+    LOGGER.info(f"⚡Bot By BashAFK⚡")
     Telegram.TELETHON_CLIENT.run_until_disconnected()
 
 # --- END OF FILE VideoFlux-Re-master/main.py ---
