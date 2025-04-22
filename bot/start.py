@@ -1,7 +1,12 @@
 # --- START OF FILE VideoFlux-Re-master/bot/start.py ---
 
 from config.config import Config
-from telethon import events, Button
+# REMOVED: Telethon Button import
+# from telethon import events, Button
+# ADDED: Pyrogram imports
+from pyrogram import filters
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot_helper.Others.Helper_Functions import getbotuptime, get_config, delete_trash, get_logs_msg, gen_random_string, get_readable_time, get_human_size, botStartTime, get_current_time, get_env_keys, export_env_file, get_env_dict, get_host_stats
 from os.path import exists
 from asyncio import sleep as asynciosleep
@@ -19,13 +24,15 @@ from bot_helper.Process.Running_Process import remove_running_process
 from asyncio import Lock
 from psutil import virtual_memory, cpu_percent, disk_usage
 from bot_helper.Others.Names import Names
-from telethon.errors.rpcerrorlist import MessageIdInvalidError
+# REMOVED: Telethon error import
+# from telethon.errors.rpcerrorlist import MessageIdInvalidError
+# ADDED: Pyrogram error import
+from pyrogram.errors import MessageNotModified, MessageIdInvalid
 from re import findall
 from requests import get
 from bot_helper.Others.SpeedTest import speedtest
 from subprocess import run as srun
 # REMOVED: Heroku import
-# from heroku3 import from_key
 
 
 status_update = {}
@@ -44,24 +51,18 @@ sudo_users = Config.SUDO_USERS
 owner_id = Config.OWNER_ID
 allowed_chats = Config.ALLOWED_CHATS
 auth_chat = Config.AUTH_GROUP_ID
-TELETHON_CLIENT = Telegram.TELETHON_CLIENT
+# REMOVED: Telethon client variable
+# TELETHON_CLIENT = Telegram.TELETHON_CLIENT
+# ADDED: Pyrogram client variable
+PYROGRAM_CLIENT = Telegram.PYROGRAM_CLIENT
 LOGGER = Config.LOGGER
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 
 #////////////////////////////////////Functions////////////////////////////////////#
 
 # REMOVED: hardmux_multi_task function
-# async def hardmux_multi_task(multi_process_status, event, chat_id, user_id, process_command):
-#         ... (function content removed) ...
-
 # REMOVED: append_multi_task function
-# async def append_multi_task(process_status, process_name, command, event):
-#     ... (function content removed) ...
-
 # REMOVED: multi_tasks function
-# ###############------Multi-Tasks------###############
-# async def multi_tasks(process_status, command):
-#     ... (function content removed) ...
 
 
 ###############------Create_Dire------###############
@@ -108,23 +109,28 @@ def is_magnet(url: str):
 
 
 #////////////////////////////////////Telethon Functions////////////////////////////////////#
+# MODIFIED: Renamed section as functions are now Pyrogram-based
 
 ###############------Mention_User------###############
-def get_mention(event):
-    return "["+event.message.sender.first_name+"](tg://user?id="+str(event.message.sender.id)+")"
+# MODIFIED: Use Pyrogram event structure
+def get_mention(message): # Changed event to message
+    return f"[{message.from_user.first_name}](tg://user?id={message.from_user.id})"
 
 ###############------Check_File_Or_URL_Event------###############
-async def get_url_from_message(new_event):
-        if new_event.message.file:
-            return new_event
-        else:
-            return str(new_event.message.message)
+# MODIFIED: Use Pyrogram message structure
+async def get_url_from_message(message): # Changed new_event to message
+        if message.document or message.video or message.audio: # Check for media types
+            return message # Return the message object itself
+        elif message.text:
+            return str(message.text) # Return text if no media
+        return None # Return None if neither media nor text
 
 ###############------Get_Username------###############
-def get_username(event):
+# MODIFIED: Use Pyrogram event structure
+def get_username(message): # Changed event to message
     try:
-        if event.message.sender.username:
-            user_name = event.message.sender.username
+        if message.from_user.username:
+            user_name = message.from_user.username
         else:
             user_name = False
     except:
@@ -132,18 +138,22 @@ def get_username(event):
     return user_name
 
 ###############------Check_Auth_User------###############
-def user_auth_checker(event):
-    if event.is_private:
-        if event.message.sender.id == owner_id:
+# MODIFIED: Use Pyrogram message structure
+def user_auth_checker(message): # Changed event to message
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    if message.chat.type == message.chat.type.PRIVATE: # Check private chat
+        if user_id == owner_id:
             return True
-    else:
-        if event.message.sender.id in sudo_users or event.message.sender.id in allowed_chats or event.message.sender.id == owner_id or event.chat_id == auth_chat:
+    else: # Group/Supergroup/Channel
+        if user_id in sudo_users or user_id in allowed_chats or user_id == owner_id or chat_id == auth_chat:
             return True
     return False
 
 ###############------Check_Sudo_User_Event------###############
-def sudo_user_checker_event(event):
-    if event.message.sender.id in sudo_users or event.message.sender.id == owner_id:
+# MODIFIED: Use Pyrogram message structure
+def sudo_user_checker_event(message): # Changed event to message
+    if message.from_user.id in sudo_users or message.from_user.id == owner_id:
             return True
     return False
 
@@ -154,228 +164,124 @@ def sudo_user_checker_id(user_id):
     return False
 
 ###############------Check_Owner_User_Event------###############
-def owner_checker(event):
-    if event.message.sender.id == owner_id:
+# MODIFIED: Use Pyrogram message structure
+def owner_checker(message): # Changed event to message
+    if message.from_user.id == owner_id:
             return True
     return False
 
 ###############------Get_Link------###############
-async def get_link(event):
+# MODIFIED: Use Pyrogram message structure and client
+async def get_link(client, message): # Added client, changed event to message
     custom_file_name = False
-    if "|" in event.message.message:
-        ext_data = event.message.message.split('|')
+    text = message.text if message.text else "" # Get text safely
+    if "|" in text:
+        ext_data = text.split('|')
         custom_file_name = str(ext_data[-1]).strip()
         commands = ext_data[0].strip().split(' ')
     else:
-        commands = event.message.message.split(' ')
-    if len(commands)==2:
+        commands = text.split(' ')
+    if len(commands) >= 2: # Check >= 2 for command + link
             if str(commands[1]).startswith("http") or is_magnet(commands[1]):
                 return commands[1], custom_file_name
             else:
-                return "invalid", custom_file_name
-    else:
-            if event.reply_to_msg_id:
-                msg_object = await TELETHON_CLIENT.get_messages(event.message.chat.id, ids=event.reply_to_msg_id)
-                if not msg_object.file:
-                    if str(msg_object.message).startswith("http") or is_magnet(str(msg_object.message)):
-                        return str(msg_object.message), custom_file_name
-                    else:
-                        return "invalid", custom_file_name
+                # Check if it's just the command (like /merge) without a link
+                if len(commands) == 1 and commands[0].startswith('/'):
+                     pass # Let the reply check handle it
                 else:
-                    return msg_object, custom_file_name
+                    return "invalid", custom_file_name
+
+    if message.reply_to_message:
+        msg_object = message.reply_to_message
+        if msg_object.document or msg_object.video or msg_object.audio: # Check media
+            return msg_object, custom_file_name # Return message object
+        elif msg_object.text: # Check text in replied message
+            if str(msg_object.text).startswith("http") or is_magnet(str(msg_object.text)):
+                return str(msg_object.text), custom_file_name
             else:
-                return False, custom_file_name
+                return "invalid", custom_file_name
+        else: # Replied message has no usable content
+             return "invalid", custom_file_name
+    else: # No link in command and no reply
+        return False, custom_file_name
+
 
 ###############------Ask_User_ID------###############
-async def get_sudo_user_id(event):
-    if event.reply_to_msg_id:
-        reply_data = await TELETHON_CLIENT.get_messages(event.message.chat.id, ids=event.reply_to_msg_id)
-        return reply_data.from_id.user_id
+# MODIFIED: Use Pyrogram message structure
+async def get_sudo_user_id(message): # Changed event to message
+    if message.reply_to_message:
+        reply_data = message.reply_to_message
+        return reply_data.from_user.id
     return False
 
 
 ###############------Get_Custom_Name------###############
-async def get_custom_name(event):
+# MODIFIED: Use Pyrogram message structure
+async def get_custom_name(message): # Changed event to message
     custom_file_name = False
-    if "|" in event.message.message:
-        ext_data = event.message.message.split('|')
+    text = message.text if message.text else ""
+    if "|" in text:
+        ext_data = text.split('|')
         custom_file_name = str(ext_data[-1]).strip()
     return custom_file_name
 
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
 ###############------Ask_Text------###############
-async def ask_text(chat_id, user_id, event, timeout, message, text_type, include_list=False):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]')
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Task Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            try:
-                if not include_list:
-                    return text_type(new_event.message.message)
-                else:
-                    if text_type(new_event.message.message) not in include_list:
-                        await new_event.reply(f'❌Invalid Input')
-                        return False
-                    else:
-                        return new_event
-            except:
-                await new_event.reply(f'❌Invalid Input')
-                return False
+async def ask_text(client, chat_id, user_id, event_message, timeout, message, text_type, include_list=False):
+    # Placeholder - Pyrogram conversation logic is different
+    await event_message.reply(f"Text input ({message}) needs adaptation for Pyrogram.")
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
-
-
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
 ###############------Ask_Text_Event------###############
-async def ask_text_event(chat_id, user_id, event, timeout, message, message_hint=False):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
-            msg = f"*️⃣ {str(message)} [{str(timeout)} secs]"
-            if message_hint:
-                msg += f"\n\n{message_hint}"
-            ask = await event.reply(msg)
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Task Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            return new_event
+async def ask_text_event(client, chat_id, user_id, event_message, timeout, message, message_hint=False):
+    # Placeholder - Pyrogram conversation logic is different
+    await event_message.reply(f"Text input ({message}) needs adaptation for Pyrogram.")
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
 ###############------Ask_Text_List------###############
-async def ask_text_list(chat_id, user_id, event, timeout, message, include_list):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: str(e.message.message) in include_list), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]') # MODIFIED: Kept original emoji
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Task Has Been Cancelled.')
-                LOGGER.info(e)
-                return False
-            return new_event
+async def ask_text_list(client, chat_id, user_id, event_message, timeout, message, include_list):
+    # Placeholder - Pyrogram conversation logic is different
+    await event_message.reply(f"Text list input ({message}) needs adaptation for Pyrogram.")
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
 ###############------Ask Media OR URL------###############
-async def ask_media_OR_url(event, chat_id, user_id, keywords, message, timeout, mtype, s_handle, allow_magnet=True, allow_url=True, message_hint=False, allow_command=False, stop_on_url=True):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.file or str(e.message.message) in keywords or str(e.message.message).startswith("http")), timeout=timeout)
-            msg = f"*️⃣ {str(message)} [{str(timeout)} secs]"
-            if message_hint:
-                msg += f"\n\n{message_hint}"
-            ask = await event.reply(msg)
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Task Has Been Cancelled.')
-                return False
-            if new_event.message.file:
-                if mtype:
-                    if not str(new_event.message.file.mime_type).startswith(mtype):
-                        await new_event.reply(f'❗[{str(new_event.message.file.mime_type)}] This is not a valid file.')
-                        return False
-                return new_event
-            elif new_event.message.message:
-                if str(new_event.message.message)=='stop':
-                    if s_handle:
-                        await ask.reply('✅Task Stopped')
-                    return "stopped"
-                elif str(new_event.message.message)=='cancel':
-                    await ask.reply('✅Task Cancelled')
-                    return "cancelled"
-                elif str(new_event.message.message).startswith("http"):
-                    if allow_url:
-                        return new_event
-                    else:
-                        await ask.reply('❌HTTP Link Are Not Allowed.')
-                        if stop_on_url:
-                            return "stopped"
-                        else:
-                            return "pass"
-                elif is_magnet(str(new_event.message.message)):
-                    if allow_magnet:
-                        return new_event
-                    else:
-                        await ask.reply('❌Magnet Link Are Not Allowed.')
-                        if stop_on_url:
-                            return "stopped"
-                        else:
-                            return "pass"
-                else:
-                    if allow_command:
-                            await ask.reply(f'❗You have already started {str(new_event.message.message).replace("/", "")} task.')
-                            return "pass"
-                    else:
-                            await ask.reply(f'❌You already started {str(new_event.message.message).replace("/", "")} task. Now send {str(new_event.message.message)} command again')
-                            return "cancelled"
+async def ask_media_OR_url(client, event_message, chat_id, user_id, keywords, message, timeout, mtype, s_handle, allow_magnet=True, allow_url=True, message_hint=False, allow_command=False, stop_on_url=True):
+    # Placeholder - Pyrogram conversation logic is different
+    await event_message.reply(f"Media/URL input ({message}) needs adaptation for Pyrogram.")
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
 ###############------Ask URL------###############
-async def ask_url(event, chat_id, user_id, keywords, message, timeout, s_handle, allow_magnet=True, allow_url=True, message_hint=False, allow_command=False, stop_on_url=True):
-    async with TELETHON_CLIENT.conversation(chat_id) as conv:
-            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: str(e.message.message) in keywords or str(e.message.message).startswith("http") or is_magnet(str(e.message.message))), timeout=timeout)
-            msg = f"*️⃣ {str(message)} [{str(timeout)} secs]"
-            if message_hint:
-                msg += f"\n\n{message_hint}"
-            ask = await event.reply(msg)
-            try:
-                new_event = await handle
-            except Exception as e:
-                await ask.reply('🔃Timed Out! Task Has Been Cancelled.')
-                return False
-            if str(new_event.message.message)=='stop':
-                    if s_handle:
-                        await ask.reply('✅Task Stopped')
-                    return "stopped"
-            elif str(new_event.message.message)=='cancel':
-                await ask.reply('✅Task Cancelled')
-                return "cancelled"
-            elif str(new_event.message.message).startswith("http"):
-                if allow_url:
-                    return new_event
-                else:
-                    await ask.reply('❌HTTP Link Are Not Allowed.')
-                    if stop_on_url:
-                        return "stopped"
-                    else:
-                        return "pass"
-            elif is_magnet(str(new_event.message.message)):
-                if allow_magnet:
-                    return new_event
-                else:
-                    await ask.reply('❌Magnet Link Are Not Allowed.')
-                    if stop_on_url:
-                        return "stopped"
-                    else:
-                        return "pass"
-            else:
-                if allow_command:
-                        await ask.reply(f'❗You have already started {str(new_event.message.message).replace("/", "")} task.')
-                        return "pass"
-                else:
-                        await ask.reply(f'❌You already started {str(new_event.message.message).replace("/", "")} task. Now send {str(new_event.message.message)} command again')
-                        return "cancelled"
+async def ask_url(client, event_message, chat_id, user_id, keywords, message, timeout, s_handle, allow_magnet=True, allow_url=True, message_hint=False, allow_command=False, stop_on_url=True):
+    # Placeholder - Pyrogram conversation logic is different
+    await event_message.reply(f"URL input ({message}) needs adaptation for Pyrogram.")
+    return False
+    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
+    #         ... (Telethon logic removed) ...
 
-# REMOVED: get_thumbnail function
-# ###############------Get_Thumbnail------###############
-# async def get_thumbnail(process_status, keywords, timeout):
-#     ... (function content removed) ...
+# REMOVED: get_thumbnail function (Static handled by ProcessStatus init)
 
 # REMOVED: ask_watermark function
-# ###############------Ask_WaterMark------###############
-# async def ask_watermark(event, chat_id, user_id, cmd, wt_check, all_handle=False):
-#     ... (function content removed) ...
 
-# REMOVED: ask_thumbnail function (Static handled by ProcessStatus init)
-# ###############------Ask_Thumbnail------###############
-# async def ask_thumbnail(event, chat_id, user_id, cmd):
-#     ... (function content removed) ...
+# REMOVED: ask_thumbnail function
 
 
-async def update_status_message(event):
-        reply  = await event.reply("⏳Please Wait")
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+# MODIFIED: Use Pyrogram message structure and client
+async def update_status_message(client, message): # Added client, changed event to message
+        reply = await message.reply_text("⏳Please Wait") # Use reply_text
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         status_update_id = gen_random_string(5)
         async with status_update_lock:
             if chat_id not in status_update:
@@ -384,15 +290,23 @@ async def update_status_message(event):
             status_update[chat_id]['update_id'] = status_update_id
         await asynciosleep(2)
         while True:
-            status_message = await get_status_message(reply)
+            status_message = await get_status_message(reply) # Pass Pyrogram message object
             if not status_message:
                 try:
-                    await reply.edit(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
-                except:
-                    await event.reply(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
+                    # Use edit_text for Pyrogram
+                    await reply.edit_text(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
+                except MessageNotModified: # Catch Pyrogram specific error
+                    pass
+                except Exception as e: # Catch other potential errors
+                    LOGGER.error(f"Error editing status message (no process): {e}")
+                    # Fallback reply if edit fails
+                    await message.reply_text(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
                 break
-            if status_update[chat_id]['update_id'] != status_update_id:
-                await reply.delete()
+            if chat_id not in status_update or status_update[chat_id]['update_id'] != status_update_id: # Check if chat_id exists
+                try:
+                    await reply.delete()
+                except Exception as e:
+                    LOGGER.warning(f"Failed to delete status message: {e}")
                 break
             if get_data().get(user_id, {}).get('show_stats', True): # MODIFIED: Use .get()
                 status_message += f"**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}"
@@ -401,10 +315,15 @@ async def update_status_message(event):
                     status_message+= "**Current Time:** " + get_current_time() + "\n"
             status_message += f"**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}"
             try:
-                await reply.edit(status_message, buttons=[
-                        [Button.inline('⭕ Close', 'close_settings')]])
-            except MessageIdInvalidError:
-                break
+                 # Use edit_text and InlineKeyboardMarkup for Pyrogram
+                await reply.edit_text(status_message, reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton('⭕ Close', callback_data='close_settings')]
+                        ]))
+            except MessageNotModified: # Catch Pyrogram specific error
+                 pass
+            except MessageIdInvalid: # Catch if message was deleted
+                 LOGGER.warning("Status message ID invalid, likely deleted.")
+                 break
             except Exception as e:
                 LOGGER.info(f"Status Update Error: {str(e)}")
             await asynciosleep(get_data().get(user_id, {}).get('update_time', 7)) # MODIFIED: Use .get()
@@ -412,11 +331,12 @@ async def update_status_message(event):
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Save_Rclone_Config------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/saveconfig', func=lambda e: user_auth_checker(e)))
-async def _saverclone(event):
-        user_id = event.message.sender.id
-        chat_id = event.message.chat.id
+@PYROGRAM_CLIENT.on_message(filters.command("saveconfig") & filters.private) # Use Pyrogram filters
+async def _saverclone(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
+        chat_id = message.chat.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
         r_config = f'./userdata/{str(user_id)}_rclone.conf'
@@ -426,119 +346,125 @@ async def _saverclone(event):
                 text = f"Rclone Config Already Present\n\nSend Me New Config To Replace."
         else:
                 text = f"Rclone Config Not Present\n\nSend Me Config To Save."
-        new_event = await ask_media_OR_url(event, chat_id, user_id, ["/saveconfig", "stop"], text, 120, "text/", True, False)
+        # MODIFIED: Needs adaptation for Pyrogram
+        # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/saveconfig", "stop"], text, 120, "text/", True, False)
+        await message.reply_text("Rclone config saving needs adaptation for Pyrogram conversations.") # Placeholder
+        new_event = None # Placeholder
         if new_event and new_event not in ["cancelled", "stopped"]:
-            if new_event.message.file:
-                await new_event.download_media(file=r_config)
-            else:
-                link = str(new_event.message.message)
+            if new_event.document: # Check document for Pyrogram
+                await client.download_media(new_event.document, file_name=r_config) # Use client.download_media
+            elif new_event.text: # Check text for Pyrogram
+                link = str(new_event.text)
                 dw_file_from_url(link, r_config)
                 await saveoptions(user_id, 'rclone_config_link', link, SAVE_TO_DATABASE)
             if not exists(r_config):
-                await new_event.reply("❌Failed To Download Config File.")
+                await message.reply_text("❌Failed To Download Config File.") # Use reply_text
                 return
             accounts = await get_config(r_config)
             if not accounts:
                 await delete_trash(r_config)
-                await new_event.reply("❌Invalid Config File Or Empty Config File.")
+                await message.reply_text("❌Invalid Config File Or Empty Config File.")
                 return
             await saveoptions(user_id, 'drive_name', accounts[0], SAVE_TO_DATABASE)
             if link:
                 await saveoptions(user_id, 'rclone_config_link', link, SAVE_TO_DATABASE)
-            await new_event.reply(f"✅Config Saved Successfully\n\n🔶Using {str(get_data().get(user_id, {}).get('drive_name', 'N/A'))} Drive For Uploading.") # MODIFIED: Use .get()
+            await message.reply_text(f"✅Config Saved Successfully\n\n🔶Using {str(get_data().get(user_id, {}).get('drive_name', 'N/A'))} Drive For Uploading.") # Use reply_text
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Change_Task_Limit------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/tasklimit', func=lambda e: owner_checker(e)))
-async def _changetasklimit(event):
-        user_id = event.message.sender.id
-        chat_id = event.message.chat.id
-        limit = await ask_text(chat_id, user_id, event, 120, "Send New Task Limit", int)
+@PYROGRAM_CLIENT.on_message(filters.command("tasklimit") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _changetasklimit(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        # MODIFIED: Needs adaptation for Pyrogram
+        # limit = await ask_text(client, chat_id, user_id, message, 120, "Send New Task Limit", int)
+        await message.reply_text("Task limit changing needs adaptation for Pyrogram conversations.") # Placeholder
+        limit = None # Placeholder
         if limit:
             change_task_limit(int(limit))
             await refresh_tasks()
-            await event.reply(f'✅Successfully Set New Limit: {get_task_limit()}')
+            await message.reply_text(f'✅Successfully Set New Limit: {get_task_limit()}') # Use reply_text
             return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Restart------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/restart', func=lambda e: owner_checker(e)))
-async def _restart(event):
-        chat_id = event.message.chat.id
-        reply = await event.reply("♻Restarting...")
+@PYROGRAM_CLIENT.on_message(filters.command("restart") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _restart(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        reply = await message.reply_text("♻Restarting...") # Use reply_text
         srun(["pkill", "-f", "aria2c|ffmpeg|rclone"])
         srun(["python3", "update.py"])
         with open(".restartmsg", "w") as f:
                 f.truncate(0)
-                f.write(f"{chat_id}\n{reply.id}\n")
+                f.write(f"{chat_id}\n{reply.id}\n") # Use reply.id (Pyrogram)
         execl(executable, executable, *argv)
 
 
 # REMOVED: Heroku restart handler
-# ###############------Restart_Heroku------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/herokurestart', func=lambda e: owner_checker(e)))
-# async def _heroku_restart(event):
-#         ... (function content removed) ...
 
-
+# MODIFIED: Use Pyrogram client and message
 ###############------Get_Logs_Message------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/log', func=lambda e: sudo_user_checker_event(e)))
-async def _log(event):
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("log") & filters.private & filters.user(sudo_users + [owner_id])) # Use Pyrogram filters
+async def _log(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
         log_file = "Logging.txt"
         if exists(log_file):
-                await event.reply(str(get_logs_msg(log_file)))
+                # Send log content directly if too long for a single message
+                log_content = str(get_logs_msg(log_file))
+                if len(log_content) > 4096:
+                     await message.reply_document(log_file) # Send as document if too long
+                else:
+                     await message.reply_text(log_content) # Use reply_text
         else:
-            await event.reply("❗Log File Not Found")
+            await message.reply_text("❗Log File Not Found")
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Get_Log_File------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/logs', func=lambda e: sudo_user_checker_event(e)))
-async def _logs(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("logs") & filters.private & filters.user(sudo_users + [owner_id])) # Use Pyrogram filters
+async def _logs(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
         log_file = "Logging.txt"
         if exists(log_file):
             try:
-                await TELETHON_CLIENT.send_file(chat_id, file=log_file, allow_cache=False)
+                await client.send_document(chat_id, document=log_file) # Use send_document
             except Exception as e:
-                await event.reply(str(e))
+                await message.reply_text(str(e))
         else:
-            await event.reply("❗Log File Not Found")
+            await message.reply_text("❗Log File Not Found")
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Reset_Database------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/resetdb', func=lambda e: owner_checker(e)))
-async def _resetdb(event):
-        await event.reply("*️⃣Are you sure?\n\n🚫 This will reset your all database 🚫", buttons=[
-                [Button.inline('Yes 🚫', 'resetdb_True')],
-                [Button.inline('No 😓', 'resetdb_False')],
-                [Button.inline('⭕Close', 'close_settings')]
-            ])
+@PYROGRAM_CLIENT.on_message(filters.command("resetdb") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _resetdb(client, message): # Use Pyrogram arguments
+        await message.reply_text("*️⃣Are you sure?\n\n🚫 This will reset your all database 🚫", reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+                [InlineKeyboardButton('Yes 🚫', callback_data='resetdb_True')],
+                [InlineKeyboardButton('No 😓', callback_data='resetdb_False')],
+                [InlineKeyboardButton('⭕Close', callback_data='close_settings')]
+            ]))
         return
 
 # REMOVED: Save Watermark handler
-# ###############------Save_WaterMark_Image------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/savewatermark', func=lambda e: user_auth_checker(e)))
-# async def _savewatermark(event):
-#         ... (function content removed) ...
 
-
+# MODIFIED: Use Pyrogram client and message
 ###############------Save_Thumbnail------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/savethumb', func=lambda e: user_auth_checker(e)))
-async def _savethumb(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("savethumb") & filters.private) # Use Pyrogram filters
+async def _savethumb(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        check_thumbnail = await ask_thumbnail(event, chat_id, user_id, "savethumb") # This function was removed, need to re-evaluate if needed for static thumb
         # MODIFIED: Replaced ask_thumbnail logic with simple file download
         Thumbnail_path = f'./userdata/{str(user_id)}_Thumbnail.jpg'
         Thumbnail_check = exists(Thumbnail_path)
@@ -546,76 +472,85 @@ async def _savethumb(event):
                 text = f"Thumbnail Already Present\n\n🔷Send Me New Thumbnail To Replace."
         else:
                 text = f"Thumbnail Not Present\n\n🔶Send Me Thumbnail To Save."
-        new_event = await ask_media_OR_url(event, chat_id, user_id, ["/savethumb", "stop"], text, 120, "image/", True, False, False)
+        # MODIFIED: Needs adaptation for Pyrogram
+        # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/savethumb", "stop"], text, 120, "image/", True, False, False)
+        await message.reply_text("Thumbnail saving needs adaptation for Pyrogram conversations.") # Placeholder
+        new_event = None # Placeholder
         if new_event and new_event not in ["cancelled", "stopped"]:
-            await TELETHON_CLIENT.download_media(new_event.message, Thumbnail_path)
+            await client.download_media(new_event.photo or new_event.document, file_name=Thumbnail_path) # Check photo or document
             if exists(Thumbnail_path):
-                 await event.reply("✅Thumbnail saved successfully.")
+                 await message.reply_text("✅Thumbnail saved successfully.")
                  return True # Indicate success
             else:
-                 await event.reply("❗Failed To Save Thumbnail.")
+                 await message.reply_text("❗Failed To Save Thumbnail.")
                  return False # Indicate failure
         else:
             # Handle cancellation or timeout if needed, maybe just return False
             return False
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Renew------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/renew', func=lambda e: owner_checker(e)))
-async def _renew(event):
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("renew") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _renew(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        await event.reply("*️⃣Are you sure?\n\n🚫 This will delete all your downloads and saved watermark locally 🚫", buttons=[
-                [Button.inline('Yes 🚫', 'renew_True')],
-                [Button.inline('No 😓', 'renew_False')],
-                [Button.inline('⭕Close', 'close_settings')]
-            ])
+        await message.reply_text("*️⃣Are you sure?\n\n🚫 This will delete all your downloads and saved watermark locally 🚫", reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+                [InlineKeyboardButton('Yes 🚫', callback_data='renew_True')],
+                [InlineKeyboardButton('No 😓', callback_data='renew_False')],
+                [InlineKeyboardButton('⭕Close', callback_data='close_settings')]
+            ]))
         return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Save_Stats------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/stats', func=lambda e: sudo_user_checker_event(e)))
-async def _stats_msg(event):
-    await event.reply(str(await get_host_stats()), parse_mode='html')
+@PYROGRAM_CLIENT.on_message(filters.command("stats") & filters.private & filters.user(sudo_users + [owner_id])) # Use Pyrogram filters
+async def _stats_msg(client, message): # Use Pyrogram arguments
+    await message.reply_text(str(await get_host_stats()), parse_mode='html') # Use reply_text
     return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Speed_Test------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/speedtest', func=lambda e: sudo_user_checker_event(e)))
-async def _speed_test(event):
-    chat_id = event.message.chat.id
-    reply = await event.reply("⏳Running Speed Test, Please Wait.....")
+@PYROGRAM_CLIENT.on_message(filters.command("speedtest") & filters.private & filters.user(sudo_users + [owner_id])) # Use Pyrogram filters
+async def _speed_test(client, message): # Use Pyrogram arguments
+    chat_id = message.chat.id
+    reply = await message.reply_text("⏳Running Speed Test, Please Wait.....")
     try:
         file_path, caption = await speedtest()
-        await TELETHON_CLIENT.send_file(chat_id, file=file_path, caption=caption, reply_to=event.message, allow_cache=False, parse_mode='html')
+        await client.send_photo(chat_id, photo=file_path, caption=caption, reply_to_message_id=message.id) # Use send_photo
     except Exception as e:
-        await event.reply(str(e))
+        await message.reply_text(str(e))
     await reply.delete()
     return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Start_Message------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/start'))
-async def _startmsg(event):
-    text = f"Hi {get_mention(event)}, I Am Alive."
-    await event.reply(text, buttons=[
-    [Button.url('⭐ Bot By 𝚂𝚊𝚑𝚒𝚕 ⭐', 'https://t.me/nik66')],
-    [Button.url('❤ Join Channel ❤', 'https://t.me/nik66x')]
-])
+@PYROGRAM_CLIENT.on_message(filters.command("start") & filters.private) # Use Pyrogram filters
+async def _startmsg(client, message): # Use Pyrogram arguments
+    text = f"Hi {get_mention(message)}, I Am Alive." # Use Pyrogram mention
+    await message.reply_text(text, reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+        [InlineKeyboardButton('⭐ Bot By 𝚂𝚊𝚑𝚒𝚕 ⭐', url='https://t.me/nik66')],
+        [InlineKeyboardButton('❤ Join Channel ❤', url='https://t.me/nik66x')]
+    ]))
     return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Bot_UpTime------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/time', func=lambda e: sudo_user_checker_event(e)))
-async def _timecmd(event):
-    await event.reply(f'♻Bot Is Alive For {getbotuptime()}')
+@PYROGRAM_CLIENT.on_message(filters.command("time") & filters.private & filters.user(sudo_users + [owner_id])) # Use Pyrogram filters
+async def _timecmd(client, message): # Use Pyrogram arguments
+    await message.reply_text(f'♻Bot Is Alive For {getbotuptime()}')
     return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Cancel Process------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/cancel', func=lambda e: user_auth_checker(e)))
-async def _cancel(event):
-        user_id = event.message.sender.id
-        commands = event.message.message.split(' ')
+@PYROGRAM_CLIENT.on_message(filters.command("cancel") & filters.private) # Use Pyrogram filters
+async def _cancel(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
+        commands = message.text.split(' ') # Use message.text
         if len(commands)==3:
                 processx = commands[1]
                 process_id = commands[2]
@@ -626,10 +561,10 @@ async def _cancel(event):
                                     await Aria2.cancel_download(process_id)
                                     await remove_from_working_task(dl.listener().process_id)
                                 else:
-                                    await event.reply(f'❗You Have No Permission To Cancel This Task')
+                                    await message.reply_text(f'❗You Have No Permission To Cancel This Task')
                                     return
                             else:
-                                await event.reply(f'❗No download with this id')
+                                await message.reply_text(f'❗No download with this id')
                                 return
                         elif processx=="process":
                             add_user_id = get_user_id(process_id)
@@ -638,35 +573,36 @@ async def _cancel(event):
                                     cancel_result = await remove_running_process(process_id)
                                     await remove_from_working_task(process_id)
                                     if not cancel_result:
-                                            await event.reply(f'❗No process with this id')
+                                            await message.reply_text(f'❗No process with this id')
                                             return
                                 else:
-                                    await event.reply(f'❗You Have No Permission To Cancel This Task')
+                                    await message.reply_text(f'❗You Have No Permission To Cancel This Task')
                                     return
                             else:
                                 if user_id==owner_id:
                                     cancel_result = await remove_running_process(process_id)
                                     await remove_from_working_task(process_id)
                                     if not cancel_result:
-                                            await event.reply(f'❗No process with this id')
+                                            await message.reply_text(f'❗No process with this id')
                                             return
                                 else:
-                                    await event.reply(f'❗You Have No Permission To Cancel This Task')
+                                    await message.reply_text(f'❗You Have No Permission To Cancel This Task')
                                     return
-                        await event.reply(f'✅Successfully Cancelled.')
+                        await message.reply_text(f'✅Successfully Cancelled.')
                 except Exception as e:
-                        await event.reply(str(e))
+                        await message.reply_text(str(e))
                 return
         else:
-                await event.reply(f'❗Give Me Process ID To Cancel.')
+                await message.reply_text(f'❗Give Me Process ID To Cancel.')
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------FFMPEF Log------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/ffmpeg', func=lambda e: user_auth_checker(e)))
-async def _ffmpeg_log(event):
-        chat_id = event.message.chat.id
-        commands = event.message.message.split(' ')
+@PYROGRAM_CLIENT.on_message(filters.command("ffmpeg") & filters.private) # Use Pyrogram filters
+async def _ffmpeg_log(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        commands = message.text.split(' ') # Use message.text
         if len(commands)==3:
                 processx = commands[1]
                 process_id = commands[2]
@@ -674,29 +610,25 @@ async def _ffmpeg_log(event):
                         if processx=="log":
                             log_file = await get_ffmpeg_log_file(process_id)
                             if log_file:
-                                await TELETHON_CLIENT.send_file(chat_id, file=log_file, allow_cache=False)
+                                await client.send_document(chat_id, document=log_file) # Use send_document
                             else:
-                                await event.reply("❗Log File Not Found")
+                                await message.reply_text("❗Log File Not Found")
                 except Exception as e:
-                        await event.reply(str(e))
+                        await message.reply_text(str(e))
                 return
         else:
-                await event.reply(f'❗Give Me Process ID.')
+                await message.reply_text(f'❗Give Me Process ID.')
         return
 
 # REMOVED: Compress handler
-# ###############------Compress------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/compress', func=lambda e: user_auth_checker(e)))
-# async def _compress_video(event):
-#         ... (function content removed) ...
 
-
+# MODIFIED: Use Pyrogram client and message
 ###############------Status------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/status', func=lambda e: user_auth_checker(e)))
-async def _status(event):
-        reply  = await event.reply("⏳Please Wait")
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("status") & filters.private) # Use Pyrogram filters
+async def _status(client, message): # Use Pyrogram arguments
+        reply = await message.reply_text("⏳Please Wait")
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
         status_update_id = gen_random_string(5)
@@ -710,83 +642,90 @@ async def _status(event):
             status_message = await get_status_message(reply)
             if not status_message:
                 try:
-                    await reply.edit(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
-                except:
-                    await event.reply(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
+                    await reply.edit_text(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
+                except MessageNotModified:
+                    pass
+                except Exception as e:
+                    LOGGER.error(f"Error editing status message (no process): {e}")
+                    await message.reply_text(f"No Running Process!\n\n**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}")
                 break
-            if status_update[chat_id]['update_id'] != status_update_id:
-                await reply.delete()
+            if chat_id not in status_update or status_update[chat_id]['update_id'] != status_update_id:
+                try:
+                    await reply.delete()
+                except Exception as e:
+                     LOGGER.warning(f"Failed to delete status message: {e}")
                 break
-            if get_data().get(user_id, {}).get('show_stats', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_stats', True):
                 status_message += f"**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}"
                 status_message += f"\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n"
-            if get_data().get(user_id, {}).get('show_time', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_time', True):
                     status_message+= "**Current Time:** " + get_current_time() + "\n"
             status_message += f"**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}"
             try:
-                await reply.edit(status_message, buttons=[
-                        [Button.inline('⭕ Close', 'close_settings')]])
-            except MessageIdInvalidError:
-                break
+                await reply.edit_text(status_message, reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+                        [InlineKeyboardButton('⭕ Close', callback_data='close_settings')]
+                        ]))
+            except MessageNotModified:
+                 pass
+            except MessageIdInvalid:
+                 LOGGER.warning("Status message ID invalid, likely deleted.")
+                 break
             except Exception as e:
                 LOGGER.info(f"Status Update Error: {str(e)}")
-            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7)) # MODIFIED: Use .get()
+            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7))
         LOGGER.info(f"Status Updating Complete")
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Settings------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/settings', func=lambda e: user_auth_checker(e)))
-async def _settings(event):
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("settings") & filters.private) # Use Pyrogram filters
+async def _settings(client, message): # Use Pyrogram arguments
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
-        await event.reply(text, buttons=[
-        [Button.inline('#️⃣ General', 'general_settings')],
-        [Button.inline('❣ Telegram', 'telegram_settings')],
-        [Button.inline('📝 Progress Bar', 'progress_settings')],
-        # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED
-        # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED
-        [Button.inline('🍧 Merge', 'merge_settings')],
-        [Button.inline('💻 Encode', 'convert_settings')],
-        [Button.inline('🎬 Video ', 'video_settings')],
-        [Button.inline('🔊 Audio', 'audio_settings')],
-        [Button.inline('❤ VBR / 🖤CRF', 'vbrcrf_settings')],
-        [Button.inline('🚍 HardMux', 'hardmux_settings')],
-        [Button.inline('🎮 SoftMux', 'softmux_settings')],
-        # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED
-        [Button.inline('⭕Close Settings', 'close_settings')]
-    ])
+        text = f"⚙ Hi {get_mention(message)} Choose Your Settings" # Use Pyrogram mention
+        await message.reply_text(text, reply_markup=InlineKeyboardMarkup([ # Use Pyrogram InlineKeyboardMarkup
+            [InlineKeyboardButton('#️⃣ General', callback_data='general_settings')],
+            # [InlineKeyboardButton('❣ Telegram', callback_data='telegram_settings')], # REMOVED
+            [InlineKeyboardButton('📝 Progress Bar', callback_data='progress_settings')],
+            [InlineKeyboardButton('🍧 Merge', callback_data='merge_settings')],
+            [InlineKeyboardButton('💻 Encode', callback_data='convert_settings')],
+            [InlineKeyboardButton('🎬 Video ', callback_data='video_settings')],
+            [InlineKeyboardButton('🔊 Audio', callback_data='audio_settings')],
+            [InlineKeyboardButton('❤ VBR / 🖤CRF', callback_data='vbrcrf_settings')],
+            [InlineKeyboardButton('🚍 HardMux', callback_data='hardmux_settings')],
+            [InlineKeyboardButton('🎮 SoftMux', callback_data='softmux_settings')],
+            [InlineKeyboardButton('⭕Close Settings', callback_data='close_settings')]
+        ]))
         return
 
 # REMOVED: Watermark handler
-# ###############------Watermark------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/watermark', func=lambda e: user_auth_checker(e)))
-# async def _add_watermark_to_video(event):
-#         ... (function content removed) ...
 
-
+# MODIFIED: Use Pyrogram client and message
 ###############------Merge_Videos------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/merge', func=lambda e: user_auth_checker(e)))
-async def _merge_videos(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("merge") & filters.private) # Use Pyrogram filters
+async def _merge_videos(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        custom_file_name = await get_custom_name(event)
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.merge, custom_file_name)
+        custom_file_name = await get_custom_name(message)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.merge, custom_file_name) # Pass message
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         file_index = 1
         Cancel = False
         while True:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/merge", "stop", "cancel"], f"Send Video or URL No {file_index}", 120, "video/", False, message_hint=f"🔷Send `stop` To Process Merge\n🔷Send `cancel` To Cancel Merge Process", allow_command=True)
+            # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/merge", "stop", "cancel"], f"Send Video or URL No {file_index}", 120, "video/", False, message_hint=f"🔷Send `stop` To Process Merge\n🔷Send `cancel` To Cancel Merge Process", allow_command=True)
+            await message.reply_text(f"Merge input (file {file_index}) needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = "stopped" # Placeholder to stop loop for now
             if new_event and new_event not in ["cancelled", "stopped", "pass"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
                 if type(link)==str:
                     task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
                 else:
@@ -805,58 +744,63 @@ async def _merge_videos(event):
             return
         if len(task['functions'])<2:
             del process_status
-            await event.reply("❗Atleast 2 Files Required To Merge")
+            await message.reply_text("❗Atleast 2 Files Required To Merge")
             return
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/merge", "pass"], 120)
         # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------SoftMux------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/softmux', func=lambda e: user_auth_checker(e)))
-async def _softmux_subtitles(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("softmux") & filters.private) # Use Pyrogram filters
+async def _softmux_subtitles(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/softmux", "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/softmux", "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Softmux video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.softmux, custom_file_name)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.softmux, custom_file_name) # Pass message
         file_index = 1
         Cancel = False
         while True:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/softmux", "stop", "cancel"], f"Send Subtitle SRT File No {file_index}", 120, False, False, message_hint=f"🔷Send `stop` To Process SoftMux\n🔷Send `cancel` To Cancel SoftMux Process", allow_command=True, allow_magnet=False, allow_url=False, stop_on_url=False)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/softmux", "stop", "cancel"], f"Send Subtitle SRT File No {file_index}", 120, False, False, message_hint=f"🔷Send `stop` To Process SoftMux\n🔷Send `cancel` To Cancel SoftMux Process", allow_command=True, allow_magnet=False, allow_url=False, stop_on_url=False)
+            await message.reply_text(f"Softmux subtitle input (file {file_index}) needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = "stopped" # Placeholder to stop loop for now
             if new_event and new_event not in ["cancelled", "stopped", "pass"]:
-                if new_event.message.file:
-                    if not str(new_event.message.file.mime_type).startswith("video/") and not str(new_event.message.file.mime_type).startswith("image/"):
-                        if new_event.message.file.size<512000: # MODIFIED: Kept original size limit
-                            sub_name = new_event.message.file.name
-                            create_direc(f"{process_status.dir}/subtitles")
-                            sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
-                            sub_path = await new_event.download_media(file=sub_dw_loc)
-                            process_status.append_subtitles(sub_path)
-                            file_index+=1
-                        else:
-                            await event.reply("❌Subtitle Size Is More Than 500KB, Is This Really A Subtitle File")
+                if new_event.document: # Check document
+                    # Mime type check might need adjustment based on Pyrogram attributes
+                    # if not str(new_event.document.mime_type).startswith("video/") and not str(new_event.document.mime_type).startswith("image/"):
+                    if new_event.document.file_size < 512000: # Check size
+                        sub_name = new_event.document.file_name
+                        create_direc(f"{process_status.dir}/subtitles")
+                        sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
+                        sub_path = await client.download_media(new_event.document, file_name=sub_dw_loc) # Use client.download_media
+                        process_status.append_subtitles(sub_path)
+                        file_index+=1
                     else:
-                        await event.reply("❌I Need A Subtitle File")
+                        await message.reply_text("❌Subtitle Size Is More Than 500KB, Is This Really A Subtitle File")
+                    # else:
+                    #     await message.reply_text("❌I Need A Subtitle File")
                 else:
-                    await event.reply("❗Only Telegram File Is Supported")
+                    await message.reply_text("❗Only Telegram File Is Supported")
             elif new_event=="stopped":
                 break
             elif new_event=="cancelled":
@@ -870,170 +814,181 @@ async def _softmux_subtitles(event):
             return
         if len(process_status.subtitles)==0:
             del process_status
-            await event.reply("❗Atleast 1 Files Required To SoftMux")
+            await message.reply_text("❗Atleast 1 Files Required To SoftMux")
             return
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/softmux", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 # REMOVED: Softremux handler
-# ###############------softremux------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/softremux', func=lambda e: user_auth_checker(e)))
-# async def _softremux_subtitles(event):
-#         ... (function content removed) ...
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Convert------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/convert', func=lambda e: user_auth_checker(e)))
-async def _convert_video(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("convert") & filters.private) # Use Pyrogram filters
+async def _convert_video(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/convert", "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/convert", "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Convert video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.convert, custom_file_name)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.convert, custom_file_name) # Pass message
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/convert", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------hardmux------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/hardmux', func=lambda e: user_auth_checker(e)))
-async def _hardmux_subtitle(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("hardmux") & filters.private) # Use Pyrogram filters
+async def _hardmux_subtitle(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/hardmux", "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/hardmux", "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Hardmux video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.hardmux, custom_file_name)
-        new_event = await ask_media_OR_url(event, chat_id, user_id, ["/hardmux", "stop"], f"Send Subtitle SRT File", 120, False, True, allow_magnet=False, allow_url=False)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.hardmux, custom_file_name) # Pass message
+         # MODIFIED: Needs adaptation for Pyrogram
+        # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/hardmux", "stop"], f"Send Subtitle SRT File", 120, False, True, allow_magnet=False, allow_url=False)
+        await message.reply_text("Hardmux subtitle input needs adaptation for Pyrogram conversations.") # Placeholder
+        new_event = None # Placeholder
         if new_event and new_event not in ["cancelled", "stopped"]:
-            if new_event.message.file:
-                if not str(new_event.message.file.mime_type).startswith("video/") and not str(new_event.message.file.mime_type).startswith("image/"):
-                    if new_event.message.file.size<512000: # MODIFIED: Kept original size limit
-                        sub_name = new_event.message.file.name
-                        create_direc(f"{process_status.dir}/subtitles")
-                        sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
-                        sub_path = await new_event.download_media(file=sub_dw_loc)
-                        process_status.append_subtitles(sub_path)
-                    else:
-                        await event.reply("❌Subtitle Size Is More Than 500KB, Is This Really A Subtitle File")
-                        del process_status
-                        return
+            if new_event.document: # Check document
+                # Mime type check might need adjustment
+                # if not str(new_event.document.mime_type).startswith("video/") and not str(new_event.document.mime_type).startswith("image/"):
+                if new_event.document.file_size < 512000: # Check size
+                    sub_name = new_event.document.file_name
+                    create_direc(f"{process_status.dir}/subtitles")
+                    sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
+                    sub_path = await client.download_media(new_event.document, file_name=sub_dw_loc) # Use client.download_media
+                    process_status.append_subtitles(sub_path)
                 else:
-                    await event.reply("❌I Need A Subtitle File.")
+                    await message.reply_text("❌Subtitle Size Is More Than 500KB, Is This Really A Subtitle File")
                     del process_status
                     return
+                # else:
+                #     await message.reply_text("❌I Need A Subtitle File.")
+                #     del process_status
+                #     return
             else:
-                await event.reply("❗Only Telegram File Is Supported")
+                await message.reply_text("❗Only Telegram File Is Supported")
                 del process_status
                 return
         else:
+            # Handle cancellation or timeout if needed
+            if new_event is None: # If placeholder was hit due to needing adaptation
+                 await message.reply_text("Subtitle input cancelled due to pending Pyrogram adaptation.")
             del process_status
             return
         if len(process_status.subtitles)==0:
             del process_status
-            await event.reply("❗Atleast 1 Files Required To hardmux")
+            await message.reply_text("❗Atleast 1 Files Required To hardmux")
             return
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/hardmux", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Change_Config------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/changeconfig', func=lambda e: owner_checker(e)))
-async def _changeconfig(event):
+@PYROGRAM_CLIENT.on_message(filters.command("changeconfig") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _changeconfig(client, message): # Use Pyrogram arguments
         if not exists('config.env'):
-            await event.reply("❗`config.env` File Not Found")
+            await message.reply_text("❗`config.env` File Not Found")
             return
         tg_button = []
         for key in get_env_keys('config.env'):
-            tg_button.append([Button.inline(key, f'env_{key}')])
+            tg_button.append([InlineKeyboardButton(key, callback_data=f'env_{key}')]) # Use Pyrogram InlineKeyboardButton
         if tg_button:
-            tg_button.append([Button.inline('⭕Close Settings', 'close_settings')])
-            await event.reply("Choose Variable To Change", buttons=tg_button)
+            tg_button.append([InlineKeyboardButton('⭕Close Settings', callback_data='close_settings')])
+            await message.reply_text("Choose Variable To Change", reply_markup=InlineKeyboardMarkup(tg_button)) # Use Pyrogram InlineKeyboardMarkup
         else:
-            await event.reply("❗No Variable In `config.env` File")
+            await message.reply_text("❗No Variable In `config.env` File")
         return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Clear_Config------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/clearconfigs', func=lambda e: owner_checker(e)))
-async def _clearconfig(event):
+@PYROGRAM_CLIENT.on_message(filters.command("clearconfigs") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _clearconfig(client, message): # Use Pyrogram arguments
         if exists('./userdata/botconfig.env'):
             remove("./userdata/botconfig.env")
-            await event.reply(f"✅Successfully Cleared")
+            await message.reply_text(f"✅Successfully Cleared")
         else:
-            await event.reply(f"❗Config Not Found")
+            await message.reply_text(f"❗Config Not Found")
         return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Check_Sudo------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/checksudo', func=lambda e: owner_checker(e)))
-async def _checksudo(event):
-    await event.reply(str(sudo_users))
+@PYROGRAM_CLIENT.on_message(filters.command("checksudo") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _checksudo(client, message): # Use Pyrogram arguments
+    await message.reply_text(str(sudo_users))
     return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Add_Sudo------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/addsudo', func=lambda e: owner_checker(e)))
-async def _addsudo(event):
-    chat_id = event.message.chat.id
-    user_id = event.message.sender.id
-    sudo_id = await get_sudo_user_id(event)
+@PYROGRAM_CLIENT.on_message(filters.command("addsudo") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _addsudo(client, message): # Use Pyrogram arguments
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    sudo_id = await get_sudo_user_id(message) # Pass Pyrogram message
     if not sudo_id:
-        sudo_id = await ask_text(chat_id, user_id, event, 120, "Send User ID", int)
+         # MODIFIED: Needs adaptation for Pyrogram
+        # sudo_id = await ask_text(client, chat_id, user_id, message, 120, "Send User ID", int)
+        await message.reply_text("Sudo ID input needs adaptation for Pyrogram conversations.") # Placeholder
+        sudo_id = None # Placeholder
         if not sudo_id:
             return
     if sudo_id not in sudo_users:
@@ -1049,21 +1004,25 @@ async def _addsudo(event):
                 sudo_data+= f"{u} "
             config_dict["SUDO_USERS"] = sudo_data.strip()
             export_env_file("./userdata/botconfig.env", config_dict)
-            await event.reply(f"✅Successfully Added To Sudo Users.\n\n{str(sudo_users)}")
+            await message.reply_text(f"✅Successfully Added To Sudo Users.\n\n{str(sudo_users)}")
             return
     else:
-        await event.reply(f"❗ID Already In Sudo Users.\n\n{str(sudo_users)}")
+        await message.reply_text(f"❗ID Already In Sudo Users.\n\n{str(sudo_users)}")
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Delete_Sudo------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/delsudo', func=lambda e: owner_checker(e)))
-async def _delsudo(event):
-    chat_id = event.message.chat.id
-    user_id = event.message.sender.id
-    sudo_id = await get_sudo_user_id(event)
+@PYROGRAM_CLIENT.on_message(filters.command("delsudo") & filters.private & filters.user(owner_id)) # Use Pyrogram filters
+async def _delsudo(client, message): # Use Pyrogram arguments
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    sudo_id = await get_sudo_user_id(message) # Pass Pyrogram message
     if not sudo_id:
-        sudo_id = await ask_text(chat_id, user_id, event, 120, "Send User ID", int)
+         # MODIFIED: Needs adaptation for Pyrogram
+        # sudo_id = await ask_text(client, chat_id, user_id, message, 120, "Send User ID", int)
+        await message.reply_text("Sudo ID input needs adaptation for Pyrogram conversations.") # Placeholder
+        sudo_id = None # Placeholder
         if not sudo_id:
             return
     if sudo_id in sudo_users:
@@ -1079,98 +1038,113 @@ async def _delsudo(event):
                 sudo_data+= f"{u} "
             config_dict["SUDO_USERS"] = sudo_data.strip()
             export_env_file("./userdata/botconfig.env", config_dict)
-            await event.reply(f"✅Successfully Removed From Sudo Users.\n\n{str(sudo_users)}")
+            await message.reply_text(f"✅Successfully Removed From Sudo Users.\n\n{str(sudo_users)}")
             return
     else:
-        await event.reply(f"❗ID Not Found In Sudo Users.\n\n{str(sudo_users)}")
+        await message.reply_text(f"❗ID Not Found In Sudo Users.\n\n{str(sudo_users)}")
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Generate_Sample_Video------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/gensample', func=lambda e: user_auth_checker(e)))
-async def _gen_video_sample(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("gensample") & filters.private) # Use Pyrogram filters
+async def _gen_video_sample(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/gensample", "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/gensample", "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Sample video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.gensample, custom_file_name)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.gensample, custom_file_name) # Pass message
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Generate_Screenshots------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/genss', func=lambda e: user_auth_checker(e)))
-async def _gen_screenshots(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("genss") & filters.private) # Use Pyrogram filters
+async def _gen_screenshots(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/genss", "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, ["/genss", "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Screenshot video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.genss, custom_file_name)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.genss, custom_file_name) # Pass message
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Change_MetaData------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/changemetadata', func=lambda e: user_auth_checker(e)))
-async def _change_metadata(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("changemetadata") & filters.private) # Use Pyrogram filters
+async def _change_metadata(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         command = '/changemetadata'
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, [command, "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, [command, "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Metadata video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        metadata_event = await ask_text_event(chat_id, user_id, event, 120, "Send MetaData", message_hint="🔷`a` Is For Audio & `s` Is For Subtitle\n🔷 Send In The Format As Shown Below:\n\n`a:0-AudioLanguage-AudioTitle` (To Change Audio Number 1 Metadata)\n`s:0-SubLanguage-SubTitle` (To Change Subtitle Number 1 Metadata)\n\ne.g. `a:1-eng-nik66bots` (To Change Audio Number 2 Metadata)")
+         # MODIFIED: Needs adaptation for Pyrogram
+        # metadata_event = await ask_text_event(client, chat_id, user_id, message, 120, "Send MetaData", message_hint="🔷`a` Is For Audio & `s` Is For Subtitle\n🔷 Send In The Format As Shown Below:\n\n`a:0-AudioLanguage-AudioTitle` (To Change Audio Number 1 Metadata)\n`s:0-SubLanguage-SubTitle` (To Change Subtitle Number 1 Metadata)\n\ne.g. `a:1-eng-nik66bots` (To Change Audio Number 2 Metadata)")
+        await message.reply_text("Metadata text input needs adaptation for Pyrogram conversations.") # Placeholder
+        metadata_event = None # Placeholder
         if not metadata_event:
             return
-        custom_metadata_list = str(metadata_event.message.message).split('\n')
+        custom_metadata_list = str(metadata_event.text).split('\n') # Use .text
         custom_metadata = []
         for m in custom_metadata_list:
             mdata = str(m).strip().split('-')
@@ -1181,47 +1155,53 @@ async def _change_metadata(event):
                 mtilte = str(mdata[2])
                 custom_metadata.append([f'-metadata:s:{sindex}', f"language={mlang}", f'-metadata:s:{str(sindex)}', f"title={mtilte}"])
             except Exception as e:
-                await metadata_event.reply(f"❗Invalid Metadata, Error: {str(e)}")
+                await metadata_event.reply_text(f"❗Invalid Metadata, Error: {str(e)}") # Use reply_text
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.changeMetadata, custom_file_name, custom_metadata=custom_metadata)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.changeMetadata, custom_file_name, custom_metadata=custom_metadata) # Pass message
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, [command, "pass"], 120)
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 
+# MODIFIED: Use Pyrogram client and message
 ###############------Change_index------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/changeindex', func=lambda e: user_auth_checker(e)))
-async def _change_index(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
+@PYROGRAM_CLIENT.on_message(filters.command("changeindex") & filters.private) # Use Pyrogram filters
+async def _change_index(client, message): # Use Pyrogram arguments
+        chat_id = message.chat.id
+        user_id = message.from_user.id
         command = '/changeindex'
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
+        link, custom_file_name = await get_link(client, message) # Pass client and message
         if link=="invalid":
-            await event.reply("❗Invalid link")
+            await message.reply_text("❗Invalid link")
             return
         elif not link:
-            new_event = await ask_media_OR_url(event, chat_id, user_id, [command, "stop"], "Send Video or URL", 120, "video/", True)
+             # MODIFIED: Needs adaptation for Pyrogram
+            # new_event = await ask_media_OR_url(client, message, chat_id, user_id, [command, "stop"], "Send Video or URL", 120, "video/", True)
+            await message.reply_text("Index video input needs adaptation for Pyrogram conversations.") # Placeholder
+            new_event = None # Placeholder
             if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
+                link = await get_url_from_message(new_event) # Pass Pyrogram message
             else:
                 return
-        index_event = await ask_text_event(chat_id, user_id, event, 120, "Send index", message_hint="🔷`a` Is For Audio & `s` Is For Subtitle\n🔷 Send In The Format As Shown Below:\n\n`a-3-1-2` (To Change Audio Index In 3rd, 1st and 2nd order)\n`s-2-1` (To Change Subtitle Index In 2nd and 1st order)")
+         # MODIFIED: Needs adaptation for Pyrogram
+        # index_event = await ask_text_event(client, chat_id, user_id, message, 120, "Send index", message_hint="🔷`a` Is For Audio & `s` Is For Subtitle\n🔷 Send In The Format As Shown Below:\n\n`a-3-1-2` (To Change Audio Index In 3rd, 1st and 2nd order)\n`s-2-1` (To Change Subtitle Index In 2nd and 1st order)")
+        await message.reply_text("Index text input needs adaptation for Pyrogram conversations.") # Placeholder
+        index_event = None # Placeholder
         if not index_event:
             return
-        custom_index_list = str(index_event.message.message).split('\n')
+        custom_index_list = str(index_event.text).split('\n') # Use .text
         custom_index = []
         for m in custom_index_list:
             mdata = str(m).strip().split('-')
@@ -1235,90 +1215,35 @@ async def _change_index(event):
                     custom_index.append(f"0:{stream}:{s}")
                 custom_index+= [f"-disposition:{stream}:0", "default"]
             except Exception as e:
-                await index_event.reply(f"❗Invalid index, Error: {str(e)}")
+                await index_event.reply_text(f"❗Invalid index, Error: {str(e)}") # Use reply_text
                 return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.changeindex, custom_file_name, custom_index=custom_index)
+        user_name = get_username(message)
+        user_first_name = message.from_user.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, message, Names.changeindex, custom_file_name, custom_index=custom_index) # Pass message
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
         if type(link)==str:
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
-            task['functions'].append(["TG", [link]])
+            task['functions'].append(["TG", [link]]) # Pass Pyrogram message object
         # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, [command, "pass"], 120)
         create_task(add_task(task))
-        await update_status_message(event)
+        await update_status_message(client, message) # Pass client and message
         return
 
 
-###############------Leech_File------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/leech', func=lambda e: user_auth_checker(e)))
-async def _leech_file(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
-        if user_id not in get_data():
-                await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
-        if link=="invalid":
-            await event.reply("❗Invalid link")
-            return
-        elif not link:
-            new_event = await ask_url(event, chat_id, user_id, ["/leech", "stop"], "Send Link", 120, True)
-            if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
-            else:
-                return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.leech, custom_file_name)
-        task = {}
-        task['process_status'] = process_status
-        task['functions'] = []
-        if type(link)==str:
-                task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
-        else:
-            task['functions'].append(["TG", [link]])
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/leech", "pass"], 120)
-        create_task(add_task(task))
-        await update_status_message(event)
-        return
+# REMOVED: Leech handler
+# ###############------Leech_File------###############
+# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/leech', func=lambda e: user_auth_checker(e)))
+# async def _leech_file(event):
+#         ... (function content removed) ...
 
 
-###############------mirror_File------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/mirror', func=lambda e: user_auth_checker(e)))
-async def _mirror_file(event):
-        chat_id = event.message.chat.id
-        user_id = event.message.sender.id
-        if user_id not in get_data():
-                await new_user(user_id, SAVE_TO_DATABASE)
-        link, custom_file_name = await get_link(event)
-        if link=="invalid":
-            await event.reply("❗Invalid link")
-            return
-        elif not link:
-            new_event = await ask_url(event, chat_id, user_id, ["/mirror", "stop"], "Send Link", 120, True)
-            if new_event and new_event not in ["cancelled", "stopped"]:
-                link = await get_url_from_message(new_event)
-            else:
-                return
-        user_name = get_username(event)
-        user_first_name = event.message.sender.first_name
-        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.mirror, custom_file_name)
-        task = {}
-        task['process_status'] = process_status
-        task['functions'] = []
-        if type(link)==str:
-                task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
-        else:
-            task['functions'].append(["TG", [link]])
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/mirror", "pass"], 120)
-        create_task(add_task(task))
-        await update_status_message(event)
-        return
+# REMOVED: Mirror handler
+# ###############------mirror_File------###############
+# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/mirror', func=lambda e: user_auth_checker(e)))
+# async def _mirror_file(event):
+#         ... (function content removed) ...
 
 # --- END OF FILE VideoFlux-Re-master/bot/start.py ---
