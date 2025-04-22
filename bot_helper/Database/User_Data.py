@@ -132,6 +132,9 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['convert']['type'] = 'CRF'
         DATA[user_id]['use_vbr'] = False
         DATA[user_id]['vbr'] = '220k'
+-       +       # Added ABR defaults
+-       +       DATA[user_id]['use_abr'] = False
+-       +       DATA[user_id]['abr'] = '1500k'
 +       # Added ABR defaults
 +       DATA[user_id]['use_abr'] = False
 +       DATA[user_id]['abr'] = '1500k'
