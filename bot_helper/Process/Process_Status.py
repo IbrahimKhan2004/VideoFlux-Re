@@ -166,11 +166,7 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
 
 def generate_ffmpeg_status_head(user_id, pmode, input_size):
         # REMOVED: Compress status head
-        # if pmode==Names.compress:
-        #         ... (block content removed) ...
         # REMOVED: Watermark status head
-        # elif pmode==Names.watermark:
-        #         ... (block content removed) ...
         if pmode==Names.merge: # MODIFIED: Changed elif to if
                 text = f"\n**MAP**: {get_data()[user_id]['merge']['map']} | **Fix Blank**: {get_data()[user_id]['merge']['fix_blank']}"
                 # Added metadata display from VFBITMOD-update
@@ -222,9 +218,6 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 text = f"\n**Subtitles Codec**: {get_data()[user_id]['softmux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
                 return text
         # REMOVED: SoftReMux status head
-        # elif pmode==Names.softremux:
-        #         text = f"\n**Subtitles Codec**: {get_data()[user_id]['softremux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
-        #         return text
         else:
                 return ""
 
@@ -262,8 +255,6 @@ class ProcessStatus:
                 self.ping = time()
                 self.trash_objects = False
                 # REMOVED: Multi-task attributes
-                # self.multi_tasks = []
-                # self.multi_task_no = 0
                 self.custom_metadata = custom_metadata
                 self.custom_index = custom_index
                 if self.user_name:
@@ -272,14 +263,6 @@ class ProcessStatus:
                         self.added_by = self.user_first_name
 
         # REMOVED: Multi-task related methods
-        # def append_multi_tasks(self, task):
-        #         ...
-        # def change_multi_tasks_no(self, no):
-        #         ...
-        # def get_multi_task_no(self):
-        #         ...
-        # def replace_multi_tasks(self, multi_tasks):
-        #         ...
 
         def update_status_message(self, message):
                 self.message = message
@@ -438,7 +421,6 @@ class ProcessStatus:
                 total_files = len(self.send_files)
                 error_no = 0
                 # REMOVED: Multi-task number logic
-                # multi_task_no = self.get_multi_task_no()
                 while True:
                         self.ping = time()
                         if status.type()==Names.aria:
@@ -525,7 +507,8 @@ class ProcessStatus:
                                 self.dw_files.append(f"{self.dir}/{status.name()}")
                 return
 
-        def telegram_update_status(self,current,total, mode, name, start_time, status, engine, client=False):
+        # MODIFIED: Removed 'engine' parameter and its usage in the status message
+        def telegram_update_status(self,current,total, mode, name, start_time, status, client=False):
                 self.ping = time()
                 if client:
                         if not check_running_process(self.process_id):
@@ -538,7 +521,7 @@ class ProcessStatus:
                         f'`{name}`\n'\
                         f'{get_progress_bar_string(current,total)} {current * 100 / total:.1f}%\n'\
                         f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
-                        f'**Engine**: {engine}\n'\
+                        f'**Engine**: Pyrogram\n'\
                         f'**{mode}**: {get_human_size(current)} of {get_human_size(total)}\n'\
                         f'**Speed**: {get_human_size(speed)}ps | **ETA**: {get_readable_time((total-current)/speed)}\n'\
                         f"`/cancel process {self.process_id}`"
