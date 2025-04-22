@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Process/Process_Status.py ---
+
 from asyncio import sleep as asynciosleep
 from bot_helper.Others.Helper_Functions import get_human_size, gen_random_string, get_readable_time, get_value, get_account_type
 from os import remove
@@ -113,7 +115,7 @@ async def rclone_get_link(remote,name, conf):
                 return url
         else:
                 return False
-        
+
 
 
 def get_progress_bar_from_percentage(percentage):
@@ -150,9 +152,15 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
                 else:
                         status_foot+= " | "
                 try:
-                        status_foot+= f"**ETA Size**: {str(get_human_size((status.output_size()/time_in_us)*status.duration*1024*1024))}"
-                except:
-                        status_foot+= f"**ETA Size**: Unknown"
+                        # Added check for time_in_us being zero
+                        if time_in_us != 0:
+                            eta_size = (status.output_size() / time_in_us) * status.duration * 1024 * 1024
+                            status_foot += f"**ETA Size**: {str(get_human_size(eta_size))}"
+                        else:
+                            status_foot += "**ETA Size**: N/A (Division by zero prevented)"
+                except Exception as e: # Catch potential errors during calculation
+                        LOGGER.error(f"Error calculating ETA Size: {e}")
+                        status_foot+= f"**ETA Size**: Error"
         return status_foot
 
 
@@ -176,7 +184,7 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                         encoder = get_data()[user_id]['watermark']['encoder']
                 else:
                         encoder = 'False'
-                        
+
                 text = f"\n**SYNC**: {get_data()[user_id]['watermark']['sync']} | **Preset**: {get_data()[user_id]['watermark']['preset']}\n"\
                         f"**CRF**: {get_data()[user_id]['watermark']['crf']} | **Copy Subtitles**: {get_data()[user_id]['watermark']['copy_sub']}\n"\
                         f"{qsize_text} | **MAP**: {get_data()[user_id]['watermark']['map']}\n"\
@@ -185,20 +193,52 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 return text
         elif pmode==Names.merge:
                 text = f"\n**MAP**: {get_data()[user_id]['merge']['map']} | **Fix Blank**: {get_data()[user_id]['merge']['fix_blank']}"
+                # Added metadata display from VFBITMOD-update
+                text += f"\n**Metadata**: {get_data()[user_id]['metadata']}"
                 return text
         elif pmode==Names.convert:
+                # --- Start of VFBITMOD-update Status Head ---
                 if get_data()[user_id]['convert']['use_queue_size']:
                         qsize_text = f"**Queue Size**: {str(get_data()[user_id]['convert']['queue_size'])}"
                 else:
                         qsize_text = f"**Queue Size**: False"
-                if get_data()[user_id]['convert']['encode']:
-                        encoder = get_data()[user_id]['convert']['encoder']
-                else:
-                        encoder = 'False'
-                text = f"\n**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
-                        f"**CRF**: {get_data()[user_id]['convert']['crf']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
-                        f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}\n"\
-                        f"**Encoder**: {encoder} | **In.Size**: {get_human_size(input_size)}"
+
+                encoder = get_data()[user_id]['video']['encude']
+                vbit = get_data()[user_id]['video']['vbit']
+                quality = get_data()[user_id]['video']['qubality']
+                etype = get_data()[user_id]['convert']['type']
+                crf = get_data()[user_id]['crf'] if get_data()[user_id]['use_crf'] else 'N/A'
+                vbr = get_data()[user_id]['vbr'] if get_data()[user_id]['use_vbr'] else 'N/A'
+                abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
+                acodec = get_data()[user_id]['audio']['acodec']
+                achannel = get_data()[user_id]['audio']['achannel']
+                encode_mode = get_data()[user_id]['convert']['encode']
+
+                text = f"\n**Encoding...**: {encode_mode}\n"\
+                        f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
+                        f"**Resolution**: {quality} | **EType**: {etype}\n"\
+                        f"**CRF**: {crf} | **VBR**: {vbr}\n"\
+                        f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
+                        f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"\
+                        f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
+                        f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
+                        f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
+                # --- End of VFBITMOD-update Status Head ---
+
+                # --- Start of Old Status Head (Commented Out) ---
+                # if get_data()[user_id]['convert']['use_queue_size']:
+                #         qsize_text = f"**Queue Size**: {str(get_data()[user_id]['convert']['queue_size'])}"
+                # else:
+                #         qsize_text = f"**Queue Size**: False"
+                # if get_data()[user_id]['convert']['encode']:
+                #         encoder = get_data()[user_id]['convert']['encoder']
+                # else:
+                #         encoder = 'False'
+                # text = f"\n**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
+                #         f"**CRF**: {get_data()[user_id]['convert']['crf']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
+                #         f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}\n"\
+                #         f"**Encoder**: {encoder} | **In.Size**: {get_human_size(input_size)}"
+                # --- End of Old Status Head ---
                 return text
         elif pmode==Names.hardmux:
                 if get_data()[user_id]['hardmux']['use_queue_size']:
@@ -250,7 +290,7 @@ class ProcessStatus:
                         self.thumbnail = thumbnail
                 self.process_type = process_type
                 self.start_time = start_time
-                self.convert_quality = 480
+                self.convert_quality = 480 # Kept original default, but will be updated by VFBITMOD logic
                 self.convert_index = "-/-"
                 self.ping = time()
                 self.trash_objects = False
@@ -262,45 +302,45 @@ class ProcessStatus:
                         self.added_by = f'[{self.user_first_name}](https://t.me/{str(self.user_name)})'
                 else:
                         self.added_by = self.user_first_name
-                        
+
         def append_multi_tasks(self, task):
                 self.multi_tasks.append(task)
                 return
-        
+
         def change_multi_tasks_no(self, no):
                 self.multi_task_no = no
                 return
-        
+
         def get_multi_task_no(self):
                 if self.multi_task_no:
                         return f"({str(self.multi_task_no-len(self.multi_tasks))}/{str(self.multi_task_no)})"
                 else:
                         return ""
-        
+
         def replace_multi_tasks(self, multi_tasks):
                 self.multi_tasks = multi_tasks
                 return
-        
+
         def update_status_message(self, message):
                 self.message = message
                 return
-        
+
         def update_convert_quality(self, convert_quality):
                 self.convert_quality = convert_quality
                 return
-        
+
         def update_convert_index(self, convert_index):
                 self.convert_index = convert_index
                 return
-        
+
         def update_process_message(self, text):
                 self.status_message = text
                 return
-        
+
         def set_custom_thumbnail(self, thumbnail):
                 self.thumbnail = thumbnail
                 return
-        
+
         def move_custom_thumbnail(self, thumbnail):
                 if not thumbnail:
                         return
@@ -317,48 +357,48 @@ class ProcessStatus:
                         self.thumbnail = "./thumb.jpg"
                         LOGGER.info(f"{thumbnail} Thumbnail Not Found.")
                 return
-        
+
         def update_start_time(self, start_time):
                 self.start_time = start_time
                 return
-        
+
         def set_send_files(self, name):
                 self.send_files = [f"{self.dir}/{name}"]
                 return
-        
+
         def replace_send_files(self, file_name):
                 self.send_files = [file_name]
                 return
-        
+
         def replace_send_list(self, send_files):
                 self.send_files = send_files
                 return
-        
+
         def append_send_files(self, name):
                 if f"{self.dir}/{name}" not in self.send_files:
                         self.send_files.append(f"{self.dir}/{name}")
                 return
-        
+
         def append_send_files_loc(self, fileloc):
                 if fileloc not in self.send_files:
                         self.send_files.append(fileloc)
                 return
-        
+
         def append_dw_files_loc(self, fileloc):
                 if fileloc not in self.dw_files:
                         self.dw_files.append(fileloc)
                 return
-        
+
         def append_dw_files(self, name):
                 if f"{self.dir}/{name}" not in self.dw_files:
                         self.dw_files.append(f"{self.dir}/{name}")
                 return
-        
+
         def set_file_name(self, file_name):
                 if not self.file_name:
                         self.file_name = file_name
                 return
-        
+
         def set_file_name_from_send_list(self):
                 if not self.file_name:
                         try:
@@ -372,19 +412,19 @@ class ProcessStatus:
                 else:
                         LOGGER.info(f"File Name Already Set : {str(self.file_name)}")
                 return
-        
+
         def set_caption(self, caption):
                 self.caption = caption
                 return
-        
+
         def set_amap_options(self, options):
                 self.amap_options = options
                 return
-        
+
         def set_dw_index(self, dw_index):
                 self.dw_index = dw_index
                 return
-        
+
         def move_dw_file(self, name):
                 if exists(f"{self.dir}/{name}"):
                         if f"{self.dir}/{name}" in self.dw_files:
@@ -402,7 +442,7 @@ class ProcessStatus:
                 else:
                         LOGGER.info(f"{self.dir}/{name} File Not Found.")
                 return
-        
+
         def move_send_files(self, send_files):
                 for file in send_files:
                         if exists(file):
@@ -417,7 +457,7 @@ class ProcessStatus:
                         else:
                                 LOGGER.info(f"{file} File Not Found.")
                         return
-        
+
         def append_subtitles(self, sub_loc):
                 if exists(sub_loc):
                         if sub_loc not in self.subtitles:
@@ -427,10 +467,10 @@ class ProcessStatus:
                 else:
                         LOGGER.info(f"{sub_loc} File Not Found.")
                 return
-        
+
         def get_task_details(self):
                 return f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`'
-        
+
         async def update_status(self, status):
                 if status.type()==Names.ffmpeg:
                         input_size = status.input_size()
@@ -449,7 +489,7 @@ class ProcessStatus:
                                                 f'**Engine**: Aria\n'\
                                                 f'**Downloaded**: {get_human_size(int(status.processed_bytes()))} of {get_human_size(int(status.size_raw()))}\n'\
                                                 f'**Speed**: {status.speed()} | **ETA**: {status.eta()}\n'\
-                                                f"`/cancel aria {status.gid()}`" 
+                                                f"`/cancel aria {status.gid()}`"
                                         self.status_message = text
                                         await asynciosleep(0.5)
                                 else:
@@ -497,7 +537,8 @@ class ProcessStatus:
                                         error_no+=1
                                 elapsed_time = time_in_us/1000000
                                 if self.process_type==Names.convert:
-                                                process_state = f"{Names.STATUS[self.process_type]} To {self.convert_quality}P [{self.convert_index}]"
+                                                # Updated status message for convert
+                                                process_state = f"{Names.STATUS[self.process_type]} [{self.convert_index}]"
                                                 name = status.name
                                 elif self.process_type!=Names.merge:
                                                 process_state = Names.STATUS[self.process_type]
@@ -522,7 +563,7 @@ class ProcessStatus:
                         if f"{self.dir}/{status.name()}" not in self.dw_files:
                                 self.dw_files.append(f"{self.dir}/{status.name()}")
                 return
-        
+
         def telegram_update_status(self,current,total, mode, name, start_time, status, engine, client=False):
                 self.ping = time()
                 if client:
@@ -542,8 +583,8 @@ class ProcessStatus:
                         f"`/cancel process {self.process_id}`"
                 self.status_message = text
                 return
-                
-                
+
+
         async def rclone__update_status(self, rclone_process, name, search_command, fileloc, r_config, drive_name, status):
                 Cancel = False
                 while True:
@@ -602,3 +643,5 @@ class ProcessStatus:
                 if exists(f"{self.dir}/upload_log_{str(name)}.txt"):
                         remove(f"{self.dir}/upload_log_{str(name)}.txt")
                 return True
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Process/Process_Status.py ---
