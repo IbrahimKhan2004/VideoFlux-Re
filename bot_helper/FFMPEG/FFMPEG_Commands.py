@@ -46,7 +46,7 @@ def get_commands(process_status):
             input_file = f'{str(process_status.send_files[-1])}'
             output_file = f"{process_status.dir}/compress/{get_output_name(process_status)}"
             file_duration = get_video_duration(input_file)
-            command = ['ffmpeg','-hide_banner',
+            command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                         '-progress', f"{log_file}",
                                         '-i', f'{input_file}']
             if compress_map:
@@ -83,7 +83,7 @@ def get_commands(process_status):
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/watermark/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        command = ['ffmpeg','-hide_banner',
+        command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}",
                                     '-i', f'{str(input_file)}', "-i", f"{str(watermark_path)}"]
         if watermark_map:
@@ -123,7 +123,7 @@ def get_commands(process_status):
             with open(input_file, "w", encoding="utf-8") as f:
                         f.write(str(infile_names).strip('\n'))
             output_file = f"{process_status.dir}/merge/{get_output_name(process_status)}"
-            command = ['ffmpeg','-hide_banner',
+            command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}",
                                         "-f", "concat",
                                         "-safe", "0"]
@@ -160,7 +160,7 @@ def get_commands(process_status):
             input_sub += ['-i', f'{str(subtitle)}']
             sub_map+= ['-map', f'{smap}:0']
             smap +=1
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}']
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
         if softmux_encode:
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
@@ -198,7 +198,7 @@ def get_commands(process_status):
             input_sub += ['-i', f'{str(subtitle)}']
             sub_map+= ['-map', f'{smap}:0']
             smap +=1
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}']
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-disposition:s:0','default']
         if softremux_encode:
                 encoder = get_data()[process_status.user_id]['softremux']['encoder']
@@ -236,14 +236,6 @@ def get_commands(process_status):
             convert_vbr = get_data()[process_status.user_id]['vbr'] if get_data()[process_status.user_id]['use_vbr'] else None # Use custom if enabled
             # --- End of VFBITMOD-update Integration ---
 
-            # convert_preset =  get_data()[process_status.user_id]['convert']['preset'] # Old
-            # convert_crf = get_data()[process_status.user_id]['convert']['crf'] # Old
-            # convert_map = get_data()[process_status.user_id]['convert']['map'] # Old
-            # convert_encoder = get_data()[process_status.user_id]['convert']['encoder'] # Old
-            # convert_copysub = get_data()[process_status.user_id]['convert']['copy_sub'] # Old
-            # convert_sync = get_data()[process_status.user_id]['convert']['sync'] # Old
-            # convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Old
-
             create_direc(f"{process_status.dir}/convert/")
             log_file = f"{process_status.dir}/convert/convert_logs_{process_status.process_id}.txt"
             if exists(log_file):
@@ -253,7 +245,7 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/convert/{get_output_name(process_status, convert_quality=convert_quality)}"
             file_duration = get_video_duration(input_file)
 
-            command = ['ffmpeg','-hide_banner',
+            command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                             '-progress', f"{log_file}",
                                             '-i', f'{input_file}']
 
@@ -342,33 +334,6 @@ def get_commands(process_status):
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
 
-            # --- Start of Old Command Logic (Commented Out) ---
-            # command = ['ffmpeg','-hide_banner',
-            #                                 '-progress', f"{log_file}",
-            #                                 '-i', f'{input_file}',
-            #                                 '-vf', f"scale=-2:{process_status.convert_quality}"]
-            # if convert_map:
-            #     command+=['-map','0:v?',
-            #                                 '-map',f'{str(process_status.amap_options)}?',
-            #                                 "-map", "0:s?"]
-            # if convert_copysub:
-            #     command+= ["-c:s", "copy"]
-            # if convert_encode:
-            #     if convert_encoder=='libx265':
-            #             command+= ['-vcodec','libx265','-vtag', 'hvc1']
-            #     else:
-            #             command+= ['-vcodec','libx264']
-            # else:
-            #     command+= ["-c:a", "copy"]
-            # convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
-            # if convert_use_queue_size:
-            #     convert_queue_size = get_data()[process_status.user_id]['convert']['queue_size']
-            #     command+= ['-max_muxing_queue_size', f'{str(convert_queue_size)}']
-            # if convert_sync:
-            #     command+= ['-vsync', '1', '-async', '-1']
-            # command+= ['-preset', convert_preset, '-crf', f'{str(convert_crf)}', '-y', f"{output_file}"]
-            # --- End of Old Command Logic ---
-
             return command, log_file, input_file, output_file, file_duration
 
 
@@ -382,7 +347,7 @@ def get_commands(process_status):
         output_file = f"{process_status.dir}/hardmux/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
         sub_loc = process_status.subtitles[-1]
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}']
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         command+= ['-vf', f"subtitles='{sub_loc}'",
                                     '-map','0:v',
                                     '-map',f'{str(process_status.amap_options)}']
@@ -412,7 +377,7 @@ def get_commands(process_status):
         output_file = f"{process_status.dir}/metadata/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
         custom_metadata = process_status.custom_metadata
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}']
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         for m in custom_metadata:
             command+=m
         # Added global title metadata from VFBITMOD-update
@@ -429,7 +394,7 @@ def get_commands(process_status):
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/index/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index # Reverted zender -> ffmpeg
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
