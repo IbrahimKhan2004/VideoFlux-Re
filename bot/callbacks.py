@@ -1,7 +1,10 @@
 # --- START OF FILE VideoFlux-Re-master/bot/callbacks.py ---
 
-from telethon import events
-from telethon.tl.custom import Button
+from telethon import events # REMOVED: No longer needed? Keep for now if other parts use it, but ideally remove.
+# ADDED: Pyrogram imports
+from pyrogram import filters
+from pyrogram.handlers import CallbackQueryHandler
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config.config import Config
 from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file
 from bot_helper.Database.User_Data import get_data, new_user, saveconfig, saveoptions, resetdatabase
@@ -31,14 +34,13 @@ bool_list = [True, False]
 ws_name = {'5:5': 'Top Left', 'main_w-overlay_w-5:5': 'Top Right', '5:main_h-overlay_h': 'Bottom Left', 'main_w-overlay_w-5:main_h-overlay_h-5': 'Bottom Right'}
 ws_value = {'Top Left': '5:5', 'Top Right': 'main_w-overlay_w-5:5', 'Bottom Left': '5:main_h-overlay_h', 'Bottom Right': 'main_w-overlay_w-5:main_h-overlay_h-5'}
 # REMOVED: TELETHON_CLIENT variable (no longer needed)
-# TELETHON_CLIENT = Telegram.TELETHON_CLIENT
 punc = ['!', '|', '{', '}', ';', ':', "'", '=', '"', '\\', ',', '<', '>', '/', '?', '@', '#', '$', '%', '^', '&', '*', '~', "  ", "\t", "+", "b'", "'"]
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 LOGGER = Config.LOGGER
 
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
-# MODIFIED: Removed TELETHON_CLIENT reference
+# MODIFIED: Use Pyrogram decorator
 @Telegram.PYROGRAM_CLIENT.on_callback_query() # Use Pyrogram decorator
 async def callback(client, event): # Use Pyrogram arguments
         txt = event.data # Use event.data directly
@@ -109,17 +111,17 @@ async def callback(client, event): # Use Pyrogram arguments
 
         elif txt.startswith("env"):
             position = txt.split("_", 1)[1]
-            # MODIFIED: Need to adapt get_text_data for Pyrogram or implement differently
-            # value_result = await get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
+            # MODIFIED: Needs adaptation for Pyrogram
             await event.answer("Environment variable editing needs adaptation for Pyrogram.", show_alert=True) # Placeholder
+            # value_result = await get_text_data(client, chat_id, user_id, event.message, 120, f"Send New Value For Variable {position}") # Pass client, event.message
             # if value_result:
             #     if exists("./userdata/botconfig.env"):
             #         config_dict = get_env_dict('./userdata/botconfig.env')
             #     else:
             #         config_dict = get_env_dict('config.env')
-            #     config_dict[position] = value_result.message.text # Use .text for Pyrogram
+            #     config_dict[position] = value_result.text # Use .text for Pyrogram
             #     export_env_file("./userdata/botconfig.env", config_dict)
-            #     await value_result.reply(f"✅{position} Value Changed Successfully, Restart Bot To Reflect Changes.")
+            #     await value_result.reply_text(f"✅{position} Value Changed Successfully, Restart Bot To Reflect Changes.") # Use reply_text
             return
 
 
@@ -147,9 +149,6 @@ async def callback(client, event): # Use Pyrogram arguments
             return
 
         # REMOVED: Telegram callback trigger
-        # elif txt.startswith("telegram"):
-        #     await telegram_callback(event, txt, user_id, chat_id)
-        #     return
 
         elif txt.startswith("vbrcrf"):
             await vbrcrf_callback(client, event, txt, user_id, chat_id) # Pass client
@@ -189,15 +188,15 @@ async def callback(client, event): # Use Pyrogram arguments
 
 
         elif txt.startswith("change"):
-             # MODIFIED: Need to adapt get_text_data for Pyrogram or implement differently
+             # MODIFIED: Needs adaptation for Pyrogram
             await event.answer("Queue size changing needs adaptation for Pyrogram.", show_alert=True) # Placeholder
             # if "_queue_size" in txt:
-            #     queue_size_input= await get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
+            #     queue_size_input= await get_text_data(client, chat_id, user_id, event.message, 120, "Send Queue Size") # Pass client, event.message
             #     if queue_size_input:
             #         try:
-            #             queue_size = int(queue_size_input.message.text) # Use .text
+            #             queue_size = int(queue_size_input.text) # Use .text
             #         except:
-            #             await queue_size_input.reply("❗Invalid Input")
+            #             await queue_size_input.reply_text("❗Invalid Input") # Use reply_text
             #             return
             #         if txt=="change_convert_queue_size":
             #             await saveconfig(user_id, 'convert', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
@@ -235,7 +234,9 @@ async def callback(client, event): # Use Pyrogram arguments
 #////////////////////////////////////Functions////////////////////////////////////#
 # MODIFIED: Use Pyrogram event structure
 def get_mention(event):
-    return f"[{event.from_user.first_name}](tg://user?id={event.from_user.id})"
+    # Check if it's a CallbackQuery or Message event
+    user = event.from_user if hasattr(event, 'from_user') else event.sender
+    return f"[{user.first_name}](tg://user?id={user.id})"
 
 # MODIFIED: Import Pyrogram types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -252,19 +253,6 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
         # REMOVED: Watermark specific logic
-        # if current_value!=x:
-        #     if callvalue!="watermarkposition":
-        #         text = f"{str(x)}"
-        #     else:
-        #             text = f"{str(ws_name[x])}"
-        # else:
-        #     if not hide:
-        #         if callvalue!="watermarkposition":
-        #             text = f"{str(x)} 🟢"
-        #         else:
-        #             text = f"{str(ws_name[x])} 🟢"
-        #     else:
-        #         text = f"🟢"
         # MODIFIED: Simplified text generation
         text = f"{str(x)}"
         if current_value == x:
@@ -276,53 +264,49 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
     boards.append(current_list)
     return boards
 
-# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
-async def get_metadata(chat_id, user_id, event, timeout, message):
-    # Placeholder - Pyrogram conversation logic is different
-    await event.answer("Metadata input needs adaptation for Pyrogram.", show_alert=True)
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
+# Important Note: These functions require significant adaptation for Pyrogram.
+async def get_metadata(client, chat_id, user_id, event_message, timeout, message):
+    await event_message.reply_text(f"**[Placeholder]** Metadata input needs adaptation for Pyrogram conversations.")
+    # Example using client.ask (needs error handling, timeout, etc.)
+    # try:
+    #     ask = await event_message.reply_text(f'*️⃣ {str(message)} [{str(timeout)} secs]')
+    #     response = await client.ask(chat_id, f"Please send the metadata title now.", filters=filters.text, timeout=timeout)
+    #     await ask.delete()
+    #     metadata = response.text
+    #     for ele in punc:
+    #         if ele in metadata:
+    #             metadata = metadata.replace(ele, '')
+    #     return metadata
+    # except Exception as e:
+    #     LOGGER.error(f"Error in get_metadata: {e}")
+    #     await event_message.reply_text('🔃Timed Out or Error! Task Has Been Cancelled.')
     return False
-    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
-    #         ... (Telethon logic removed) ...
 
-# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
-async def get_vbr(chat_id, user_id, event, timeout, message):
-    # Placeholder - Pyrogram conversation logic is different
-    await event.answer("VBR input needs adaptation for Pyrogram.", show_alert=True)
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
+async def get_vbr(client, chat_id, user_id, event_message, timeout, message):
+    await event_message.reply_text(f"**[Placeholder]** VBR input needs adaptation for Pyrogram conversations.")
     return False
-    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
-    #         ... (Telethon logic removed) ...
 
-# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
-async def get_crf(chat_id, user_id, event, timeout, message):
-     # Placeholder - Pyrogram conversation logic is different
-    await event.answer("CRF input needs adaptation for Pyrogram.", show_alert=True)
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
+async def get_crf(client, chat_id, user_id, event_message, timeout, message):
+    await event_message.reply_text(f"**[Placeholder]** CRF input needs adaptation for Pyrogram conversations.")
     return False
-    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
-    #         ... (Telethon logic removed) ...
 
-# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
-async def get_abit(chat_id, user_id, event, timeout, message):
-     # Placeholder - Pyrogram conversation logic is different
-    await event.answer("AudioBit input needs adaptation for Pyrogram.", show_alert=True)
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
+async def get_abit(client, chat_id, user_id, event_message, timeout, message):
+    await event_message.reply_text(f"**[Placeholder]** AudioBit input needs adaptation for Pyrogram conversations.")
     return False
-    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
-    #         ... (Telethon logic removed) ...
 
-# MODIFIED: Needs adaptation for Pyrogram conversation/input handling
-async def get_text_data(chat_id, user_id, event, timeout, message):
-    # Placeholder - Pyrogram conversation logic is different
-    await event.answer("Text input needs adaptation for Pyrogram.", show_alert=True)
+# MODIFIED: Needs complete rewrite for Pyrogram conversations
+async def get_text_data(client, chat_id, user_id, event_message, timeout, message):
+    await event_message.reply_text(f"**[Placeholder]** Text input needs adaptation for Pyrogram conversations.")
     return False
-    # async with TELETHON_CLIENT.conversation(chat_id) as conv:
-    #         ... (Telethon logic removed) ...
 
 
 #////////////////////////////////////Callbacks_Functions////////////////////////////////////#
 
 # REMOVED: telegram_callback function
-# ###############------General------###############
-# async def telegram_callback(event, txt, user_id, chat_id):
-#             ... (function content removed) ...
 
 # MODIFIED: Add client argument
 ###############------General------###############
@@ -336,9 +320,7 @@ async def general_callback(client, event, txt, user_id, chat_id):
             if txt.startswith("generalcustommetadata"): # MODIFIED: Adjusted elif chain
                 if eval(new_position):
                         # MODIFIED: Needs adaptation for Pyrogram
-                        # metadata = await get_metadata(chat_id, user_id, event, 120, "Send Metadata Title")
-                        await event.answer("Metadata input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
-                        metadata = None # Placeholder
+                        metadata = await get_metadata(client, chat_id, user_id, event.message, 120, "Send Metadata Title") # Pass client, event.message
                         if metadata:
                             await saveoptions(user_id, 'metadata', metadata, SAVE_TO_DATABASE)
                             edit = False
@@ -760,9 +742,9 @@ async def audio_callback(client, event, txt, user_id, chat_id, edit):
             elif txt.startswith("audioabit"):
                 if eval(new_position):
                         # MODIFIED: Needs adaptation for Pyrogram
-                        # metadata = await get_abit(chat_id, user_id, event, 120, "**Send AudioBit Value\n\n****Example :** `128k`, `760k` etc.")
                         await event.answer("AudioBit input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
                         metadata = None # Placeholder
+                        # metadata = await get_abit(client, chat_id, user_id, event.message, 120, "**Send AudioBit Value\n\n****Example :** `128k`, `760k` etc.") # Pass client, event.message
                         if metadata:
                             await saveoptions(user_id, 'abit', metadata, SAVE_TO_DATABASE)
                             edit = False
@@ -812,9 +794,9 @@ async def vbrcrf_callback(client, event, txt, user_id, chat_id):
             if txt.startswith("vbrcrfvbr"):
                 if eval(new_position):
                         # MODIFIED: Needs adaptation for Pyrogram
-                        # metadata = await get_vbr(chat_id, user_id, event, 120, "**Send VBR Value**\n\n**Example :** `400k`, `900k` etc.")
                         await event.answer("VBR input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
                         metadata = None # Placeholder
+                        # metadata = await get_vbr(client, chat_id, user_id, event.message, 120, "**Send VBR Value**\n\n**Example :** `400k`, `900k` etc.") # Pass client, event.message
                         if metadata:
                             await saveoptions(user_id, 'vbr', metadata, SAVE_TO_DATABASE)
                             edit = False
@@ -825,9 +807,9 @@ async def vbrcrf_callback(client, event, txt, user_id, chat_id):
             elif txt.startswith("vbrcrfcrf"):
                 if eval(new_position):
                         # MODIFIED: Needs adaptation for Pyrogram
-                        # metadata = await get_crf(chat_id, user_id, event, 120, "**Send CRF Value**\n\n**Example :** `22`, `28` etc.")
                         await event.answer("CRF input needs adaptation for Pyrogram.", show_alert=True) # Placeholder
                         metadata = None # Placeholder
+                        # metadata = await get_crf(client, chat_id, user_id, event.message, 120, "**Send CRF Value**\n\n**Example :** `22`, `28` etc.") # Pass client, event.message
                         if metadata:
                             await saveoptions(user_id, 'crf', metadata, SAVE_TO_DATABASE)
                             edit = False
