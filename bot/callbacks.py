@@ -461,10 +461,10 @@ async def telegram_callback(event, txt, user_id, chat_id):
             telegram_upload = get_data().get(user_id, {}).get('tgupload', "Pyrogram") # Use .get()
             telegram_download = get_data().get(user_id, {}).get('tgdownload', "Pyrogram") # Use .get()
             KeyBoard = []
-            KeyBoard.append([Button.inline(f'🔼Telegram Upload Client - {str(telegram_upload)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🔼Telegram Upload Client - {str(telegram_upload)}', 'BashAFK')])
             for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_upload, "telegramupload", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🔽Telegram Download Client - {str(telegram_download)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🔽Telegram Download Client - {str(telegram_download)}', 'BashAFK')])
             for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_download, "telegramdownload", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -581,32 +581,32 @@ async def general_callback(event, txt, user_id, chat_id):
 
             KeyBoard = []
             # REMOVED: Audio selection buttons
-            # KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'BashAFK')])
             # for board in gen_keyboard(bool_list, select_stream, "generalselectstream", 2, False):
             #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'🍭Select Audio - {str(stream)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🍭Select Audio - {str(stream)}', 'BashAFK')])
             # for board in gen_keyboard(['ENG', 'HIN'], stream, "generalstream", 2, False):
             #     KeyBoard.append(board)
             # REMOVED: Split buttons
-            # KeyBoard.append([Button.inline(f'🪓Split Video - {str(split_video)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🪓Split Video - {str(split_video)}', 'BashAFK')])
             # for board in gen_keyboard(bool_list, split_video, "generalsplitvideo", 2, False):
             #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'🛢Split Size - {str(split)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🛢Split Size - {str(split)}', 'BashAFK')])
             # for board in gen_keyboard(['2GB', '4GB'], split, "generalsplit", 2, False):
             #     KeyBoard.append(board)
             # REMOVED: Dynamic thumbnail button
-            # KeyBoard.append([Button.inline(f'🖼Dynamic Thumbnail - {str(custom_thumbnail)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🖼Dynamic Thumbnail - {str(custom_thumbnail)}', 'BashAFK')])
             # for board in gen_keyboard(bool_list, custom_thumbnail, "generalcustomthumbnail", 2, False):
             #     KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'🪀Custom Metadata - {str(custom_metadata)} [Click To See]', 'custom_metedata')])
             for board in gen_keyboard(bool_list, custom_metadata, "generalcustommetadata", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🧵Upload On TG - {str(upload_tg)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🧵Upload On TG - {str(upload_tg)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, upload_tg, "generaluploadtg", 2, False):
                 KeyBoard.append(board)
 # Highlighted change: Conditionally add Upload Destination button
             if not upload_tg:
-                KeyBoard.append([Button.inline(f'📤Upload Destination - {str(upload_destination)}', 'nik66bots')])
+                KeyBoard.append([Button.inline(f'📤Upload Destination - {str(upload_destination)}', 'BashAFK')])
                 # Use the defined prefix when generating the keyboard
                 for board in gen_keyboard(upload_destination_list, upload_destination, "generalupload_destination", 2, False):
                     KeyBoard.append(board)
@@ -614,34 +614,34 @@ async def general_callback(event, txt, user_id, chat_id):
                 if upload_destination == 'Rclone' and check_config:
                     accounts = await get_config(r_config)
                     if accounts:
-                        KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
+                        KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'BashAFK')])
                         for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
                             KeyBoard.append(board)
 # End of highlighted change
-            KeyBoard.append([Button.inline(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, auto_drive, "generalautodrive", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📷Generate Screenshots - {str(gen_ss)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📷Generate Screenshots - {str(gen_ss)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, gen_ss, "generalgenss", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎶No Of Screenshots - {str(ss_no)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🎶No Of Screenshots - {str(ss_no)}', 'BashAFK')])
             for board in gen_keyboard([3,5,7,10], ss_no, "generalssno", 4, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎞Generate Sample Video - {str(gen_sample)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🎞Generate Sample Video - {str(gen_sample)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, gen_sample, "generalgensample", 2, False):
                 KeyBoard.append(board)
             # REMOVED: Multi-task buttons
-            # KeyBoard.append([Button.inline(f'🛰Multi Tasks - {str(multi_tasks)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'🛰Multi Tasks - {str(multi_tasks)}', 'BashAFK')])
             # for board in gen_keyboard(bool_list, multi_tasks, "generalmultitasks", 2, False):
             #     KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'nik66bots')])
+            # KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'BashAFK')])
             # for board in gen_keyboard(bool_list, upload_all, "generaluploadall", 2, False):
             #     KeyBoard.append(board)
             # Highlighted change: Moved Rclone account selection inside the conditional block above
             # if check_config:
             #     accounts = await get_config(r_config)
             #     if accounts:
-            #         KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'nik66bots')])
+            #         KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'BashAFK')])
             #         for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
             #             KeyBoard.append(board)
             # End of highlighted change
@@ -687,22 +687,22 @@ async def progress_callback(event, txt, user_id):
             ffmpeg_ptime = user_data.get('ffmpeg_ptime', True)
             show_time = user_data.get('show_time', True)
 
-            KeyBoard.append([Button.inline(f'📋Show Detailed Messages - {str(detailed_messages)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📋Show Detailed Messages - {str(detailed_messages)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, detailed_messages, "progressdetailedprogress", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📊Show Stats - {str(show_stats)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📊Show Stats - {str(show_stats)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, show_stats, "progressshowstats", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📀Show FFMPEG Output File Size - {str(ffmpeg_size)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📀Show FFMPEG Output File Size - {str(ffmpeg_size)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, ffmpeg_size, "progressffmpegsize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⏲Show Process Time- {str(ffmpeg_ptime)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'⏲Show Process Time- {str(ffmpeg_ptime)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, ffmpeg_ptime, "progressffmpegptime", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⌚Show Current Time- {str(show_time)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'⌚Show Current Time- {str(show_time)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, show_time, "progressshowtime", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⏱Progress Update Time - {str(update_time)} secs', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'⏱Progress Update Time - {str(update_time)} secs', 'BashAFK')])
             for board in gen_keyboard([5, 6, 7, 8, 9, 10], update_time, "progressupdatetime", 3, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -739,10 +739,10 @@ async def merge_callback(event, txt, user_id):
             merge_map = merge_settings.get('map', True)
             merge_fix_blank = merge_settings.get('fix_blank', False)
 
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(merge_map)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🍓Map  - {str(merge_map)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, merge_map, "mergemap", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🚢Fix Blank Outro  - {str(merge_fix_blank)} [Use Only When Necessary]', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🚢Fix Blank Outro  - {str(merge_fix_blank)} [Use Only When Necessary]', 'BashAFK')])
             for board in gen_keyboard(bool_list, merge_fix_blank, "mergefixblank", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -792,30 +792,30 @@ async def convert_callback(event, txt, user_id, edit):
             convert_sync = convert_settings.get('sync', False)
 
             # Added from VFBITMOD-update
-            KeyBoard.append([Button.inline(f'🎧Encode - {str(convert_encode)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🎧Encode - {str(convert_encode)}', 'BashAFK')])
             for board in gen_keyboard(encode_list, convert_encode, "convertencode", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎧Encode Type - {str(convert_type)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🎧Encode Type - {str(convert_type)}', 'BashAFK')])
             # Highlighted change: Updated items per row for type_list
             for board in gen_keyboard(type_list, convert_type, "converttype", 4, False): # Changed items per row to 4 for CBR
                 KeyBoard.append(board)
             # End of Added from VFBITMOD-update
 
-            KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(convert_copysub)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(convert_copysub)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, convert_copysub, "convertcopysub", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(convert_map)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🍓Map  - {str(convert_map)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, convert_map, "convertmap", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(convert_use_queue_size)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(convert_use_queue_size)}', 'BashAFK')])
             if convert_use_queue_size:
                 KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(convert_queue_size)} (Click To Change)', 'change_convert_queue_size')])
             for board in gen_keyboard(bool_list, convert_use_queue_size, "convertusequeuesize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(convert_sync)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(convert_sync)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, convert_sync, "convertsync", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(convert_preset)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'♒Preset - {str(convert_preset)}', 'BashAFK')])
             for board in gen_keyboard(presets_list, convert_preset, "convertpreset", 3, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -865,24 +865,24 @@ async def hardmux_callback(event, txt, user_id, edit):
             hardmux_queue_size = hardmux_settings.get('queue_size', '9999')
             hardmux_sync = hardmux_settings.get('sync', False)
 
-            KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(hardmux_encode_video)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(hardmux_encode_video)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, hardmux_encode_video, "hardmuxencodevideo", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍬Encoder - {str(hardmux_encoder)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🍬Encoder - {str(hardmux_encoder)}', 'BashAFK')])
             for board in gen_keyboard(encoders_list, hardmux_encoder, "hardmuxencoder", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(hardmux_use_queue_size)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(hardmux_use_queue_size)}', 'BashAFK')])
             if hardmux_use_queue_size:
                 KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(hardmux_queue_size)} (Click To Change)', 'change_hardmux_queue_size')])
             for board in gen_keyboard(bool_list, hardmux_use_queue_size, "hardmuxusequeuesize", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(hardmux_sync)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(hardmux_sync)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, hardmux_sync, "hardmuxsync", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(hardmux_preset)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'♒Preset - {str(hardmux_preset)}', 'BashAFK')])
             for board in gen_keyboard(presets_list, hardmux_preset, "hardmuxpreset", 3, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⚡CRF  - {str(hardmux_crf)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'⚡CRF  - {str(hardmux_crf)}', 'BashAFK')])
             for board in gen_keyboard(crf_list, hardmux_crf, "hardmuxcrf", 6, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -912,7 +912,7 @@ async def softmux_callback(event, txt, user_id, edit):
             softmux_settings = get_data().get(user_id, {}).get('softmux', {})
             softmux_sub_codec = softmux_settings.get('sub_codec', 'copy')
 
-            KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softmux_sub_codec)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softmux_sub_codec)}', 'BashAFK')])
             for board in gen_keyboard(['copy', 'mov_text'], softmux_sub_codec, "softmuxsubcodec", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -955,13 +955,13 @@ async def video_callback(event, txt, user_id, edit):
             video_encude = video_settings.get('encude', 'HEVC')
             video_qubality = video_settings.get('qubality', '480p [720x480]')
 
-            KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'BashAFK')])
             for board in gen_keyboard(encude_list, video_encude, "videoencude", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'❤ VideoBit - {str(video_vbit)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'❤ VideoBit - {str(video_vbit)}', 'BashAFK')])
             for board in gen_keyboard(vbit_list, video_vbit, "videovbit", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'❤ Resolution - {str(video_qubality)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'❤ Resolution - {str(video_qubality)}', 'BashAFK')])
             for board in gen_keyboard(qubality_list, video_qubality, "videoquality", 2, False):
                 KeyBoard.append(board)
 
@@ -1007,10 +1007,10 @@ async def audio_callback(event, txt, user_id, chat_id, edit):
             audio_acodec = audio_settings.get('acodec', 'AAC')
             audio_achannel = audio_settings.get('achannel', '2')
 
-            KeyBoard.append([Button.inline(f'🖤 Audio Codec - {str(audio_acodec)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🖤 Audio Codec - {str(audio_acodec)}', 'BashAFK')])
             for board in gen_keyboard(acodec_list, audio_acodec, "audioacodec", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🖤 Audio Channel - {str(audio_achannel)}', 'nik66bots')])
+            KeyBoard.append([Button.inline(f'🖤 Audio Channel - {str(audio_achannel)}', 'BashAFK')])
             for board in gen_keyboard(achannel_list, audio_achannel, "audioachannel", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'🖤 AudioBit - {str(use_abit)} [Click To See]', 'abit_value')])
