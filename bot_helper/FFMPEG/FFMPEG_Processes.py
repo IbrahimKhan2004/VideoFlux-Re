@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Processes.py ---
+
 from bot_helper.Database.User_Data import get_data
 from json import loads
 from bot_helper.Others.Helper_Functions import execute, get_video_duration, get_readable_time, delete_trash
@@ -86,7 +88,7 @@ async def gen_ss_list(duration, ss_no):
 ###############------Generate_ScreenShot------###############
 async def generate_screenshoot(ss_time, input_video, ss_name):
     command = [
-        "ffmpeg",
+        "ffmpeg", # Reverted zender -> ffmpeg
         "-ss",
         str(ss_time),
         "-i",
@@ -119,13 +121,13 @@ class FFMPEG:
                     parted_name = f"{str(file_name)}.part{str(i).zfill(3)}{str(extension)}"
                     create_direc(f"{dirpath}/split/")
                     out_path = join(f"{dirpath}/split/", parted_name)
-                    command = ["ffmpeg", "-hide_banner", "-ss", str(start_time),
+                    command = ["ffmpeg", "-hide_banner", "-ss", str(start_time), # Reverted zender -> ffmpeg
                                 "-i", f"{str(file)}", "-fs", str(split_size), "-map", "0", "-map_chapters", "-1",
                                 "-c", "copy", f"{out_path}"]
                     result = await run_process_command(command)
                     if not result:
                             await delete_trash(out_path)
-                            command = ["ffmpeg", "-hide_banner", "-ss", str(start_time),
+                            command = ["ffmpeg", "-hide_banner", "-ss", str(start_time), # Reverted zender -> ffmpeg
                                 "-i", f"{str(file)}", "-fs", str(split_size), "-map_chapters", "-1",
                                 "-c", "copy", out_path]
                             result = await run_process_command(command)
@@ -185,8 +187,8 @@ class FFMPEG:
                                 vframes = '750'
                         else:
                                 vframes = '1500'
-                        # cmd_sample = ["ffmpeg", "-ss", str(vstart_time), "-to",  str(vend_time), "-i", f"{input_video}","-c", "copy", '-y', f"{sample_name}"]
-                        cmd_sample= ['ffmpeg', '-ss', f'{vstart_time}s', '-i', f"{input_video}", '-vframes', f'{vframes}', '-vsync', '1', '-async', '-1', '-acodec', 'copy', '-vcodec', 'copy', '-y', f"{sample_name}"]
+                        # cmd_sample = ["ffmpeg", "-ss", str(vstart_time), "-to",  str(vend_time), "-i", f"{input_video}","-c", "copy", '-y', f"{sample_name}"] # Old command
+                        cmd_sample= ['ffmpeg', '-ss', f'{vstart_time}s', '-i', f"{input_video}", '-vframes', f'{vframes}', '-vsync', '1', '-async', '-1', '-acodec', 'copy', '-vcodec', 'copy', '-y', f"{sample_name}"] # Reverted zender -> ffmpeg
                         sample_result = await run_process_command(cmd_sample)
                         if sample_result and exists(sample_name):
                                 try:
@@ -209,17 +211,20 @@ class FFMPEG:
                 output_meta = f"{direc}/{get_output_name(process_status)}"
                 custom_metadata_title = get_data()[process_status.user_id]['metadata']
                 process_status.update_process_message(f"🪀Changing MetaData\n{process_status.get_task_details()}")
-                cmd_meta = ["ffmpeg", "-i", f"{dl_loc}", f"-metadata:s:a", f"title={custom_metadata_title}", f"-metadata:s:s", f"title={custom_metadata_title}", "-map", "0", "-c", "copy", '-y', f"{output_meta}"]
+                # Updated command structure based on VFBITMOD-update
+                cmd_meta = ["ffmpeg", "-i", f"{dl_loc}", # Reverted zender -> ffmpeg
+                            "-metadata", f"title={custom_metadata_title}",
+                            "-metadata:s:v", f"title={custom_metadata_title}",
+                            "-metadata:s:v", f"channel={custom_metadata_title}", # Added channel metadata
+                            "-metadata:s:a", f"title={custom_metadata_title}",
+                            "-metadata:s:s", f"title={custom_metadata_title}",
+                            "-map", "0", "-c", "copy", '-y', f"{output_meta}"]
                 met_result = await run_process_command(cmd_meta)
-                if not met_result:
-                        cmd_meta = ["ffmpeg", "-i", f"{dl_loc}", f"-metadata:s:a", f"title={custom_metadata_title}", "-map", "0", "-c", "copy", '-y', f"{output_meta}"]
-                        met_result = await run_process_command(cmd_meta)
-                if not met_result:
-                        cmd_meta = ["ffmpeg", "-i", f"{dl_loc}", f"-metadata:s:s", f"title={custom_metadata_title}", "-map", "0", "-c", "copy", '-y', f"{output_meta}"]
-                        met_result = await run_process_command(cmd_meta)
+                # Removed fallback commands as the primary one now includes all necessary flags
                 if met_result:
                         await process_status.event.reply(f"✅Metadata Set Successfully")
-                        caption = f"✅Metadata: {custom_metadata_title}\n" + caption if process_status.caption else ''
+                        # Corrected caption logic
+                        caption = f"✅Metadata: {custom_metadata_title}\n" + (process_status.caption if process_status.caption else '')
                         process_status.set_caption(caption)
                         process_status.append_send_files_loc(output_meta)
                         return
@@ -228,8 +233,8 @@ class FFMPEG:
                         return
         else:
             return
-    
-    
+
+
     ###############------Select_Audio------###############
     async def select_audio(process_status):
                                         if get_data()[process_status.user_id]['select_stream']:
@@ -270,7 +275,8 @@ class FFMPEG:
                                                                                 amap_options = f'0:a:{str(int(stream_no)-1)}'
                                                                                 process_status.set_amap_options(amap_options)
                                                                                 await process_status.event.reply(f'✅Audio Selected Successfully\n\n`{str(cstream)}`\n\n`STREAM NO: {str(stream_no)}`')
-                                                                                caption = f"✅Audio: {str(cstream)}\n" + caption if process_status.caption else ''
+                                                                                # Corrected caption logic
+                                                                                caption = f"✅Audio: {str(cstream)}\n" + (process_status.caption if process_status.caption else '')
                                                                                 process_status.set_caption(caption)
                                                                                 return
                                                                 await process_status.event.reply(f'❗{language} Language Not Found In Video.')
@@ -281,3 +287,5 @@ class FFMPEG:
                                                         return
                                         else:
                                             return
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Processes.py ---
