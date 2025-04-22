@@ -4,22 +4,94 @@ import aiohttp
 import aiofiles
 import os
 from bot_helper.Others.Names import Names
-from bot_helper.Database.User_Data import get_data # Import get_data if needed for Gofile specific settings later
+# Removed User_Data import as token is hardcoded
 from bot_helper.Process.Running_Process import check_running_process
 from config.config import LOGGER
 from bot_helper.Others.Helper_Functions import get_human_size
 from time import time
 # Highlighted change: Import ClientTimeout
 from aiohttp import ClientTimeout
+from asyncio import Lock # Import Lock for thread safety if needed for root folder ID caching
 # End of highlighted change
 
+# --- Gofile API Configuration ---
+GOFILE_API_TOKEN = "lBZPR77YTHyquQPpDlCoMbiYWh8B0mbK" # Hardcoded API Token
+GOFILE_API_BASE = "https://api.gofile.io"
 # Gofile API endpoint
 GOFILE_UPLOAD_API = "https://upload.gofile.io/uploadfile"
+# --- End Gofile API Configuration ---
+
 # Highlighted change: Define a longer timeout (e.g., 30 minutes = 1800 seconds)
 # None means infinite timeout, but setting a large value is often safer.
 # Adjust this value based on expected upload times.
 UPLOAD_TIMEOUT_SECONDS = 1800
 # End of highlighted change
+
+# --- Root Folder ID Caching ---
+root_folder_id_cache = None
+root_folder_id_lock = Lock()
+# --- End Root Folder ID Caching ---
+
+async def get_gofile_root_folder_id(session: aiohttp.ClientSession) -> str | None:
+    """Fetches the Gofile account's root folder ID using the API token."""
+    global root_folder_id_cache
+    async with root_folder_id_lock:
+        if root_folder_id_cache:
+            return root_folder_id_cache
+
+        if not GOFILE_API_TOKEN:
+            LOGGER.error("Gofile API Token is not set.")
+            return None
+
+        headers = {"Authorization": f"Bearer {GOFILE_API_TOKEN}"}
+        account_id = None
+
+        # 1. Get Account ID
+        try:
+            get_id_url = f"{GOFILE_API_BASE}/accounts/getid"
+            async with session.get(get_id_url, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("status") == "ok":
+                        account_id = data.get("data", {}).get("id")
+                        LOGGER.info(f"Gofile Account ID fetched: {account_id}")
+                    else:
+                        LOGGER.error(f"Failed to get Gofile Account ID: {data.get('status', 'Unknown error')}")
+                        return None
+                else:
+                    LOGGER.error(f"Failed to get Gofile Account ID. HTTP Status: {response.status}, Response: {await response.text()}")
+                    return None
+        except Exception as e:
+            LOGGER.error(f"Error fetching Gofile Account ID: {e}")
+            return None
+
+        if not account_id:
+            return None
+
+        # 2. Get Account Details (including root folder ID)
+        try:
+            get_account_url = f"{GOFILE_API_BASE}/accounts/{account_id}"
+            async with session.get(get_account_url, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("status") == "ok":
+                        root_folder_id = data.get("data", {}).get("rootFolder")
+                        if root_folder_id:
+                            LOGGER.info(f"Gofile Root Folder ID fetched: {root_folder_id}")
+                            root_folder_id_cache = root_folder_id # Cache the ID
+                            return root_folder_id
+                        else:
+                            LOGGER.error("Root Folder ID not found in Gofile account details.")
+                            return None
+                    else:
+                        LOGGER.error(f"Failed to get Gofile Account Details: {data.get('status', 'Unknown error')}")
+                        return None
+                else:
+                    LOGGER.error(f"Failed to get Gofile Account Details. HTTP Status: {response.status}, Response: {await response.text()}")
+                    return None
+        except Exception as e:
+            LOGGER.error(f"Error fetching Gofile Account Details: {e}")
+            return None
 
 
 async def upload_gofile(process_status):
@@ -28,11 +100,16 @@ async def upload_gofile(process_status):
     """
     total_files = len(process_status.send_files)
     files_to_upload = process_status.send_files
-    user_id = process_status.user_id
+    # user_id = process_status.user_id # Not needed if token is hardcoded
     chat_id = process_status.chat_id
     event = process_status.event
     process_id = process_status.process_id
     caption = process_status.caption if process_status.caption else ""
+
+    if not GOFILE_API_TOKEN:
+        await event.reply("❌ Gofile API Token is not configured. Cannot upload.")
+        LOGGER.error("Gofile upload skipped: API Token not configured.")
+        return
 
     LOGGER.info(f"Starting Gofile upload for process {process_id}. Total files: {total_files}")
 
@@ -40,6 +117,12 @@ async def upload_gofile(process_status):
     timeout = ClientTimeout(total=UPLOAD_TIMEOUT_SECONDS)
     async with aiohttp.ClientSession(timeout=timeout) as session:
     # End of highlighted change
+        # Fetch the root folder ID once before the loop
+        root_folder_id = await get_gofile_root_folder_id(session)
+        if not root_folder_id:
+            await event.reply("❌ Failed to get Gofile Root Folder ID. Cannot upload.")
+            return
+
         for i, file_path in enumerate(files_to_upload):
             if not check_running_process(process_id):
                 await event.reply("🔒 Task Cancelled By User (during Gofile upload).")
@@ -60,19 +143,25 @@ async def upload_gofile(process_status):
             try:
                 # Prepare multipart data
                 data = aiohttp.FormData()
+                # Add the folderId parameter
+                data.add_field('folderId', root_folder_id)
+
                 # Use aiofiles for async file reading
                 # Highlighted change: Stream the file instead of reading all at once
                 async with aiofiles.open(file_path, 'rb') as f:
                     # Pass the file object directly to add_field for streaming
                     data.add_field('file',
                                    f, # Pass the async file handle
+
                                    filename=filename,
                                    content_type='application/octet-stream') # Or detect mime type
 
                     # Make the POST request *inside* the file open block
                     # This ensures the file is open while aiohttp streams it
-                    async with session.post(GOFILE_UPLOAD_API, data=data) as response:
+                    # Add the Authorization header for the upload itself
+                    async with session.post(GOFILE_UPLOAD_API, data=data, headers={"Authorization": f"Bearer {GOFILE_API_TOKEN}"}) as response:
                         upload_duration = time() - start_time
+
                         response_text = await response.text()
                         LOGGER.debug(f"Gofile API response status: {response.status}")
                         LOGGER.debug(f"Gofile API response body: {response_text}")
