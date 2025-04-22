@@ -45,6 +45,30 @@ async def callback(event):
         if user_id not in get_data():
             await new_user(user_id, SAVE_TO_DATABASE)
 
+        # Ensure user data has new keys before accessing callbacks
+        user_data = get_data().get(user_id, {}) # Use .get() for safety
+        if 'video' not in user_data:
+            await saveconfig(user_id, 'video', 'qubality', '480p [720x480]', SAVE_TO_DATABASE)
+            await saveconfig(user_id, 'video', 'encude', 'HEVC', SAVE_TO_DATABASE)
+            await saveconfig(user_id, 'video', 'vbit', '8Bit', SAVE_TO_DATABASE)
+        if 'audio' not in user_data:
+             await saveconfig(user_id, 'audio', 'achannel', '2', SAVE_TO_DATABASE)
+             await saveconfig(user_id, 'audio', 'acodec', 'AAC', SAVE_TO_DATABASE)
+        if 'use_vbr' not in user_data:
+            await saveoptions(user_id, 'use_vbr', False, SAVE_TO_DATABASE)
+            await saveoptions(user_id, 'vbr', '220k', SAVE_TO_DATABASE)
+        if 'use_crf' not in user_data:
+            await saveoptions(user_id, 'use_crf', False, SAVE_TO_DATABASE)
+            await saveoptions(user_id, 'crf', '22', SAVE_TO_DATABASE)
+        if 'use_abit' not in user_data:
+            await saveoptions(user_id, 'use_abit', False, SAVE_TO_DATABASE)
+            await saveoptions(user_id, 'abit', '128k', SAVE_TO_DATABASE)
+        if 'convert' not in user_data or 'type' not in user_data.get('convert', {}):
+             await saveconfig(user_id, 'convert', 'type', 'CRF', SAVE_TO_DATABASE)
+        if 'convert' not in user_data or 'encode' not in user_data.get('convert', {}):
+             await saveconfig(user_id, 'convert', 'encode', 'Video', SAVE_TO_DATABASE)
+        # --- End of Key Check ---
+
         if txt.startswith("settings"):
             text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
             await event.edit(text, buttons=[
@@ -206,23 +230,23 @@ async def callback(event):
 
 
         elif txt=="custom_metedata":
-            cmetadata = get_data()[user_id]['metadata']
+            cmetadata = get_data().get(user_id, {}).get('metadata', "Nik66Bots") # Use .get() with default
             await event.answer(f"✅Current Metadata: {str(cmetadata)}", alert=True) # Kept original message
             return
 
         # Added from VFBITMOD-update
         elif txt=="vbr_value":
-            cvbr = get_data()[user_id]['vbr']
+            cvbr = get_data().get(user_id, {}).get('vbr', '220k') # Use .get() with default
             await event.answer(f"❤ Current VBR 🖤: {str(cvbr)}", alert=True)
             return
 
         elif txt=="crf_value":
-            ccrf = get_data()[user_id]['crf']
+            ccrf = get_data().get(user_id, {}).get('crf', '22') # Use .get() with default
             await event.answer(f"❤ Current CRF 🖤: {str(ccrf)}", alert=True)
             return
 
         elif txt=="abit_value":
-            cabit = get_data()[user_id]['abit']
+            cabit = get_data().get(user_id, {}).get('abit', '128k') # Use .get() with default
             await event.answer(f"❤ Current AudioBit 🖤: {str(cabit)}", alert=True)
             return
         # End of Added from VFBITMOD-update
@@ -356,8 +380,8 @@ async def telegram_callback(event, txt, user_id, chat_id):
             elif txt.startswith("telegramdownload"):
                 await saveoptions(user_id, 'tgdownload', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Telegram Download Client - {str(new_position)}")
-            telegram_upload = get_data()[user_id]['tgupload']
-            telegram_download = get_data()[user_id]['tgdownload']
+            telegram_upload = get_data().get(user_id, {}).get('tgupload', "Pyrogram") # Use .get()
+            telegram_download = get_data().get(user_id, {}).get('tgdownload', "Pyrogram") # Use .get()
             KeyBoard = []
             KeyBoard.append([Button.inline(f'🔼Telegram Upload Client - {str(telegram_upload)}', 'nik66bots')])
             for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_upload, "telegramupload", 2, False):
@@ -377,7 +401,8 @@ async def general_callback(event, txt, user_id, chat_id):
             new_position = txt.split("_", 1)[1]
             r_config = f'./userdata/{str(user_id)}_rclone.conf'
             check_config = exists(r_config)
-            drive_name = get_data()[user_id]['drive_name']
+            user_data = get_data().get(user_id, {}) # Use .get()
+            drive_name = user_data.get('drive_name', False) # Use .get()
             edit = True
             if txt.startswith("generalselectstream"):
                 await saveoptions(user_id, 'select_stream', eval(new_position), SAVE_TO_DATABASE)
@@ -436,21 +461,24 @@ async def general_callback(event, txt, user_id, chat_id):
             elif txt.startswith("generalmultitasks"):
                 await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Multi Tasks - {str(new_position)}")
-            select_stream = get_data()[user_id]['select_stream']
-            stream = get_data()[user_id]['stream']
-            split_video = get_data()[user_id]['split_video']
-            split = get_data()[user_id]['split']
-            upload_tg = get_data()[user_id]['upload_tg']
-            custom_metadata = get_data()[user_id]['custom_metadata']
-            custom_thumbnail = get_data()[user_id]['custom_thumbnail']
-            drive_name = get_data()[user_id]['drive_name']
-            auto_drive = get_data()[user_id]['auto_drive']
-            gen_ss = get_data()[user_id]['gen_ss']
-            ss_no = get_data()[user_id]['ss_no']
-            gen_sample = get_data()[user_id]['gen_sample']
-            multi_tasks = get_data()[user_id]['multi_tasks']
-            upload_all = get_data()[user_id]['upload_all']
-            # rclone = get_data()[user_id]['rclone']
+
+            # Use .get() with defaults for all settings
+            user_data = get_data().get(user_id, {})
+            select_stream = user_data.get('select_stream', False)
+            stream = user_data.get('stream', 'ENG')
+            split_video = user_data.get('split_video', False)
+            split = user_data.get('split', '2GB')
+            upload_tg = user_data.get('upload_tg', True)
+            custom_metadata = user_data.get('custom_metadata', False)
+            custom_thumbnail = user_data.get('custom_thumbnail', False)
+            drive_name = user_data.get('drive_name', False)
+            auto_drive = user_data.get('auto_drive', False)
+            gen_ss = user_data.get('gen_ss', False)
+            ss_no = user_data.get('ss_no', 5)
+            gen_sample = user_data.get('gen_sample', False)
+            multi_tasks = user_data.get('multi_tasks', False)
+            upload_all = user_data.get('upload_all', True)
+
             KeyBoard = []
             KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, select_stream, "generalselectstream", 2, False):
@@ -529,12 +557,16 @@ async def progress_callback(event, txt, user_id):
             elif txt.startswith("progressshowtime"):
                 await saveoptions(user_id, 'show_time', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Show Current Time - {str(new_position)}")
-            detailed_messages = get_data()[user_id]['detailed_messages']
-            show_stats = get_data()[user_id]['show_stats']
-            update_time = get_data()[user_id]['update_time']
-            ffmpeg_size = get_data()[user_id]['ffmpeg_size']
-            ffmpeg_ptime = get_data()[user_id]['ffmpeg_ptime']
-            show_time = get_data()[user_id]['show_time']
+
+            # Use .get() with defaults
+            user_data = get_data().get(user_id, {})
+            detailed_messages = user_data.get('detailed_messages', True)
+            show_stats = user_data.get('show_stats', True)
+            update_time = user_data.get('update_time', 7)
+            ffmpeg_size = user_data.get('ffmpeg_size', True)
+            ffmpeg_ptime = user_data.get('ffmpeg_ptime', True)
+            show_time = user_data.get('show_time', True)
+
             KeyBoard.append([Button.inline(f'📋Show Detailed Messages - {str(detailed_messages)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, detailed_messages, "progressdetailedprogress", 2, False):
                 KeyBoard.append(board)
@@ -585,14 +617,18 @@ async def compress_callback(event, txt, user_id, edit):
             elif txt.startswith("compressionsync"):
                 await saveconfig(user_id, 'compress', 'sync', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Compress Use SYNC - {str(new_position)}")
-            compress_encoder = get_data()[user_id]['compress']['encoder']
-            compress_preset = get_data()[user_id]['compress']['preset']
-            compress_crf = get_data()[user_id]['compress']['crf']
-            compress_map = get_data()[user_id]['compress']['map']
-            compress_copysub = get_data()[user_id]['compress']['copy_sub']
-            compress_use_queue_size = get_data()[user_id]['compress']['use_queue_size']
-            compress_queue_size = get_data()[user_id]['compress']['queue_size']
-            compress_sync = get_data()[user_id]['compress']['sync']
+
+            # Use .get() with defaults
+            compress_settings = get_data().get(user_id, {}).get('compress', {})
+            compress_encoder = compress_settings.get('encoder', 'libx265')
+            compress_preset = compress_settings.get('preset', 'ultrafast')
+            compress_crf = compress_settings.get('crf', '23')
+            compress_map = compress_settings.get('map', True)
+            compress_copysub = compress_settings.get('copy_sub', False)
+            compress_use_queue_size = compress_settings.get('use_queue_size', False)
+            compress_queue_size = compress_settings.get('queue_size', '9999')
+            compress_sync = compress_settings.get('sync', False)
+
             KeyBoard.append([Button.inline(f'🍬Encoder - {str(compress_encoder)}', 'nik66bots')])
             for board in gen_keyboard(encoders_list, compress_encoder, "compressionencoder", 2, False):
                 KeyBoard.append(board)
@@ -664,17 +700,21 @@ async def watermark_callback(event, txt, user_id, edit):
             elif txt.startswith("watermarksync"):
                 await saveconfig(user_id, 'watermark', 'sync', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Watermark Use SYNC - {str(new_position)}")
-            watermark_position = get_data()[user_id]['watermark']['position']
-            watermark_size = get_data()[user_id]['watermark']['size']
-            watermark_encoder = get_data()[user_id]['watermark']['encoder']
-            watermark_encode = get_data()[user_id]['watermark']['encode']
-            watermark_preset = get_data()[user_id]['watermark']['preset']
-            watermark_crf = get_data()[user_id]['watermark']['crf']
-            watermark_map = get_data()[user_id]['watermark']['map']
-            watermark_copysub = get_data()[user_id]['watermark']['copy_sub']
-            watermark_use_queue_size = get_data()[user_id]['watermark']['use_queue_size']
-            watermark_queue_size = get_data()[user_id]['watermark']['queue_size']
-            watermark_sync = get_data()[user_id]['watermark']['sync']
+
+            # Use .get() with defaults
+            watermark_settings = get_data().get(user_id, {}).get('watermark', {})
+            watermark_position = watermark_settings.get('position', '5:5')
+            watermark_size = watermark_settings.get('size', '15')
+            watermark_encoder = watermark_settings.get('encoder', 'libx265')
+            watermark_encode = watermark_settings.get('encode', True)
+            watermark_preset = watermark_settings.get('preset', 'ultrafast')
+            watermark_crf = watermark_settings.get('crf', '23')
+            watermark_map = watermark_settings.get('map', True)
+            watermark_copysub = watermark_settings.get('copy_sub', True)
+            watermark_use_queue_size = watermark_settings.get('use_queue_size', False)
+            watermark_queue_size = watermark_settings.get('queue_size', '9999')
+            watermark_sync = watermark_settings.get('sync', False)
+
             KeyBoard.append([Button.inline(f'🥽Position - {str(ws_name[watermark_position])}', 'nik66bots')])
             for board in gen_keyboard(list(ws_name.keys()), watermark_position, "watermarkposition", 2, False):
                 KeyBoard.append(board)
@@ -732,8 +772,12 @@ async def merge_callback(event, txt, user_id):
             elif txt.startswith("mergefixblank"):
                 await saveconfig(user_id, 'merge', 'fix_blank', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Merge Fix Blank - {str(new_position)}")
-            merge_map = get_data()[user_id]['merge']['map']
-            merge_fix_blank = get_data()[user_id]['merge']['fix_blank']
+
+            # Use .get() with defaults
+            merge_settings = get_data().get(user_id, {}).get('merge', {})
+            merge_map = merge_settings.get('map', True)
+            merge_fix_blank = merge_settings.get('fix_blank', False)
+
             KeyBoard.append([Button.inline(f'🍓Map  - {str(merge_map)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, merge_map, "mergemap", 2, False):
                 KeyBoard.append(board)
@@ -759,14 +803,6 @@ async def convert_callback(event, txt, user_id, edit):
                 await saveconfig(user_id, 'convert', 'type', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Encode Type - {str(new_position)}")
             # End of Added from VFBITMOD-update
-            # Removed encoder setting from here as it's handled by video_callback now
-            # elif txt.startswith("convertencoder"):
-            #     await saveconfig(user_id, 'convert', 'encoder', new_position, SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Convert Encoder - {str(new_position)}")
-            # Removed encode setting from here as it's handled by video_callback now
-            # elif txt.startswith("convertencode"):
-            #     await saveconfig(user_id, 'convert', 'encode', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Convert Use Encoder - {str(new_position)}")
             elif txt.startswith("convertpreset"):
                 await saveconfig(user_id, 'convert', 'preset', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Preset - {str(new_position)}")
@@ -776,36 +812,23 @@ async def convert_callback(event, txt, user_id, edit):
             elif txt.startswith("convertmap"):
                 await saveconfig(user_id, 'convert', 'map', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Map - {str(new_position)}")
-            # Removed CRF setting from here as it's handled by vbrcrf_callback now
-            # elif txt.startswith("convertcrf"):
-            #     await saveconfig(user_id, 'convert', 'crf', new_position, SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Convert CRF - {str(new_position)}")
             elif txt.startswith("convertusequeuesize"):
                 await saveconfig(user_id, 'convert', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Use Queue Size - {str(new_position)}")
             elif txt.startswith("convertsync"):
                 await saveconfig(user_id, 'convert', 'sync', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Use SYNC - {str(new_position)}")
-            # Removed convert_list setting as it's handled by video_callback now
-            # elif txt.startswith("convertlist"):
-            #     await saveconfig(user_id, 'convert', 'convert_list', eval(new_position), SAVE_TO_DATABASE)
-            #     await event.answer(f"✅Convert Qualities - {str(new_position)}")
 
-            # Fetch new settings
-            convert_encode = get_data()[user_id]['convert']['encode']
-            convert_type = get_data()[user_id]['convert']['type']
-            # End Fetch new settings
-
-            # convert_encoder = get_data()[user_id]['convert']['encoder'] # Old setting
-            # convert_encode = get_data()[user_id]['convert']['encode'] # Old setting
-            convert_preset = get_data()[user_id]['convert']['preset']
-            # convert_crf = get_data()[user_id]['convert']['crf'] # Old setting
-            convert_map = get_data()[user_id]['convert']['map']
-            convert_copysub = get_data()[user_id]['convert']['copy_sub']
-            convert_use_queue_size = get_data()[user_id]['convert']['use_queue_size']
-            convert_queue_size = get_data()[user_id]['convert']['queue_size']
-            convert_sync = get_data()[user_id]['convert']['sync']
-            # convert_list = get_data()[user_id]['convert']['convert_list'] # Old setting
+            # Use .get() with defaults
+            convert_settings = get_data().get(user_id, {}).get('convert', {})
+            convert_encode = convert_settings.get('encode', 'Video')
+            convert_type = convert_settings.get('type', 'CRF')
+            convert_preset = convert_settings.get('preset', 'ultrafast')
+            convert_map = convert_settings.get('map', True)
+            convert_copysub = convert_settings.get('copy_sub', False)
+            convert_use_queue_size = convert_settings.get('use_queue_size', False)
+            convert_queue_size = convert_settings.get('queue_size', '9999')
+            convert_sync = convert_settings.get('sync', False)
 
             # Added from VFBITMOD-update
             KeyBoard.append([Button.inline(f'🎧Encode - {str(convert_encode)}', 'nik66bots')])
@@ -816,12 +839,6 @@ async def convert_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             # End of Added from VFBITMOD-update
 
-            # KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(convert_encode)}', 'nik66bots')]) # Old button
-            # for board in gen_keyboard(bool_list, convert_encode, "convertencode", 2, False): # Old button
-            #     KeyBoard.append(board) # Old button
-            # KeyBoard.append([Button.inline(f'🍬Encoder - {str(convert_encoder)}', 'nik66bots')]) # Old button
-            # for board in gen_keyboard(encoders_list, convert_encoder, "convertencoder", 2, False): # Old button
-            #     KeyBoard.append(board) # Old button
             KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(convert_copysub)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, convert_copysub, "convertcopysub", 2, False):
                 KeyBoard.append(board)
@@ -836,15 +853,9 @@ async def convert_callback(event, txt, user_id, edit):
             KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(convert_sync)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, convert_sync, "convertsync", 2, False):
                 KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'🎴Convert Qualities - {str(convert_list)}', 'nik66bots')]) # Old button
-            # for board in gen_keyboard([[720, 480],[720], [480]], convert_list, "convertlist", 3, False): # Old button
-            #     KeyBoard.append(board) # Old button
             KeyBoard.append([Button.inline(f'♒Preset - {str(convert_preset)}', 'nik66bots')])
             for board in gen_keyboard(presets_list, convert_preset, "convertpreset", 3, False):
                 KeyBoard.append(board)
-            # KeyBoard.append([Button.inline(f'⚡CRF  - {str(convert_crf)}', 'nik66bots')]) # Old button
-            # for board in gen_keyboard(crf_list, convert_crf, "convertcrf", 6, False): # Old button
-            #     KeyBoard.append(board) # Old button
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
                 try:
@@ -881,13 +892,17 @@ async def hardmux_callback(event, txt, user_id, edit):
             elif txt.startswith("hardmuxsync"):
                 await saveconfig(user_id, 'hardmux', 'sync', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Hardmux Use SYNC - {str(new_position)}")
-            hardmux_encode_video = get_data()[user_id]['hardmux']['encode_video']
-            hardmux_encoder = get_data()[user_id]['hardmux']['encoder']
-            hardmux_preset = get_data()[user_id]['hardmux']['preset']
-            hardmux_crf = get_data()[user_id]['hardmux']['crf']
-            hardmux_use_queue_size = get_data()[user_id]['hardmux']['use_queue_size']
-            hardmux_queue_size = get_data()[user_id]['hardmux']['queue_size']
-            hardmux_sync = get_data()[user_id]['hardmux']['sync']
+
+            # Use .get() with defaults
+            hardmux_settings = get_data().get(user_id, {}).get('hardmux', {})
+            hardmux_encode_video = hardmux_settings.get('encode_video', True)
+            hardmux_encoder = hardmux_settings.get('encoder', 'libx265')
+            hardmux_preset = hardmux_settings.get('preset', 'ultrafast')
+            hardmux_crf = hardmux_settings.get('crf', '23')
+            hardmux_use_queue_size = hardmux_settings.get('use_queue_size', False)
+            hardmux_queue_size = hardmux_settings.get('queue_size', '9999')
+            hardmux_sync = hardmux_settings.get('sync', False)
+
             KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(hardmux_encode_video)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, hardmux_encode_video, "hardmuxencodevideo", 2, False):
                 KeyBoard.append(board)
@@ -930,7 +945,11 @@ async def softmux_callback(event, txt, user_id, edit):
             if txt.startswith("softmuxsubcodec"):
                 await saveconfig(user_id, 'softmux', 'sub_codec', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Softmux Sub Codec - {str(new_position)}")
-            softmux_sub_codec = get_data()[user_id]['softmux']['sub_codec']
+
+            # Use .get() with defaults
+            softmux_settings = get_data().get(user_id, {}).get('softmux', {})
+            softmux_sub_codec = softmux_settings.get('sub_codec', 'copy')
+
             KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softmux_sub_codec)}', 'nik66bots')])
             for board in gen_keyboard(['copy', 'mov_text'], softmux_sub_codec, "softmuxsubcodec", 2, False):
                 KeyBoard.append(board)
@@ -956,7 +975,11 @@ async def softremux_callback(event, txt, user_id, edit):
             if txt.startswith("softremuxsubcodec"):
                 await saveconfig(user_id, 'softremux', 'sub_codec', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Softremux Sub Codec - {str(new_position)}")
-            softremux_sub_codec = get_data()[user_id]['softremux']['sub_codec']
+
+            # Use .get() with defaults
+            softremux_settings = get_data().get(user_id, {}).get('softremux', {})
+            softremux_sub_codec = softremux_settings.get('sub_codec', 'copy')
+
             KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softremux_sub_codec)}', 'nik66bots')])
             for board in gen_keyboard(['copy', 'mov_text'], softremux_sub_codec, "softremuxsubcodec", 2, False):
                 KeyBoard.append(board)
@@ -988,9 +1011,13 @@ async def video_callback(event, txt, user_id, edit):
             elif txt.startswith("videoquality"):
                 await saveconfig(user_id, 'video', 'qubality', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Quality - {str(new_position)}")
-            video_vbit = get_data()[user_id]['video']['vbit']
-            video_encude = get_data()[user_id]['video']['encude']
-            video_qubality = get_data()[user_id]['video']['qubality']
+
+            # Use .get() with defaults
+            video_settings = get_data().get(user_id, {}).get('video', {})
+            video_vbit = video_settings.get('vbit', '8Bit')
+            video_encude = video_settings.get('encude', 'HEVC')
+            video_qubality = video_settings.get('qubality', '480p [720x480]')
+
             KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'nik66bots')])
             for board in gen_keyboard(encude_list, video_encude, "videoencude", 2, False):
                 KeyBoard.append(board)
@@ -1035,9 +1062,14 @@ async def audio_callback(event, txt, user_id, chat_id, edit):
                             return
                 await saveoptions(user_id, 'use_abit', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"❤ AudioBit 🖤 - {str(new_position)}")
-            use_abit = get_data()[user_id]['use_abit']
-            audio_acodec = get_data()[user_id]['audio']['acodec']
-            audio_achannel = get_data()[user_id]['audio']['achannel']
+
+            # Use .get() with defaults
+            user_data = get_data().get(user_id, {})
+            audio_settings = user_data.get('audio', {})
+            use_abit = user_data.get('use_abit', False)
+            audio_acodec = audio_settings.get('acodec', 'AAC')
+            audio_achannel = audio_settings.get('achannel', '2')
+
             KeyBoard.append([Button.inline(f'🖤 Audio Codec - {str(audio_acodec)}', 'nik66bots')])
             for board in gen_keyboard(acodec_list, audio_acodec, "audioacodec", 2, False):
                 KeyBoard.append(board)
@@ -1087,8 +1119,10 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                 await saveoptions(user_id, 'use_crf', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"❤ CRF 🖤 - {str(new_position)}")
 
-            use_vbr = get_data()[user_id]['use_vbr']
-            use_crf = get_data()[user_id]['use_crf']
+            # Use .get() with defaults
+            user_data = get_data().get(user_id, {})
+            use_vbr = user_data.get('use_vbr', False)
+            use_crf = user_data.get('use_crf', False)
 
             KeyBoard = []
             KeyBoard.append([Button.inline(f'❤ VBR - {str(use_vbr)} [Click To See]', 'vbr_value')])
