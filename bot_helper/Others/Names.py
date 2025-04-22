@@ -18,8 +18,10 @@ class Names:
     rclone = "Rclone"
     gensample = "VideoSample"
     genss ="GenSS"
-    leech="Leech"
-    mirror="Mirror"
+# <<<< START OF DELETED BLOCK >>>>
+#     leech="Leech"
+#     mirror="Mirror"
+# <<<< END OF DELETED BLOCK >>>>
     changeMetadata = 'ChangeMetadata'
     changeindex = "ChangeIndex"
     STATUS = { # MODIFIED: Removed compress, watermark, softremux entries
