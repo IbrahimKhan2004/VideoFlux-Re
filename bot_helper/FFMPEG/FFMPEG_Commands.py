@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
+
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
@@ -8,16 +10,26 @@ def create_direc(direc):
     if not isdir(direc):
         makedirs(direc)
     return
-    
+
 
 def get_output_name(process_status, convert_quality=False):
     if process_status.file_name:
             out_file_name = process_status.file_name
     else:
             out_file_name = process_status.send_files[-1].split("/")[-1]
-    if convert_quality:
+    # Modified to use video quality string if present
+    if convert_quality and isinstance(convert_quality, str) and '[' in convert_quality:
         base_name, extension = splitext(out_file_name)
-        out_file_name = f"{base_name}_{str(convert_quality)}{extension}"
+        # Extract resolution like 720p from "720p [1280x720]"
+        quality_tag = convert_quality.split(' ')[0]
+        out_file_name = f"{base_name}_{quality_tag}{extension}"
+    elif convert_quality and isinstance(convert_quality, int): # Fallback for old integer quality
+        base_name, extension = splitext(out_file_name)
+        out_file_name = f"{base_name}_{str(convert_quality)}p{extension}"
+    # Added else case to handle when convert_quality is not provided or not in expected format
+    else:
+        # Keep original name if quality info is not applicable/available
+        pass
     return out_file_name
 
 
@@ -55,7 +67,7 @@ def get_commands(process_status):
                 command+= ['-vsync', '1', '-async', '-1']
             command+= ['-preset', compress_preset, '-crf', f'{str(compress_crf)}', '-y', f"{output_file}"]
             return command, log_file, input_file, output_file, file_duration
-    
+
     elif process_status.process_type==Names.watermark:
         watermark_position = get_data()[process_status.user_id]['watermark']['position']
         watermark_size = get_data()[process_status.user_id]['watermark']['size']
@@ -96,7 +108,7 @@ def get_commands(process_status):
                 command+= ['-vsync', '1', '-async', '-1']
         command+= ['-preset', watermark_preset, '-crf', f'{str(watermark_crf)}', '-y', f'{str(output_file)}']
         return command, log_file, input_file, output_file, file_duration
-    
+
     elif process_status.process_type==Names.merge:
             merge_map = get_data()[process_status.user_id]['merge']['map']
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
@@ -124,6 +136,10 @@ def get_commands(process_status):
                 command+=['-map','0']
             if not merge_fix_blank:
                 command+= ["-c", "copy"]
+            # Added metadata from VFBITMOD-update
+            custom_metadata_title = get_data()[process_status.user_id]['metadata']
+            command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
+            # End of Added metadata
             command+= ['-y', f'{str(output_file)}']
             return command, log_file, input_file, output_file, file_duration
 
@@ -160,11 +176,11 @@ def get_commands(process_status):
                                 command += ['-vcodec','libx264', '-preset', softmux_preset]
         else:
                 command += ['-c','copy']
-        
+
         command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"]
-        
+
         return command, log_file, input_file, output_file, file_duration
-    
+
     elif process_status.process_type==Names.softremux:
         softremux_preset =  get_data()[process_status.user_id]['softremux']['preset']
         softremux_crf = get_data()[process_status.user_id]['softremux']['crf']
@@ -200,50 +216,162 @@ def get_commands(process_status):
                 command += ['-c','copy']
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
-    
-    
+
+
     elif process_status.process_type==Names.convert:
+            # --- Start of VFBITMOD-update Integration ---
             convert_preset =  get_data()[process_status.user_id]['convert']['preset']
-            convert_crf = get_data()[process_status.user_id]['convert']['crf']
+            convert_vbit = get_data()[process_status.user_id]['video']['vbit']
+            convert_abit = get_data()[process_status.user_id]['abit'] if get_data()[process_status.user_id]['use_abit'] else None # Use custom if enabled
+            convert_acodec = get_data()[process_status.user_id]['audio']['acodec']
+            convert_achannel = get_data()[process_status.user_id]['audio']['achannel']
             convert_map = get_data()[process_status.user_id]['convert']['map']
-            convert_encoder = get_data()[process_status.user_id]['convert']['encoder']
+            convert_encoder = get_data()[process_status.user_id]['video']['encude']
             convert_copysub = get_data()[process_status.user_id]['convert']['copy_sub']
             convert_sync = get_data()[process_status.user_id]['convert']['sync']
-            convert_encode = get_data()[process_status.user_id]['convert']['encode']
+            convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Video, Audio, Both
+            convert_quality = get_data()[process_status.user_id]['video']['qubality'] # e.g., '720p [1280x720]'
+            convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR
+            convert_crf = get_data()[process_status.user_id]['crf'] if get_data()[process_status.user_id]['use_crf'] else None # Use custom if enabled
+            convert_vbr = get_data()[process_status.user_id]['vbr'] if get_data()[process_status.user_id]['use_vbr'] else None # Use custom if enabled
+            # --- End of VFBITMOD-update Integration ---
+
+            # convert_preset =  get_data()[process_status.user_id]['convert']['preset'] # Old
+            # convert_crf = get_data()[process_status.user_id]['convert']['crf'] # Old
+            # convert_map = get_data()[process_status.user_id]['convert']['map'] # Old
+            # convert_encoder = get_data()[process_status.user_id]['convert']['encoder'] # Old
+            # convert_copysub = get_data()[process_status.user_id]['convert']['copy_sub'] # Old
+            # convert_sync = get_data()[process_status.user_id]['convert']['sync'] # Old
+            # convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Old
+
             create_direc(f"{process_status.dir}/convert/")
             log_file = f"{process_status.dir}/convert/convert_logs_{process_status.process_id}.txt"
             if exists(log_file):
                 remove(log_file)
             input_file = f'{str(process_status.send_files[-1])}'
-            output_file = f"{process_status.dir}/convert/{get_output_name(process_status, convert_quality=process_status.convert_quality)}"
+            # Use the new quality string for output name generation
+            output_file = f"{process_status.dir}/convert/{get_output_name(process_status, convert_quality=convert_quality)}"
             file_duration = get_video_duration(input_file)
+
             command = ['ffmpeg','-hide_banner',
                                             '-progress', f"{log_file}",
-                                            '-i', f'{input_file}',
-                                            '-vf', f"scale=-2:{process_status.convert_quality}"]
+                                            '-i', f'{input_file}']
+
+            # --- Start of VFBITMOD-update Command Logic ---
+            # Video Encoding Part
+            if convert_encode == 'Video' or convert_encode == 'Video Audio [Both]':
+                # Resolution Scaling
+                if convert_quality=='480p [720x360]':
+                    command+=['-vf', 'scale=720:360']
+                elif convert_quality=='480p [720x480]':
+                    command+=['-vf', 'scale=720:480']
+                elif convert_quality=='720p [1280x640]':
+                    command+=['-vf', 'scale=1280:640']
+                elif convert_quality=='720p [1280x720]':
+                    command+=['-vf', 'scale=1280:720']
+                elif convert_quality=='1080p [1920x960]':
+                    command+=['-vf', 'scale=1920:960']
+                else: # Default to 1080p [1920x1080]
+                     command+=['-vf', 'scale=1920:1080']
+
+                # Pixel Format (Bit Depth)
+                if convert_vbit=='8Bit':
+                    command+= ['-pix_fmt','yuv420p']
+                else: # 10Bit
+                    command+= ['-pix_fmt','yuv420p10le']
+
+                # Video Codec
+                if convert_encoder=='HEVC':
+                    command+= ['-vcodec','libx265','-vtag', 'hvc1']
+                else: # H.264
+                    command+= ['-vcodec','libx264']
+
+                # Rate Control (CRF or VBR)
+                if convert_type=='CRF' and convert_crf is not None:
+                    command+= ['-crf', f'{str(convert_crf)}']
+                elif convert_type=='VBR' and convert_vbr is not None:
+                    command+= ['-b:v', f'{str(convert_vbr)}']
+                # If type is set but value is None (not enabled), FFmpeg might use defaults or error.
+                # Consider adding a default CRF/VBR if type is selected but value isn't enabled.
+                elif convert_type=='CRF': # Default CRF if enabled but no value set
+                     command+= ['-crf', '23'] # Example default
+                elif convert_type=='VBR': # Default VBR if enabled but no value set
+                     command+= ['-b:v', '1500k'] # Example default
+
+            else: # Only Audio encode or no video encode
+                command+=['-c:v', 'copy']
+
+            # Audio Encoding Part
+            if convert_encode == 'Audio' or convert_encode == 'Video Audio [Both]':
+                # Audio Codec
+                if convert_acodec=='OPUS':
+                    codec = 'libopus'
+                elif convert_acodec=='DD':
+                    codec = 'ac3'
+                elif convert_acodec=='DDP':
+                    codec = 'eac3'
+                else: # Default AAC
+                    codec = 'aac'
+                command += ['-c:a', codec]
+
+                # Audio Bitrate (only if custom is enabled)
+                if convert_abit is not None:
+                    command += ['-b:a', f'{str(convert_abit)}']
+
+                # Audio Channels
+                command += ['-ac', f'{str(convert_achannel)}']
+            else: # No audio encode
+                command+= ['-c:a', 'copy']
+
+            # Common Settings
             if convert_map:
                 command+=['-map','0:v?',
                                             '-map',f'{str(process_status.amap_options)}?',
                                             "-map", "0:s?"]
             if convert_copysub:
                 command+= ["-c:s", "copy"]
-            if convert_encode:
-                if convert_encoder=='libx265':
-                        command+= ['-vcodec','libx265','-vtag', 'hvc1']
-                else:
-                        command+= ['-vcodec','libx264']
-            else:
-                command+= ["-c:a", "copy"]
+
             convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
             if convert_use_queue_size:
                 convert_queue_size = get_data()[process_status.user_id]['convert']['queue_size']
                 command+= ['-max_muxing_queue_size', f'{str(convert_queue_size)}']
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
-            command+= ['-preset', convert_preset, '-crf', f'{str(convert_crf)}', '-y', f"{output_file}"]
+
+            command+= ['-preset', convert_preset]
+            command+= ['-y', f"{output_file}"]
+            # --- End of VFBITMOD-update Command Logic ---
+
+            # --- Start of Old Command Logic (Commented Out) ---
+            # command = ['ffmpeg','-hide_banner',
+            #                                 '-progress', f"{log_file}",
+            #                                 '-i', f'{input_file}',
+            #                                 '-vf', f"scale=-2:{process_status.convert_quality}"]
+            # if convert_map:
+            #     command+=['-map','0:v?',
+            #                                 '-map',f'{str(process_status.amap_options)}?',
+            #                                 "-map", "0:s?"]
+            # if convert_copysub:
+            #     command+= ["-c:s", "copy"]
+            # if convert_encode:
+            #     if convert_encoder=='libx265':
+            #             command+= ['-vcodec','libx265','-vtag', 'hvc1']
+            #     else:
+            #             command+= ['-vcodec','libx264']
+            # else:
+            #     command+= ["-c:a", "copy"]
+            # convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
+            # if convert_use_queue_size:
+            #     convert_queue_size = get_data()[process_status.user_id]['convert']['queue_size']
+            #     command+= ['-max_muxing_queue_size', f'{str(convert_queue_size)}']
+            # if convert_sync:
+            #     command+= ['-vsync', '1', '-async', '-1']
+            # command+= ['-preset', convert_preset, '-crf', f'{str(convert_crf)}', '-y', f"{output_file}"]
+            # --- End of Old Command Logic ---
+
             return command, log_file, input_file, output_file, file_duration
-    
-    
+
+
     elif process_status.process_type==Names.hardmux:
         hardmux_preset =  get_data()[process_status.user_id]['hardmux']['preset']
         hardmux_crf = get_data()[process_status.user_id]['hardmux']['crf']
@@ -275,8 +403,8 @@ def get_commands(process_status):
             command+= ['-vsync', '1', '-async', '-1']
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
-    
-    
+
+
     elif process_status.process_type==Names.changeMetadata:
         create_direc(f"{process_status.dir}/metadata/")
         log_file = f"{process_status.dir}/metadata/metadata_logs_{process_status.process_id}.txt"
@@ -287,10 +415,14 @@ def get_commands(process_status):
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}']
         for m in custom_metadata:
             command+=m
+        # Added global title metadata from VFBITMOD-update
+        custom_metadata_title = get_data()[process_status.user_id]['metadata']
+        command += ['-metadata', f"title={custom_metadata_title}"]
+        # End of Added global title metadata
         command += ["-map", "0", "-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
-    
-    
+
+
     elif process_status.process_type==Names.changeindex:
         create_direc(f"{process_status.dir}/index/")
         log_file = f"{process_status.dir}/index/index_logs_{process_status.process_id}.txt"
@@ -300,3 +432,5 @@ def get_commands(process_status):
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
