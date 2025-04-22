@@ -182,10 +182,8 @@ def get_commands(process_status):
                 if convert_encoder=='HEVC':
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
                     # <<< START OF MODIFICATION >>>
-                    # Add x265 specific parameters here
-                    # Example: Use auto-detected pools and 8 slices
-                    # You can make 'pools' and 'slices' configurable later
-                    x265_custom_params = "pools=16:slices=16" # Example values
+                    # Add x265 specific parameters here including tune=fastdecode
+                    x265_custom_params = "pools=16:slices=16:tune=fastdecode" # Added tune=fastdecode
                     command += ['-x265-params', x265_custom_params]
                     # <<< END OF MODIFICATION >>>
                 else: # H.264
@@ -299,9 +297,8 @@ def get_commands(process_status):
                 if encoder=='libx265':
                         command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
                         # <<< START OF MODIFICATION >>>
-                        # Add x265 specific parameters here for hardmux if needed
-                        # Example: Use auto-detected pools and 8 slices
-                        x265_custom_params_hm = "pools=16:slices=16" # Example values
+                        # Add x265 specific parameters here for hardmux including tune=fastdecode
+                        x265_custom_params_hm = "pools=16:slices=16:tune=fastdecode" # Added tune=fastdecode
                         command += ['-x265-params', x265_custom_params_hm]
                         # <<< END OF MODIFICATION >>>
                 else:
