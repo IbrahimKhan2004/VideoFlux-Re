@@ -1,9 +1,14 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Others/Names.py ---
+
 class Names:
-    compress = "Compress"
-    watermark = "Watermark"
+    # REMOVED: compress name
+    # compress = "Compress"
+    # REMOVED: watermark name
+    # watermark = "Watermark"
     merge = "Merge"
     softmux = "SoftMux"
-    softremux = "SoftReMux"
+    # REMOVED: softremux name
+    # softremux = "SoftReMux"
     convert = "Convert"
     hardmux = "Hardmux"
     aria = "Aria"
@@ -17,21 +22,23 @@ class Names:
     mirror="Mirror"
     changeMetadata = 'ChangeMetadata'
     changeindex = "ChangeIndex"
-    STATUS = {compress: "🏮Compressing", 
-                        watermark: "🛺Adding Watermark",
-                        merge: "🍧Merging", 
-                        softmux: "🎮SoftMuxing Subtitles", 
-                        softremux: "🛩SoftReMuxing Subtitles",
-                        convert: "🚜Converting Video", 
+    STATUS = { # MODIFIED: Removed compress, watermark, softremux entries
+                        # compress: "🏮Compressing",
+                        # watermark: "🛺Adding Watermark",
+                        merge: "🍧Merging",
+                        softmux: "🎮SoftMuxing Subtitles",
+                        # softremux: "🛩SoftReMuxing Subtitles",
+                        convert: "🚜Converting Video",
                         hardmux: "🚍HardMuxing Subtitle",
                         changeMetadata: "🪀Changing MetaData",
                         changeindex: "🎨Changing Index"}
-    FFMPEG_PROCESSES = [compress, 
-                                                        watermark, 
-                                                        merge, 
-                                                        softmux, 
-                                                        softremux, 
-                                                        convert, 
+    FFMPEG_PROCESSES = [ # MODIFIED: Removed compress, watermark, softremux entries
+                                                        # compress,
+                                                        # watermark,
+                                                        merge,
+                                                        softmux,
+                                                        # softremux,
+                                                        convert,
                                                         hardmux,
                                                         changeMetadata,
                                                         changeindex]
@@ -47,3 +54,5 @@ class Names:
     STATUS_PAUSED = "Pause"
     STATUS_CHECKING = "CheckUp"
     STATUS_SEEDING = "Seed"
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Others/Names.py ---
