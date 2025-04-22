@@ -182,8 +182,11 @@ def get_commands(process_status):
                 if convert_encoder=='HEVC':
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
                     # <<< START OF MODIFICATION >>>
-                    # Add x265 specific parameters here including tune=fastdecode
-                    x265_custom_params = "pools=16:slices=16:tune=fastdecode" # Added tune=fastdecode
+                    # Add -tune as a separate FFmpeg option
+                    command += ['-tune', 'fastdecode']
+                    # Set pools and slices in x265-params (without tune)
+                    # Using 16 pools and 15 slices based on the last log output
+                    x265_custom_params = "pools=16:slices=15"
                     command += ['-x265-params', x265_custom_params]
                     # <<< END OF MODIFICATION >>>
                 else: # H.264
@@ -271,6 +274,7 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
+            # Add preset *after* codec and tune/params
             command+= ['-preset', convert_preset]
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
@@ -295,13 +299,19 @@ def get_commands(process_status):
         if hardmux_encode_video:
                 encoder = get_data()[process_status.user_id]['hardmux']['encoder']
                 if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
+                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}']
                         # <<< START OF MODIFICATION >>>
-                        # Add x265 specific parameters here for hardmux including tune=fastdecode
-                        x265_custom_params_hm = "pools=16:slices=16:tune=fastdecode" # Added tune=fastdecode
+                        # Add -tune as a separate FFmpeg option for hardmux
+                        command += ['-tune', 'fastdecode']
+                        # Set pools and slices in x265-params (without tune)
+                        # Using 16 pools and 15 slices based on the last log output
+                        x265_custom_params_hm = "pools=16:slices=15"
                         command += ['-x265-params', x265_custom_params_hm]
                         # <<< END OF MODIFICATION >>>
+                        # Add preset *after* codec and tune/params
+                        command += ['-preset', hardmux_preset]
                 else:
+                        # Add preset for libx264 if needed, usually comes after codec/crf
                         command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
         else:
                 command += ['-c:a','copy']
