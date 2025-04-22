@@ -187,6 +187,7 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 etype = get_data()[user_id]['convert']['type']
                 crf = get_data()[user_id]['crf'] if get_data()[user_id]['use_crf'] else 'N/A'
                 vbr = get_data()[user_id]['vbr'] if get_data()[user_id]['use_vbr'] else 'N/A'
+-               +               abr = get_data()[user_id]['abr'] if get_data()[user_id]['use_abr'] else 'N/A' # Added ABR
 +               abr = get_data()[user_id]['abr'] if get_data()[user_id]['use_abr'] else 'N/A' # Added ABR
                 abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
                 acodec = get_data()[user_id]['audio']['acodec']
