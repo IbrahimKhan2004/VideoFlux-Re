@@ -1,5 +1,3 @@
-# --- START OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
-
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
@@ -132,9 +130,10 @@ def get_commands(process_status):
             convert_sync = get_data()[process_status.user_id]['convert']['sync']
             convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Video, Audio, Both
             convert_quality = get_data()[process_status.user_id]['video']['qubality'] # e.g., '720p [1280x720]'
-            convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR
+            convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR or ABR
             convert_crf = get_data()[process_status.user_id]['crf'] if get_data()[process_status.user_id]['use_crf'] else None # Use custom if enabled
             convert_vbr = get_data()[process_status.user_id]['vbr'] if get_data()[process_status.user_id]['use_vbr'] else None # Use custom if enabled
++           convert_abr = get_data()[process_status.user_id]['abr'] if get_data()[process_status.user_id]['use_abr'] else None # Use custom if enabled
             # --- End of VFBITMOD-update Integration ---
 
             create_direc(f"{process_status.dir}/convert/")
@@ -179,17 +178,22 @@ def get_commands(process_status):
                 else: # H.264
                     command+= ['-vcodec','libx264']
 
-                # Rate Control (CRF or VBR)
+-               # Rate Control (CRF or VBR)
++               # Rate Control (CRF, VBR, or ABR)
                 if convert_type=='CRF' and convert_crf is not None:
                     command+= ['-crf', f'{str(convert_crf)}']
                 elif convert_type=='VBR' and convert_vbr is not None:
                     command+= ['-b:v', f'{str(convert_vbr)}']
++               elif convert_type=='ABR' and convert_abr is not None:
++                   command+= ['-b:v', f'{str(convert_abr)}'] # ABR (1-pass) uses -b:v
                 # If type is set but value is None (not enabled), FFmpeg might use defaults or error.
                 # Consider adding a default CRF/VBR if type is selected but value isn't enabled.
                 elif convert_type=='CRF': # Default CRF if enabled but no value set
                      command+= ['-crf', '23'] # Example default
                 elif convert_type=='VBR': # Default VBR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
++               elif convert_type=='ABR': # Default ABR if enabled but no value set
++                    command+= ['-b:v', '1500k'] # Example default
 
             else: # Only Audio encode or no video encode
                 command+=['-c:v', 'copy']
