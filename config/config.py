@@ -33,8 +33,7 @@ basicConfig(
     ],
 )
 
-# REMOVED: Telethon logger disabling
-# getLogger("telethon").setLevel(ERROR)
+getLogger("telethon").setLevel(ERROR)
 getLogger("pyrogram").setLevel(ERROR)
 LOGGER = getLogger()
 
@@ -86,9 +85,8 @@ class Config:
     API_HASH = environ.get("API_HASH","")
     TOKEN = environ.get("TOKEN","")
     USE_PYROGRAM = True
-    # REMOVED: Telethon session string variables
-    # USE_SESSION_STRING = environ.get("USE_SESSION_STRING", False)
-    # SESSION_STRING = environ.get("SESSION_STRING","")
+    USE_SESSION_STRING = environ.get("USE_SESSION_STRING", False)
+    SESSION_STRING = environ.get("SESSION_STRING","")
     RUNNING_TASK_LIMIT = int(environ.get("RUNNING_TASK_LIMIT",""))
     AUTO_SET_BOT_CMDS = eval(environ.get("AUTO_SET_BOT_CMDS","False"))
     HEROKU_APP_NAME = environ.get("HEROKU_APP_NAME", False)
