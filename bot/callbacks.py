@@ -220,8 +220,8 @@ async def callback(event):
         #     return
 
 
-        elif txt=="nik66bots":
-            await event.answer(f"⚡Bot By Sahil⚡", alert=True) # Kept original message
+        elif txt=="BashAFK":
+            await event.answer(f"⚡Bot By BashAFK⚡", alert=True) # Kept original message
             return
 
 
@@ -252,7 +252,7 @@ async def callback(event):
 
 
         elif txt=="custom_metedata":
-            cmetadata = get_data().get(user_id, {}).get('metadata', "Nik66Bots") # Use .get() with default
+            cmetadata = get_data().get(user_id, {}).get('metadata', "BashAFK") # Use .get() with default
             await event.answer(f"✅Current Metadata: {str(cmetadata)}", alert=True) # Kept original message
             return
 
