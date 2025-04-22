@@ -3,16 +3,12 @@
 from telethon import events
 from telethon.tl.custom import Button
 from config.config import Config
-# Highlighted change: Import the module instead of specific functions
-# from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file, get_text_data, ask_text_event
-from bot_helper.Others import Helper_Functions
-# End of highlighted change
+from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file
 from bot_helper.Database.User_Data import get_data, new_user, saveconfig, saveoptions, resetdatabase
 from os.path import exists
 from bot_helper.Telegram.Telegram_Client import Telegram
-# Highlighted change: Import ButtonMaker (already present from previous step)
-from bot_helper.telegram_helper.button_build import ButtonMaker
-# End of highlighted change
+
+
 
 
 #////////////////////////////////////Variables////////////////////////////////////#
@@ -89,10 +85,6 @@ async def callback(event):
         if 'upload_destination' not in user_data:
             await saveoptions(user_id, 'upload_destination', 'Rclone', SAVE_TO_DATABASE)
 # End of highlighted change
-# Highlighted change: Added check for gofile_api_key key
-        if 'gofile_api_key' not in user_data:
-            await saveoptions(user_id, 'gofile_api_key', None, SAVE_TO_DATABASE)
-# End of highlighted change
         # --- End of Key Check ---
 
         if txt.startswith("settings"):
@@ -138,9 +130,7 @@ async def callback(event):
 
         elif txt.startswith("env"):
             position = txt.split("_", 1)[1]
-            # Highlighted change: Use Helper_Functions.get_text_data
-            value_result = await Helper_Functions.get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
-            # End of highlighted change
+            value_result = await get_text_data(chat_id, user_id, event, 120, f"Send New Value For Variable {position}")
             if value_result:
                 if exists("./userdata/botconfig.env"):
                     config_dict = get_env_dict('./userdata/botconfig.env')
@@ -156,9 +146,7 @@ async def callback(event):
             new_position = eval(txt.split("_", 1)[1])
             if new_position:
                 if exists(Config.DOWNLOAD_DIR):
-                    # Highlighted change: Use Helper_Functions.delete_all
-                    await Helper_Functions.delete_all(Config.DOWNLOAD_DIR)
-                    # End of highlighted change
+                    await delete_all(Config.DOWNLOAD_DIR)
                     text = f"✔Successfully Deleted {Config.DOWNLOAD_DIR}"
                     try:
                             await event.answer(text, alert=True)
@@ -231,11 +219,6 @@ async def callback(event):
         #     await watermark_callback(event, txt, user_id, True)
         #     return
 
-# Highlighted change: Added Gofile settings callback trigger
-        elif txt.startswith("gofile"):
-            await gofile_settings_callback(event, txt, user_id, chat_id)
-            return
-# End of highlighted change
 
         elif txt=="BashAFK":
             await event.answer(f"⚡Bot By BashAFK⚡", alert=True) # Kept original message
@@ -244,9 +227,7 @@ async def callback(event):
 
         elif txt.startswith("change"):
             if "_queue_size" in txt:
-                # Highlighted change: Use Helper_Functions.get_text_data
-                queue_size_input= await Helper_Functions.get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
-                # End of highlighted change
+                queue_size_input= await get_text_data(chat_id, user_id, event, 120, "Send Queue Size")
                 if queue_size_input:
                     try:
                         queue_size = int(queue_size_input.message.message)
@@ -452,10 +433,17 @@ async def get_abit(chat_id, user_id, event, timeout, message):
             return abit
 # End of Added from VFBITMOD-update
 
-# Highlighted change: Use Helper_Functions.get_text_data
 async def get_text_data(chat_id, user_id, event, timeout, message):
-    return await Helper_Functions.get_text_data(chat_id, user_id, event, timeout, message)
-# End of highlighted change
+    async with TELETHON_CLIENT.conversation(chat_id) as conv:
+            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
+            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]') # Kept original emoji
+            try:
+                new_event = await handle
+            except Exception as e:
+                await ask.reply('🔃Timed Out! Tasked Has Been Cancelled.')
+                LOGGER.info(e)
+                return False
+            return new_event
 
 
 #////////////////////////////////////Callbacks_Functions////////////////////////////////////#
@@ -532,11 +520,7 @@ async def general_callback(event, txt, user_id, chat_id):
                     if current_destination == 'Rclone' and not (check_config and drive_name):
                         await event.answer(f"❗Rclone destination selected, but no config/account found. Save Rclone Config first.", alert=True)
                         return
-                    # Highlighted change: Add check for Gofile API key if Gofile is selected
-                    elif current_destination == 'Gofile' and not user_data.get('gofile_api_key'):
-                         # Allow guest upload even if key is not set
-                         pass # No alert needed for guest upload
-                    # End of highlighted change
+                    # No check needed if destination is Gofile
                 # End of highlighted change
                 await saveoptions(user_id, 'upload_tg', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Upload On TG - {str(new_position)}")
@@ -544,13 +528,6 @@ async def general_callback(event, txt, user_id, chat_id):
             elif txt.startswith(callback_prefix): # Use the defined prefix
                 # Correctly extract the value ("Rclone" or "Gofile")
                 selected_destination = txt.replace(callback_prefix, "")
-                # Add checks before saving the destination
-                if selected_destination == 'Rclone' and not (check_config and drive_name):
-                    await event.answer(f"❗Cannot set Rclone as destination without a valid config/account.", alert=True)
-                    return # Prevent saving if Rclone is not set up
-                elif selected_destination == 'Gofile' and not user_data.get('gofile_api_key'):
-                     # Allow setting Gofile even without API key (for guest uploads)
-                     pass # No alert needed for guest upload
                 await saveoptions(user_id, 'upload_destination', selected_destination, SAVE_TO_DATABASE)
                 await event.answer(f"✅Upload Destination Set To - {str(selected_destination)}")
 # End of highlighted change
@@ -580,11 +557,6 @@ async def general_callback(event, txt, user_id, chat_id):
             # elif txt.startswith("generalmultitasks"):
             #     await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
             #     await event.answer(f"✅Multi Tasks - {str(new_position)}")
-# Highlighted change: Added Gofile settings button callback
-            elif txt.startswith("general_gofile_settings"):
-                 await gofile_settings_callback(event, txt, user_id, chat_id)
-                 return # Return early as gofile_settings_callback handles the edit
-# End of highlighted change
 
             # Use .get() with defaults for all settings
             user_data = get_data().get(user_id, {})
@@ -645,10 +617,6 @@ async def general_callback(event, txt, user_id, chat_id):
                         KeyBoard.append([Button.inline(f'🔮Rclone Account - {str(drive_name)}', 'BashAFK')])
                         for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
                             KeyBoard.append(board)
-                # Highlighted change: Add Gofile Settings button if Gofile is the chosen destination
-                elif upload_destination == 'Gofile':
-                     KeyBoard.append([Button.inline('⚙️ Gofile Settings', 'general_gofile_settings')])
-                # End of highlighted change
 # End of highlighted change
             KeyBoard.append([Button.inline(f'🕹Auto Upload Big File To Drive - {str(auto_drive)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, auto_drive, "generalautodrive", 2, False):
@@ -1146,61 +1114,5 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                 await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
             return
 # End of Added from VFBITMOD-update
-
-# Highlighted change: Added Gofile settings callback function
-###############------Gofile Settings------###############
-async def gofile_settings_callback(event, txt, user_id, chat_id):
-    new_position = txt.split("_", 1)[1]
-    edit = True
-    if txt.startswith("general_set_gofile_api"):
-        # Highlighted change: Use Helper_Functions.ask_text_event
-        api_key_event = await Helper_Functions.ask_text_event(chat_id, user_id, event, 120, "Send Gofile API Key")
-        # End of highlighted change
-        if api_key_event and api_key_event.message.message:
-            api_key = api_key_event.message.message.strip()
-            # Optional: Add API key validation here if needed
-            await saveoptions(user_id, 'gofile_api_key', api_key, SAVE_TO_DATABASE)
-            await event.answer("✅ Gofile API Key Saved!")
-            edit = False # Refresh menu after saving
-        else:
-            await event.answer("❗No API Key provided or timed out.")
-            return # Don't refresh if no key was provided
-    elif txt.startswith("general_delete_gofile_api"):
-        await saveoptions(user_id, 'gofile_api_key', None, SAVE_TO_DATABASE)
-        await event.answer("✅ Gofile API Key Deleted!")
-        edit = False # Refresh menu after deleting
-    elif txt.startswith("general_back_gofile"):
-         await general_callback(event, "general_settings", user_id, chat_id) # Go back to general settings
-         return
-
-    # Build Gofile settings menu
-    user_data = get_data().get(user_id, {})
-    gofile_api_key = user_data.get('gofile_api_key', None)
-    api_key_status = "Exists ✅" if gofile_api_key else "Not Exists ❌"
-
-    # Highlighted change: Use ButtonMaker
-    buttons = ButtonMaker()
-    buttons.ibutton(f'🔑 Gofile API Key Status: {api_key_status}', 'BashAFK')
-    buttons.ibutton('✏️ Set API Key', 'general_set_gofile_api')
-    if gofile_api_key: # Only show delete button if key exists
-        buttons.ibutton('🗑️ Delete API Key', 'general_delete_gofile_api')
-    buttons.ibutton('↩ Back to General Settings', 'general_back_gofile')
-    KeyBoard = buttons.build_menu(1) # Build the menu
-    # End of highlighted change
-
-    if edit:
-        try:
-            await event.edit("⚙️ Gofile Upload Settings", buttons=KeyBoard)
-        except:
-            pass
-    else:
-        # Refresh the message after setting/deleting key
-        await TELETHON_CLIENT.send_message(chat_id, "⚙️ Gofile Upload Settings", buttons=KeyBoard)
-        try:
-            await event.delete() # Delete the previous message
-        except:
-            pass
-    return
-# End of highlighted change
 
 # --- END OF FILE VideoFlux-Re-master/bot/callbacks.py ---
