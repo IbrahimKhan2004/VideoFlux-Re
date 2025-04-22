@@ -1,7 +1,3 @@
---- START OF FILE VideoFlux-Re-master/bot/callbacks.py ---
-
-# --- START OF FILE VideoFlux-Re-master/bot/callbacks.py ---
-
 from telethon import events
 from telethon.tl.custom import Button
 from config.config import Config
@@ -1065,6 +1061,3 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
 -               await TELETHON_CLIENT.send_message(chat_id, "❤ VBR / 🖤 CRF Settings", buttons=KeyBoard)
 +               await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR) Settings", buttons=KeyBoard) # Modified title
             return
-# End of Added from VFBITMOD-update
-
-# --- END OF FILE VideoFlux-Re-master/bot/callbacks.py ---
