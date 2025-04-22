@@ -9,9 +9,18 @@ from bot_helper.Process.Running_Process import check_running_process
 from config.config import LOGGER
 from bot_helper.Others.Helper_Functions import get_human_size
 from time import time
+# Highlighted change: Import ClientTimeout
+from aiohttp import ClientTimeout
+# End of highlighted change
 
 # Gofile API endpoint
 GOFILE_UPLOAD_API = "https://upload.gofile.io/uploadfile"
+# Highlighted change: Define a longer timeout (e.g., 30 minutes = 1800 seconds)
+# None means infinite timeout, but setting a large value is often safer.
+# Adjust this value based on expected upload times.
+UPLOAD_TIMEOUT_SECONDS = 1800
+# End of highlighted change
+
 
 async def upload_gofile(process_status):
     """
@@ -27,7 +36,10 @@ async def upload_gofile(process_status):
 
     LOGGER.info(f"Starting Gofile upload for process {process_id}. Total files: {total_files}")
 
-    async with aiohttp.ClientSession() as session:
+    # Highlighted change: Set timeout for the session
+    timeout = ClientTimeout(total=UPLOAD_TIMEOUT_SECONDS)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+    # End of highlighted change
         for i, file_path in enumerate(files_to_upload):
             if not check_running_process(process_id):
                 await event.reply("🔒 Task Cancelled By User (during Gofile upload).")
@@ -93,8 +105,14 @@ async def upload_gofile(process_status):
                 # End of highlighted change
 
             except aiohttp.ClientError as e:
-                await event.reply(f"❌ Network error during Gofile upload for `{filename}`: {e}")
-                LOGGER.error(f"Network error during Gofile upload for {filename}: {e}")
+                # Highlighted change: Check if the error is specifically a timeout error
+                if isinstance(e, asyncio.TimeoutError):
+                     await event.reply(f"❌ Gofile upload timed out for `{filename}` after {UPLOAD_TIMEOUT_SECONDS}s. Server might be slow or network unstable.")
+                     LOGGER.error(f"Gofile upload timed out for {filename}.")
+                else:
+                    await event.reply(f"❌ Network error during Gofile upload for `{filename}`: {e}")
+                    LOGGER.error(f"Network error during Gofile upload for {filename}: {e}")
+                # End of highlighted change
             except Exception as e:
                 # Catch MemoryError specifically if it still occurs somehow
                 if isinstance(e, MemoryError):
