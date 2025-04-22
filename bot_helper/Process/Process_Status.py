@@ -165,33 +165,13 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
 
 
 def generate_ffmpeg_status_head(user_id, pmode, input_size):
-        if pmode==Names.compress:
-                if get_data()[user_id]['compress']['use_queue_size']:
-                        qsize_text = f"**Queue Size**: {str(get_data()[user_id]['compress']['queue_size'])}"
-                else:
-                        qsize_text = f"**Queue Size**: False"
-                text = f"\n**SYNC**: {get_data()[user_id]['compress']['sync']} | **Preset**: {get_data()[user_id]['compress']['preset']}\n"\
-                        f"**CRF**: {get_data()[user_id]['compress']['crf']} | **Copy Subtitles**: {get_data()[user_id]['compress']['copy_sub']}\n"\
-                        f"{qsize_text} | **MAP**: {get_data()[user_id]['compress']['map']}\n"\
-                        f"**Encoder**: {get_data()[user_id]['compress']['encoder']} | **In.Size**: {get_human_size(input_size)}"
-                return text
-        elif pmode==Names.watermark:
-                if get_data()[user_id]['watermark']['use_queue_size']:
-                        qsize_text = f"**Queue Size**: {str(get_data()[user_id]['watermark']['queue_size'])}"
-                else:
-                        qsize_text = f"**Queue Size**: False"
-                if get_data()[user_id]['watermark']['encode']:
-                        encoder = get_data()[user_id]['watermark']['encoder']
-                else:
-                        encoder = 'False'
-
-                text = f"\n**SYNC**: {get_data()[user_id]['watermark']['sync']} | **Preset**: {get_data()[user_id]['watermark']['preset']}\n"\
-                        f"**CRF**: {get_data()[user_id]['watermark']['crf']} | **Copy Subtitles**: {get_data()[user_id]['watermark']['copy_sub']}\n"\
-                        f"{qsize_text} | **MAP**: {get_data()[user_id]['watermark']['map']}\n"\
-                        f"**W.Size**: {get_data()[user_id]['watermark']['size']} | **W.Position**: {ws_name[get_data()[user_id]['watermark']['position']]}\n"\
-                        f"**Encoder**: {encoder} | **In.Size**: {get_human_size(input_size)}"
-                return text
-        elif pmode==Names.merge:
+        # REMOVED: Compress status head
+        # if pmode==Names.compress:
+        #         ... (block content removed) ...
+        # REMOVED: Watermark status head
+        # elif pmode==Names.watermark:
+        #         ... (block content removed) ...
+        if pmode==Names.merge: # MODIFIED: Changed elif to if
                 text = f"\n**MAP**: {get_data()[user_id]['merge']['map']} | **Fix Blank**: {get_data()[user_id]['merge']['fix_blank']}"
                 # Added metadata display from VFBITMOD-update
                 text += f"\n**Metadata**: {get_data()[user_id]['metadata']}"
@@ -224,21 +204,6 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                         f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
                         f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
                 # --- End of VFBITMOD-update Status Head ---
-
-                # --- Start of Old Status Head (Commented Out) ---
-                # if get_data()[user_id]['convert']['use_queue_size']:
-                #         qsize_text = f"**Queue Size**: {str(get_data()[user_id]['convert']['queue_size'])}"
-                # else:
-                #         qsize_text = f"**Queue Size**: False"
-                # if get_data()[user_id]['convert']['encode']:
-                #         encoder = get_data()[user_id]['convert']['encoder']
-                # else:
-                #         encoder = 'False'
-                # text = f"\n**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
-                #         f"**CRF**: {get_data()[user_id]['convert']['crf']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
-                #         f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}\n"\
-                #         f"**Encoder**: {encoder} | **In.Size**: {get_human_size(input_size)}"
-                # --- End of Old Status Head ---
                 return text
         elif pmode==Names.hardmux:
                 if get_data()[user_id]['hardmux']['use_queue_size']:
@@ -256,9 +221,10 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
         elif pmode==Names.softmux:
                 text = f"\n**Subtitles Codec**: {get_data()[user_id]['softmux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
                 return text
-        elif pmode==Names.softremux:
-                text = f"\n**Subtitles Codec**: {get_data()[user_id]['softremux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
-                return text
+        # REMOVED: SoftReMux status head
+        # elif pmode==Names.softremux:
+        #         text = f"\n**Subtitles Codec**: {get_data()[user_id]['softremux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
+        #         return text
         else:
                 return ""
 
@@ -284,18 +250,20 @@ class ProcessStatus:
                 self.status_message = f"🔁Initializing\n`/cancel process {self.process_id}`"
                 self.message = "Not Found"
                 self.caption = False
-                if not thumbnail and exists(f'./userdata/{str(user_id)}_Thumbnail.jpg'):
+                # MODIFIED: Removed dynamic thumbnail logic, always use static if present
+                if exists(f'./userdata/{str(user_id)}_Thumbnail.jpg'):
                         self.thumbnail = f'./userdata/{str(user_id)}_Thumbnail.jpg'
                 else:
-                        self.thumbnail = thumbnail
+                        self.thumbnail = "./thumb.jpg" # Use default if static not found
                 self.process_type = process_type
                 self.start_time = start_time
                 self.convert_quality = 480 # Kept original default, but will be updated by VFBITMOD logic
                 self.convert_index = "-/-"
                 self.ping = time()
                 self.trash_objects = False
-                self.multi_tasks = []
-                self.multi_task_no = 0
+                # REMOVED: Multi-task attributes
+                # self.multi_tasks = []
+                # self.multi_task_no = 0
                 self.custom_metadata = custom_metadata
                 self.custom_index = custom_index
                 if self.user_name:
@@ -303,23 +271,15 @@ class ProcessStatus:
                 else:
                         self.added_by = self.user_first_name
 
-        def append_multi_tasks(self, task):
-                self.multi_tasks.append(task)
-                return
-
-        def change_multi_tasks_no(self, no):
-                self.multi_task_no = no
-                return
-
-        def get_multi_task_no(self):
-                if self.multi_task_no:
-                        return f"({str(self.multi_task_no-len(self.multi_tasks))}/{str(self.multi_task_no)})"
-                else:
-                        return ""
-
-        def replace_multi_tasks(self, multi_tasks):
-                self.multi_tasks = multi_tasks
-                return
+        # REMOVED: Multi-task related methods
+        # def append_multi_tasks(self, task):
+        #         ...
+        # def change_multi_tasks_no(self, no):
+        #         ...
+        # def get_multi_task_no(self):
+        #         ...
+        # def replace_multi_tasks(self, multi_tasks):
+        #         ...
 
         def update_status_message(self, message):
                 self.message = message
@@ -477,7 +437,8 @@ class ProcessStatus:
                         ffmpeg_head = generate_ffmpeg_status_head(self.user_id, self.process_type, input_size)
                 total_files = len(self.send_files)
                 error_no = 0
-                multi_task_no = self.get_multi_task_no()
+                # REMOVED: Multi-task number logic
+                # multi_task_no = self.get_multi_task_no()
                 while True:
                         self.ping = time()
                         if status.type()==Names.aria:
@@ -538,7 +499,7 @@ class ProcessStatus:
                                 elapsed_time = time_in_us/1000000
                                 if self.process_type==Names.convert:
                                                 # Updated status message for convert
-                                                process_state = f"{Names.STATUS[self.process_type]} [{self.convert_index}]"
+                                                process_state = f"{Names.STATUS[self.process_type]} [{self.convert_index}]" # MODIFIED: Removed quality P
                                                 name = status.name
                                 elif self.process_type!=Names.merge:
                                                 process_state = Names.STATUS[self.process_type]
@@ -546,7 +507,7 @@ class ProcessStatus:
                                 else:
                                                 process_state = f"{Names.STATUS[self.process_type]} [{total_files} Files]"
                                                 name = str(self.file_name)
-                                text =f'{process_state} {multi_task_no}\n'\
+                                text =f'{process_state}\n'\
                                                         f'`{name}`\n'\
                                                         f'{get_progress_bar_string(elapsed_time, status.duration)} {elapsed_time * 100 / status.duration:.1f}%\n'\
                                                         f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
