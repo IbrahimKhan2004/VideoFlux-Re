@@ -280,7 +280,9 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             boards.append(current_list)
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
-        if current_value!=x:
+# Highlighted change: Explicitly cast to string for comparison
+        if str(current_value) != str(x):
+# End of highlighted change
             if callvalue!="watermarkposition":
                 text = f"{str(x)}"
             else:
@@ -408,6 +410,9 @@ async def telegram_callback(event, txt, user_id, chat_id):
 
 ###############------General------###############
 async def general_callback(event, txt, user_id, chat_id):
+# Highlighted change: Define prefix before using it
+            callback_prefix = "generalupload_destination_"
+# End of highlighted change
             new_position = txt.split("_", 1)[1]
             r_config = f'./userdata/{str(user_id)}_rclone.conf'
             check_config = exists(r_config)
@@ -453,10 +458,12 @@ async def general_callback(event, txt, user_id, chat_id):
                 # End of highlighted change
                 await saveoptions(user_id, 'upload_tg', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Upload On TG - {str(new_position)}")
-# Highlighted change: Added handler for upload destination
-            elif txt.startswith("generalupload_destination"):
-                await saveoptions(user_id, 'upload_destination', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Upload Destination Set To - {str(new_position)}")
+# Highlighted change: Added handler for upload destination & corrected value extraction
+            elif txt.startswith(callback_prefix): # Use the defined prefix
+                # Correctly extract the value ("Rclone" or "Gofile")
+                selected_destination = txt.replace(callback_prefix, "")
+                await saveoptions(user_id, 'upload_destination', selected_destination, SAVE_TO_DATABASE)
+                await event.answer(f"✅Upload Destination Set To - {str(selected_destination)}")
 # End of highlighted change
             elif txt.startswith("generaldrivename"):
                 await saveoptions(user_id, 'drive_name', new_position, SAVE_TO_DATABASE)
@@ -534,6 +541,7 @@ async def general_callback(event, txt, user_id, chat_id):
 # Highlighted change: Conditionally add Upload Destination button
             if not upload_tg:
                 KeyBoard.append([Button.inline(f'📤Upload Destination - {str(upload_destination)}', 'nik66bots')])
+                # Use the defined prefix when generating the keyboard
                 for board in gen_keyboard(upload_destination_list, upload_destination, "generalupload_destination", 2, False):
                     KeyBoard.append(board)
                 # Conditionally add Rclone account selection only if Rclone is the chosen destination
