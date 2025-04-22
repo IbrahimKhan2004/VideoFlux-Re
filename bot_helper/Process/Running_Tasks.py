@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Process/Running_Tasks.py ---
+
 from asyncio import Lock
 from config.config import Config
 from asyncio import create_task, create_subprocess_exec, sleep
@@ -156,7 +158,7 @@ async def refresh_tasks():
 
 def get_queued_tasks_len():
         return len(queued_task)
-    
+
 
 async def remove_from_working_task(process_id):
     async with working_task_lock:
@@ -247,7 +249,7 @@ async def start_task(task):
         if i==loop_range-1:
             process_completed = True
             process_status.set_file_name_from_send_list()
-            
+
     if process_completed and process_status.process_type in Names.FFMPEG_PROCESSES:
             process_completed = False
             if process_status.process_type not in [Names.merge, Names.changeMetadata, Names.changeindex]:
@@ -255,14 +257,16 @@ async def start_task(task):
                         await FFMPEG.select_audio(process_status)
                         await FFMPEG.change_metadata(process_status)
             output_list = []
+            # Updated logic for convert list based on VFBITMOD-update
             if process_status.process_type==Names.convert:
-                    convert_list = get_data()[process_status.user_id]['convert']['convert_list']
+                    # Use the new quality setting directly
+                    convert_list = [get_data()[process_status.user_id]['video']['qubality']]
             else:
-                    convert_list = [1]
+                    convert_list = [1] # Keep original logic for non-convert tasks
             ffmpeg_range = len(convert_list)
             for c in range(ffmpeg_range):
                     if process_status.process_type==Names.convert:
-                            process_status.update_convert_quality(convert_list[c])
+                            process_status.update_convert_quality(convert_list[c]) # Pass the quality string
                             process_status.update_convert_index(f"{str(c+1)}/{str(ffmpeg_range)}")
                     command, log_file, input_file, output_file, file_duration = get_commands(process_status)
                     LOGGER.info(str(command))
@@ -323,3 +327,5 @@ async def start_task(task):
     await clear_trash(task, trash_objects, multi_tasks)
     await task_manager()
     return
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Process/Running_Tasks.py ---
