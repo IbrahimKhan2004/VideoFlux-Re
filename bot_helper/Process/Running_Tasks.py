@@ -36,27 +36,29 @@ def create_log_file(log_file):
     return
 
 
-async def clear_trash(task, trash_objects, multi_tasks):
+async def clear_trash(task, trash_objects, multi_tasks): # MODIFIED: Kept multi_tasks argument for now, but logic using it is removed
     new_task = False
-    if len(multi_tasks):
-        if check_running_process(task['process_status'].process_id):
-                new_process_status = multi_tasks[0]
-                new_process_status.move_send_files(task['process_status'].send_files)
-                multi_tasks.pop(0)
-                new_process_status.replace_multi_tasks(multi_tasks)
-                new_process_status.move_custom_thumbnail(task['process_status'].thumbnail)
-                new_task = {}
-                new_task['process_status'] = new_process_status
-                new_task['functions'] = []
-        else:
-                for t in multi_tasks:
-                    del t
+    # REMOVED: Multi-task handling logic
+    # if len(multi_tasks):
+    #     if check_running_process(task['process_status'].process_id):
+    #             new_process_status = multi_tasks[0]
+    #             new_process_status.move_send_files(task['process_status'].send_files)
+    #             multi_tasks.pop(0)
+    #             new_process_status.replace_multi_tasks(multi_tasks)
+    #             new_process_status.move_custom_thumbnail(task['process_status'].thumbnail)
+    #             new_task = {}
+    #             new_task['process_status'] = new_process_status
+    #             new_task['functions'] = []
+    #     else:
+    #             for t in multi_tasks:
+    #                 del t
     async with working_task_lock:
         if task in working_task:
             working_task.remove(task)
-        if new_task:
-            create_task(start_task(new_task))
-            working_task.append(new_task)
+        # REMOVED: Starting new multi-task
+        # if new_task:
+        #     create_task(start_task(new_task))
+        #     working_task.append(new_task)
     await remove_running_process(task['process_status'].process_id)
     try:
         rmtree(task['process_status'].dir)
@@ -102,7 +104,7 @@ async def process_status_checker():
                     if time()-task['process_status'].ping>600:
                         LOGGER.info(f"Removing {task['process_status'].process_type} Process Because Of No Response.")
                         await task['process_status'].event.reply(f"❗Removing This Task From Working Tasks As It Is Not Responding From Last 10 Minutes.")
-                        await clear_trash(task, False, [])
+                        await clear_trash(task, False, []) # MODIFIED: Pass empty list for multi_tasks
                         await task_manager()
         except Exception as e:
                 LOGGER.info(str(e))
@@ -212,7 +214,9 @@ def get_user_id(process_id):
 
 async def start_task(task):
     process_status = task['process_status']
-    multi_tasks = process_status.multi_tasks
+    # REMOVED: Getting multi_tasks from process_status
+    # multi_tasks = process_status.multi_tasks
+    multi_tasks = [] # MODIFIED: Set to empty list as multi-tasking is removed
     process_status.update_start_time(time())
     await append_running_process(process_status.process_id)
     loop_range = len(task['functions'])
@@ -252,10 +256,15 @@ async def start_task(task):
 
     if process_completed and process_status.process_type in Names.FFMPEG_PROCESSES:
             process_completed = False
+            # REMOVED: Automatic audio selection and metadata change calls
+            # if process_status.process_type not in [Names.merge, Names.changeMetadata, Names.changeindex]:
+            #     if not len(multi_tasks):
+            #             await FFMPEG.select_audio(process_status)
+            #             await FFMPEG.change_metadata(process_status)
+            # MODIFIED: Always call change_metadata if enabled, regardless of multi-tasks (since they are removed)
             if process_status.process_type not in [Names.merge, Names.changeMetadata, Names.changeindex]:
-                if not len(multi_tasks):
-                        await FFMPEG.select_audio(process_status)
-                        await FFMPEG.change_metadata(process_status)
+                 await FFMPEG.change_metadata(process_status)
+
             output_list = []
             # Updated logic for convert list based on VFBITMOD-update
             if process_status.process_type==Names.convert:
@@ -309,13 +318,15 @@ async def start_task(task):
                         if exists(f"{process_status.dir}/FFMPEG_LOG.txt"):
                             remove(f"{process_status.dir}/FFMPEG_LOG.txt")
     if process_completed and process_status.process_type in Names.FFMPEG_PROCESSES:
-        if get_data()[process_status.user_id]['upload_all'] or not len(multi_tasks):
-                await upload_files(process_status)
-        if not len(multi_tasks):
-            if check_running_process(process_status.process_id):
-                    await FFMPEG.gen_sample_video(process_status)
-            if check_running_process(process_status.process_id):
-                    await FFMPEG.generate_ss(process_status)
+        # REMOVED: upload_all check (always upload now)
+        # if get_data()[process_status.user_id]['upload_all'] or not len(multi_tasks):
+        await upload_files(process_status)
+        # REMOVED: multi_task check for sample/ss generation
+        # if not len(multi_tasks):
+        if check_running_process(process_status.process_id):
+                await FFMPEG.gen_sample_video(process_status)
+        if check_running_process(process_status.process_id):
+                await FFMPEG.generate_ss(process_status)
     elif process_completed and process_status.process_type==Names.gensample:
         await FFMPEG.gen_sample_video(process_status, force_gen=True)
     elif process_completed and process_status.process_type==Names.genss:
@@ -324,7 +335,7 @@ async def start_task(task):
         await Telegram.upload_videos(process_status)
     elif process_completed and process_status.process_type==Names.mirror:
         await upload_drive(process_status)
-    await clear_trash(task, trash_objects, multi_tasks)
+    await clear_trash(task, trash_objects, multi_tasks) # Pass multi_tasks (which is empty now)
     await task_manager()
     return
 
