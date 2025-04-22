@@ -147,7 +147,7 @@ async def new_user(user_id, dbsave):
         # End of Added from VFBITMOD-update
         DATA[user_id]['custom_name'] = False
         DATA[user_id]['custom_metadata'] = False
-        DATA[user_id]['metadata'] = "Nik66Bots" # Kept original default
+        DATA[user_id]['metadata'] = "BashAFK" # Kept original default
         DATA[user_id]['detailed_messages'] = True
         DATA[user_id]['show_stats'] = True
         DATA[user_id]['show_botuptime'] = True
