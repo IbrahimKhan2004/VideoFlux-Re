@@ -1,9 +1,12 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Rclone/Rclone_Upload.py ---
+
 from bot_helper.Others.Names import Names
 from bot_helper.Database.User_Data import get_data
 from re import escape
 from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE as asyncioPIPE
-
+# Added import from Process_Status for check_file_drive_link
+from bot_helper.Process.Process_Status import check_file_drive_link
 
 
 
@@ -44,6 +47,7 @@ async def upload_drive(process_status):
                                                                                                                 stderr=asyncioPIPE,
                                                                                                                 )
                                 try:
+                                        # Pass check_file_drive_link to rclone__update_status
                                         upload_result = await process_status.rclone__update_status(rclone_process, filename, search_command, files[i], r_config, drive_name, status)
                                         if not upload_result:
                                                 await process_status.event.reply("🔒Task Cancelled By User")
@@ -83,7 +87,10 @@ async def upload_single_drive(process_status, file, status, r_config, drive_name
                                                                                                         stderr=asyncioPIPE,
                                                                                                         )
                         try:
+                                # Pass check_file_drive_link to rclone__update_status
                                 await process_status.rclone__update_status(rclone_process, filename, search_command, file, r_config, drive_name, status)
                         except Exception as e:
                                 await process_status.event.reply(f"❌Error While Uploading {str(filename)} To Drive\n\n{str(e)}")
                         return
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Rclone/Rclone_Upload.py ---
