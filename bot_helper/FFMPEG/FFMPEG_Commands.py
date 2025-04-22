@@ -185,7 +185,7 @@ def get_commands(process_status):
                     # Add x265 specific parameters here
                     # Example: Use auto-detected pools and 8 slices
                     # You can make 'pools' and 'slices' configurable later
-                    x265_custom_params = "pools=8:slices=8" # Example values
+                    x265_custom_params = "pools=16:slices=16" # Example values
                     command += ['-x265-params', x265_custom_params]
                     # <<< END OF MODIFICATION >>>
                 else: # H.264
@@ -301,7 +301,7 @@ def get_commands(process_status):
                         # <<< START OF MODIFICATION >>>
                         # Add x265 specific parameters here for hardmux if needed
                         # Example: Use auto-detected pools and 8 slices
-                        x265_custom_params_hm = "pools=8:slices=8" # Example values
+                        x265_custom_params_hm = "pools=16:slices=16" # Example values
                         command += ['-x265-params', x265_custom_params_hm]
                         # <<< END OF MODIFICATION >>>
                 else:
