@@ -112,6 +112,9 @@ async def new_user(user_id, dbsave):
 # Highlighted change: Added upload_destination setting
         DATA[user_id]['upload_destination'] = 'Rclone' # Default to Rclone when TG is off
 # End of highlighted change
+# Highlighted change: Added gofile_api_key setting
+        DATA[user_id]['gofile_api_key'] = None # Initialize Gofile API key
+# End of highlighted change
         DATA[user_id]['merge'] = {}
         DATA[user_id]['merge']['map_audio'] = True
         DATA[user_id]['merge']['map_sub'] = True
