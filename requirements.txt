@@ -1,6 +1,6 @@
 Telethon==1.26.1
 cryptg==0.4.0
-pyrogram
+pyroblack
 TgCrypto
 pytz==2022.7
 dnspython==2.2.1
