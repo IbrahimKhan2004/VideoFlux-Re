@@ -75,8 +75,8 @@ async def callback(event):
             [Button.inline('#️⃣ General', 'general_settings')],
             [Button.inline('❣ Telegram', 'telegram_settings')],
             [Button.inline('📝 Progress Bar', 'progress_settings')],
-            # [Button.inline('🏮 Compression', 'compression_settings')], # Kept original structure, but VFBITMOD-update removed this
-            [Button.inline('🛺 Watermark', 'watermark_settings')],
+            # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
+            # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
             [Button.inline('🍧 Merge', 'merge_settings')],
             # Modified menu items below based on VFBITMOD-update
             [Button.inline('💻 Encode', 'convert_settings')],
@@ -86,7 +86,7 @@ async def callback(event):
             # End of Modified menu items
             [Button.inline('🚍 HardMux', 'hardmux_settings')],
             [Button.inline('🎮 SoftMux', 'softmux_settings')],
-            [Button.inline('🛩SoftReMux', 'softremux_settings')],
+            # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
             [Button.inline('⭕Close Settings', 'close_settings')]
         ])
             return
@@ -159,10 +159,10 @@ async def callback(event):
             await progress_callback(event, txt, user_id)
             return
 
-
-        elif txt.startswith("compression"):
-            await compress_callback(event, txt, user_id, True)
-            return
+        # REMOVED: Compression callback trigger
+        # elif txt.startswith("compression"):
+        #     await compress_callback(event, txt, user_id, True)
+        #     return
 
         elif txt.startswith("convert"):
             await convert_callback(event, txt, user_id, True)
@@ -186,18 +186,19 @@ async def callback(event):
             await softmux_callback(event, txt, user_id, True)
             return
 
-        elif txt.startswith("softremux"):
-            await softremux_callback(event, txt, user_id, True)
-            return
+        # REMOVED: SoftReMux callback trigger
+        # elif txt.startswith("softremux"):
+        #     await softremux_callback(event, txt, user_id, True)
+        #     return
 
         elif txt.startswith("merge"):
             await merge_callback(event, txt, user_id)
             return
 
-
-        elif txt.startswith("watermark"):
-            await watermark_callback(event, txt, user_id, True)
-            return
+        # REMOVED: Watermark callback trigger
+        # elif txt.startswith("watermark"):
+        #     await watermark_callback(event, txt, user_id, True)
+        #     return
 
 
         elif txt=="nik66bots":
@@ -214,13 +215,15 @@ async def callback(event):
                     except:
                         await queue_size_input.reply("❗Invalid Input")
                         return
-                    if txt=="change_compress_queue_size":
-                        await saveconfig(user_id, 'compress', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                        await compress_callback(event, "compression_settings", user_id, False)
-                    elif txt=="change_watermark_queue_size":
-                        await saveconfig(user_id, 'watermark', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
-                        await watermark_callback(event, "watermark_settings", user_id, False)
-                    elif txt=="change_convert_queue_size":
+                    # REMOVED: Compress queue size change
+                    # if txt=="change_compress_queue_size":
+                    #     await saveconfig(user_id, 'compress', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
+                    #     await compress_callback(event, "compression_settings", user_id, False)
+                    # REMOVED: Watermark queue size change
+                    # elif txt=="change_watermark_queue_size":
+                    #     await saveconfig(user_id, 'watermark', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
+                    #     await watermark_callback(event, "watermark_settings", user_id, False)
+                    if txt=="change_convert_queue_size": # MODIFIED: Adjusted elif
                         await saveconfig(user_id, 'convert', 'queue_size', str(queue_size), SAVE_TO_DATABASE)
                         await convert_callback(event, "convert_settings", user_id, False)
                     elif txt=="change_hardmux_queue_size":
@@ -404,22 +407,25 @@ async def general_callback(event, txt, user_id, chat_id):
             user_data = get_data().get(user_id, {}) # Use .get()
             drive_name = user_data.get('drive_name', False) # Use .get()
             edit = True
-            if txt.startswith("generalselectstream"):
-                await saveoptions(user_id, 'select_stream', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Auto Select Audio - {str(new_position)}")
-            elif txt.startswith("generalstream"):
-                await saveoptions(user_id, 'stream', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Select Audio - {str(new_position)}")
-            elif txt.startswith("generalsplitvideo"):
-                await saveoptions(user_id, 'split_video', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Split Video - {str(new_position)}")
-            elif txt.startswith("generalsplit"):
-                await saveoptions(user_id, 'split', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Split Size - {str(new_position)}")
-            elif txt.startswith("generalcustomthumbnail"):
-                await saveoptions(user_id, 'custom_thumbnail', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Dynamic Thumbnail - {str(new_position)}")
-            elif txt.startswith("generalcustommetadata"):
+            # REMOVED: Audio selection logic
+            # if txt.startswith("generalselectstream"):
+            #     await saveoptions(user_id, 'select_stream', eval(new_position), SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Auto Select Audio - {str(new_position)}")
+            # elif txt.startswith("generalstream"):
+            #     await saveoptions(user_id, 'stream', new_position, SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Select Audio - {str(new_position)}")
+            # REMOVED: Split logic
+            # elif txt.startswith("generalsplitvideo"):
+            #     await saveoptions(user_id, 'split_video', eval(new_position), SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Split Video - {str(new_position)}")
+            # elif txt.startswith("generalsplit"):
+            #     await saveoptions(user_id, 'split', new_position, SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Split Size - {str(new_position)}")
+            # REMOVED: Dynamic thumbnail logic
+            # elif txt.startswith("generalcustomthumbnail"):
+            #     await saveoptions(user_id, 'custom_thumbnail', eval(new_position), SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Dynamic Thumbnail - {str(new_position)}")
+            if txt.startswith("generalcustommetadata"): # MODIFIED: Adjusted elif chain
                 if eval(new_position):
                         metadata = await get_metadata(chat_id, user_id, event, 120, "Send Metadata Title")
                         if metadata:
@@ -455,46 +461,51 @@ async def general_callback(event, txt, user_id, chat_id):
             elif txt.startswith("generalgensample"):
                 await saveoptions(user_id, 'gen_sample', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Generate Sample Video - {str(new_position)}")
-            elif txt.startswith("generaluploadall"):
-                await saveoptions(user_id, 'upload_all', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Upload Every Multi Task File - {str(new_position)}")
-            elif txt.startswith("generalmultitasks"):
-                await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Multi Tasks - {str(new_position)}")
+            # REMOVED: Multi-task related settings
+            # elif txt.startswith("generaluploadall"):
+            #     await saveoptions(user_id, 'upload_all', eval(new_position), SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Upload Every Multi Task File - {str(new_position)}")
+            # elif txt.startswith("generalmultitasks"):
+            #     await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
+            #     await event.answer(f"✅Multi Tasks - {str(new_position)}")
 
             # Use .get() with defaults for all settings
             user_data = get_data().get(user_id, {})
-            select_stream = user_data.get('select_stream', False)
-            stream = user_data.get('stream', 'ENG')
-            split_video = user_data.get('split_video', False)
-            split = user_data.get('split', '2GB')
+            # REMOVED: Fetching removed settings
+            # select_stream = user_data.get('select_stream', False)
+            # stream = user_data.get('stream', 'ENG')
+            # split_video = user_data.get('split_video', False)
+            # split = user_data.get('split', '2GB')
+            # custom_thumbnail = user_data.get('custom_thumbnail', False)
+            # multi_tasks = user_data.get('multi_tasks', False)
+            # upload_all = user_data.get('upload_all', True)
             upload_tg = user_data.get('upload_tg', True)
             custom_metadata = user_data.get('custom_metadata', False)
-            custom_thumbnail = user_data.get('custom_thumbnail', False)
             drive_name = user_data.get('drive_name', False)
             auto_drive = user_data.get('auto_drive', False)
             gen_ss = user_data.get('gen_ss', False)
             ss_no = user_data.get('ss_no', 5)
             gen_sample = user_data.get('gen_sample', False)
-            multi_tasks = user_data.get('multi_tasks', False)
-            upload_all = user_data.get('upload_all', True)
 
             KeyBoard = []
-            KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, select_stream, "generalselectstream", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍭Select Audio - {str(stream)}', 'nik66bots')])
-            for board in gen_keyboard(['ENG', 'HIN'], stream, "generalstream", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🪓Split Video - {str(split_video)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, split_video, "generalsplitvideo", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🛢Split Size - {str(split)}', 'nik66bots')])
-            for board in gen_keyboard(['2GB', '4GB'], split, "generalsplit", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🖼Dynamic Thumbnail - {str(custom_thumbnail)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, custom_thumbnail, "generalcustomthumbnail", 2, False):
-                KeyBoard.append(board)
+            # REMOVED: Audio selection buttons
+            # KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'nik66bots')])
+            # for board in gen_keyboard(bool_list, select_stream, "generalselectstream", 2, False):
+            #     KeyBoard.append(board)
+            # KeyBoard.append([Button.inline(f'🍭Select Audio - {str(stream)}', 'nik66bots')])
+            # for board in gen_keyboard(['ENG', 'HIN'], stream, "generalstream", 2, False):
+            #     KeyBoard.append(board)
+            # REMOVED: Split buttons
+            # KeyBoard.append([Button.inline(f'🪓Split Video - {str(split_video)}', 'nik66bots')])
+            # for board in gen_keyboard(bool_list, split_video, "generalsplitvideo", 2, False):
+            #     KeyBoard.append(board)
+            # KeyBoard.append([Button.inline(f'🛢Split Size - {str(split)}', 'nik66bots')])
+            # for board in gen_keyboard(['2GB', '4GB'], split, "generalsplit", 2, False):
+            #     KeyBoard.append(board)
+            # REMOVED: Dynamic thumbnail button
+            # KeyBoard.append([Button.inline(f'🖼Dynamic Thumbnail - {str(custom_thumbnail)}', 'nik66bots')])
+            # for board in gen_keyboard(bool_list, custom_thumbnail, "generalcustomthumbnail", 2, False):
+            #     KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'🪀Custom Metadata - {str(custom_metadata)} [Click To See]', 'custom_metedata')])
             for board in gen_keyboard(bool_list, custom_metadata, "generalcustommetadata", 2, False):
                 KeyBoard.append(board)
@@ -513,12 +524,13 @@ async def general_callback(event, txt, user_id, chat_id):
             KeyBoard.append([Button.inline(f'🎞Generate Sample Video - {str(gen_sample)}', 'nik66bots')])
             for board in gen_keyboard(bool_list, gen_sample, "generalgensample", 2, False):
                 KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🛰Multi Tasks - {str(multi_tasks)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, multi_tasks, "generalmultitasks", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, upload_all, "generaluploadall", 2, False):
-                KeyBoard.append(board)
+            # REMOVED: Multi-task buttons
+            # KeyBoard.append([Button.inline(f'🛰Multi Tasks - {str(multi_tasks)}', 'nik66bots')])
+            # for board in gen_keyboard(bool_list, multi_tasks, "generalmultitasks", 2, False):
+            #     KeyBoard.append(board)
+            # KeyBoard.append([Button.inline(f'⏹Upload Every Multi Task File - {str(upload_all)}', 'nik66bots')])
+            # for board in gen_keyboard(bool_list, upload_all, "generaluploadall", 2, False):
+            #     KeyBoard.append(board)
             if check_config:
                 accounts = await get_config(r_config)
                 if accounts:
@@ -592,174 +604,15 @@ async def progress_callback(event, txt, user_id):
                 pass
             return
 
-###############------Compress------###############
-async def compress_callback(event, txt, user_id, edit):
-            new_position = txt.split("_", 1)[1]
-            KeyBoard = []
-            if txt.startswith("compressionencoder"):
-                await saveconfig(user_id, 'compress', 'encoder', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Encoder - {str(new_position)}")
-            elif txt.startswith("compressionpreset"):
-                await saveconfig(user_id, 'compress', 'preset', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Preset - {str(new_position)}")
-            elif txt.startswith("compressioncopysub"):
-                await saveconfig(user_id, 'compress', 'copy_sub', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Copy Subtitles - {str(new_position)}")
-            elif txt.startswith("compressionmap"):
-                await saveconfig(user_id, 'compress', 'map', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Map - {str(new_position)}")
-            elif txt.startswith("compressioncrf"):
-                await saveconfig(user_id, 'compress', 'crf', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress CRF - {str(new_position)}")
-            elif txt.startswith("compressionusequeuesize"):
-                await saveconfig(user_id, 'compress', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Use Queue Size - {str(new_position)}")
-            elif txt.startswith("compressionsync"):
-                await saveconfig(user_id, 'compress', 'sync', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Compress Use SYNC - {str(new_position)}")
+# REMOVED: compress_callback function
+# ###############------Compress------###############
+# async def compress_callback(event, txt, user_id, edit):
+#             ... (function content removed) ...
 
-            # Use .get() with defaults
-            compress_settings = get_data().get(user_id, {}).get('compress', {})
-            compress_encoder = compress_settings.get('encoder', 'libx265')
-            compress_preset = compress_settings.get('preset', 'ultrafast')
-            compress_crf = compress_settings.get('crf', '23')
-            compress_map = compress_settings.get('map', True)
-            compress_copysub = compress_settings.get('copy_sub', False)
-            compress_use_queue_size = compress_settings.get('use_queue_size', False)
-            compress_queue_size = compress_settings.get('queue_size', '9999')
-            compress_sync = compress_settings.get('sync', False)
-
-            KeyBoard.append([Button.inline(f'🍬Encoder - {str(compress_encoder)}', 'nik66bots')])
-            for board in gen_keyboard(encoders_list, compress_encoder, "compressionencoder", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(compress_copysub)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, compress_copysub, "compressioncopysub", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(compress_map)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, compress_map, "compressionmap", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(compress_use_queue_size)}', 'nik66bots')])
-            if compress_use_queue_size:
-                KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(compress_queue_size)} (Click To Change)', 'change_compress_queue_size')])
-            for board in gen_keyboard(bool_list, compress_use_queue_size, "compressionusequeuesize", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(compress_sync)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, compress_sync, "compressionsync", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(compress_preset)}', 'nik66bots')])
-            for board in gen_keyboard(presets_list, compress_preset, "compressionpreset", 3, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⚡CRF  - {str(compress_crf)}', 'nik66bots')])
-            for board in gen_keyboard(crf_list, compress_crf, "compressioncrf", 6, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            if edit:
-                try:
-                    await event.edit("⚙ Compression Settings", buttons=KeyBoard)
-                except:
-                    pass
-            else:
-                try:
-                    await event.delete()
-                except:
-                    pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Compression Settings", buttons=KeyBoard)
-            return
-
-###############------Watermark------###############
-async def watermark_callback(event, txt, user_id, edit):
-            new_position = txt.split("_", 1)[1]
-            KeyBoard = []
-            if txt.startswith("watermarkencoder"):
-                await saveconfig(user_id, 'watermark', 'encoder', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Encoder - {str(new_position)}")
-            elif txt.startswith("watermarkencode"):
-                await saveconfig(user_id, 'watermark', 'encode', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Use Encoder - {str(new_position)}")
-            elif txt.startswith("watermarkposition"):
-                await saveconfig(user_id, 'watermark', 'position', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Position - {str(ws_name[new_position])}")
-            elif txt.startswith("watermarksize"):
-                await saveconfig(user_id, 'watermark', 'size', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Size - {str(new_position)}")
-            elif txt.startswith("watermarkpreset"):
-                await saveconfig(user_id, 'watermark', 'preset', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Preset - {str(new_position)}")
-            elif txt.startswith("watermarkcopysub"):
-                await saveconfig(user_id, 'watermark', 'copy_sub', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Copy Subtitles - {str(new_position)}")
-            elif txt.startswith("watermarkmap"):
-                await saveconfig(user_id, 'watermark', 'map', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Map - {str(new_position)}")
-            elif txt.startswith("watermarkcrf"):
-                await saveconfig(user_id, 'watermark', 'crf', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark CRF - {str(new_position)}")
-            elif txt.startswith("watermarkusequeuesize"):
-                await saveconfig(user_id, 'watermark', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Use Queue Size - {str(new_position)}")
-            elif txt.startswith("watermarksync"):
-                await saveconfig(user_id, 'watermark', 'sync', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Watermark Use SYNC - {str(new_position)}")
-
-            # Use .get() with defaults
-            watermark_settings = get_data().get(user_id, {}).get('watermark', {})
-            watermark_position = watermark_settings.get('position', '5:5')
-            watermark_size = watermark_settings.get('size', '15')
-            watermark_encoder = watermark_settings.get('encoder', 'libx265')
-            watermark_encode = watermark_settings.get('encode', True)
-            watermark_preset = watermark_settings.get('preset', 'ultrafast')
-            watermark_crf = watermark_settings.get('crf', '23')
-            watermark_map = watermark_settings.get('map', True)
-            watermark_copysub = watermark_settings.get('copy_sub', True)
-            watermark_use_queue_size = watermark_settings.get('use_queue_size', False)
-            watermark_queue_size = watermark_settings.get('queue_size', '9999')
-            watermark_sync = watermark_settings.get('sync', False)
-
-            KeyBoard.append([Button.inline(f'🥽Position - {str(ws_name[watermark_position])}', 'nik66bots')])
-            for board in gen_keyboard(list(ws_name.keys()), watermark_position, "watermarkposition", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🛸Size - {str(watermark_size)}', 'nik66bots')])
-            for board in gen_keyboard(wsize_list, watermark_size, "watermarksize", 6, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🎧Use Encoder - {str(watermark_encode)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, watermark_encode, "watermarkencode", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍬Encoder - {str(watermark_encoder)}', 'nik66bots')])
-            for board in gen_keyboard(encoders_list, watermark_encoder, "watermarkencoder", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍄Copy Subtitles - {str(watermark_copysub)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, watermark_copysub, "watermarkcopysub", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🍓Map  - {str(watermark_map)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, watermark_map, "watermarkmap", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'📻Use FFMPEG Queue Size  - {str(watermark_use_queue_size)}', 'nik66bots')])
-            if watermark_use_queue_size:
-                KeyBoard.append([Button.inline(f'🎹FFMPEG Queue Size Value  - {str(watermark_queue_size)} (Click To Change)', 'change_watermark_queue_size')])
-            for board in gen_keyboard(bool_list, watermark_use_queue_size, "watermarkusequeuesize", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'🌳Use SYNC - {str(watermark_sync)}', 'nik66bots')])
-            for board in gen_keyboard(bool_list, watermark_sync, "watermarksync", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'♒Preset - {str(watermark_preset)}', 'nik66bots')])
-            for board in gen_keyboard(presets_list, watermark_preset, "watermarkpreset", 3, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'⚡CRF  - {str(watermark_crf)}', 'nik66bots')])
-            for board in gen_keyboard(crf_list, watermark_crf, "watermarkcrf", 6, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            if edit:
-                try:
-                    await event.edit("⚙ Watermark Settings", buttons=KeyBoard)
-                except:
-                    pass
-            else:
-                try:
-                    await event.delete()
-                except:
-                    pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Watermark Settings", buttons=KeyBoard)
-            return
+# REMOVED: watermark_callback function
+# ###############------Watermark------###############
+# async def watermark_callback(event, txt, user_id, edit):
+#             ... (function content removed) ...
 
 
 ###############------Merge------###############
@@ -967,35 +820,10 @@ async def softmux_callback(event, txt, user_id, edit):
                 await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Softmux Settings", buttons=KeyBoard)
             return
 
-
-###############------Softremux------###############
-async def softremux_callback(event, txt, user_id, edit):
-            new_position = txt.split("_", 1)[1]
-            KeyBoard = []
-            if txt.startswith("softremuxsubcodec"):
-                await saveconfig(user_id, 'softremux', 'sub_codec', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Softremux Sub Codec - {str(new_position)}")
-
-            # Use .get() with defaults
-            softremux_settings = get_data().get(user_id, {}).get('softremux', {})
-            softremux_sub_codec = softremux_settings.get('sub_codec', 'copy')
-
-            KeyBoard.append([Button.inline(f'🍄Subtitles Codec - {str(softremux_sub_codec)}', 'nik66bots')])
-            for board in gen_keyboard(['copy', 'mov_text'], softremux_sub_codec, "softremuxsubcodec", 2, False):
-                KeyBoard.append(board)
-            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            if edit:
-                try:
-                    await event.edit("⚙ Softremux Settings", buttons=KeyBoard)
-                except:
-                    pass
-            else:
-                try:
-                    await event.delete()
-                except:
-                    pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Softremux Settings", buttons=KeyBoard)
-            return
+# REMOVED: softremux_callback function
+# ###############------Softremux------###############
+# async def softremux_callback(event, txt, user_id, edit):
+#             ... (function content removed) ...
 
 # Added from VFBITMOD-update
 ###############------Video------###############
