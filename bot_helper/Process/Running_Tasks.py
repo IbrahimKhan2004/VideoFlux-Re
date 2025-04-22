@@ -16,6 +16,9 @@ from bot_helper.FFMPEG.FFMPEG_Processes import FFMPEG
 from os.path import exists
 from bot_helper.Others.Helper_Functions import verify_rclone_account
 from bot_helper.Rclone.Rclone_Upload import upload_drive
+# Highlighted change: Import Gofile upload function (placeholder)
+from bot_helper.Gofile.Gofile_Upload import upload_gofile # This function needs to be created
+# End of highlighted change
 from os import remove
 
 
@@ -71,19 +74,36 @@ async def clear_trash(task, trash_objects, multi_tasks): # MODIFIED: Kept multi_
     del task
     return
 
+# Highlighted change: Modified upload_files to handle different destinations
 async def upload_files(process_status):
-    drive_uplaod = False
-    if not get_data()[process_status.user_id]['upload_tg']:
-        r_config = f'./userdata/{str(process_status.user_id)}_rclone.conf'
-        if exists(r_config):
-            drive_name = get_data()[process_status.user_id]['drive_name']
-            if verify_rclone_account(r_config, drive_name):
-                drive_uplaod = True
-    if not drive_uplaod:
+    # First check if Telegram upload is enabled
+    if get_data()[process_status.user_id]['upload_tg']:
         await Telegram.upload_videos(process_status)
+        return
+
+    # If Telegram upload is disabled, check the chosen destination
+    upload_destination = get_data()[process_status.user_id].get('upload_destination', 'Rclone') # Default to Rclone
+
+    if upload_destination == 'Rclone':
+        r_config = f'./userdata/{str(process_status.user_id)}_rclone.conf'
+        drive_name = get_data()[process_status.user_id].get('drive_name', False)
+        if exists(r_config) and drive_name and verify_rclone_account(r_config, drive_name):
+            await upload_drive(process_status)
+        else:
+            await process_status.event.reply("❗Rclone upload selected, but config/drive is not set up correctly. Upload skipped.")
+            LOGGER.warning(f"Rclone upload skipped for user {process_status.user_id} due to missing/invalid config or drive name.")
+
+    elif upload_destination == 'Gofile':
+        # Call the Gofile upload function (to be implemented)
+        await upload_gofile(process_status)
+
     else:
-        await upload_drive(process_status)
+        # Handle potential unknown destination? Default to skipping?
+        await process_status.event.reply(f"❗Unknown upload destination '{upload_destination}'. Upload skipped.")
+        LOGGER.warning(f"Unknown upload destination '{upload_destination}' for user {process_status.user_id}. Upload skipped.")
+
     return
+# End of highlighted change
 
 
 async def process_status_checker():
@@ -320,7 +340,9 @@ async def start_task(task):
     if process_completed and process_status.process_type in Names.FFMPEG_PROCESSES:
         # REMOVED: upload_all check (always upload now)
         # if get_data()[process_status.user_id]['upload_all'] or not len(multi_tasks):
+# Highlighted change: Call the modified upload_files function
         await upload_files(process_status)
+# End of highlighted change
         # REMOVED: multi_task check for sample/ss generation
         # if not len(multi_tasks):
         if check_running_process(process_status.process_id):
@@ -331,10 +353,14 @@ async def start_task(task):
         await FFMPEG.gen_sample_video(process_status, force_gen=True)
     elif process_completed and process_status.process_type==Names.genss:
         await FFMPEG.generate_ss(process_status, force_gen=True)
+# Highlighted change: Call upload_files for leech/mirror (though commands are removed)
     elif process_completed and process_status.process_type==Names.leech:
-        await Telegram.upload_videos(process_status)
+        # await Telegram.upload_videos(process_status) # Original call
+        await upload_files(process_status) # Use the new function
     elif process_completed and process_status.process_type==Names.mirror:
-        await upload_drive(process_status)
+        # await upload_drive(process_status) # Original call
+        await upload_files(process_status) # Use the new function
+# End of highlighted change
     await clear_trash(task, trash_objects, multi_tasks) # Pass multi_tasks (which is empty now)
     await task_manager()
     return
