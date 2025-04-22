@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Database/User_Data.py ---
+
 from bot_helper.Database.DB_Handler import Database
 from config.config import Config
 
@@ -31,6 +33,15 @@ def get_data():
 ###############------New_User------###############
 async def new_user(user_id, dbsave):
         DATA[user_id] = {}
+        # Added from VFBITMOD-update
+        DATA[user_id]['video'] = {}
+        DATA[user_id]['video']['qubality'] = '480p [720x480]'
+        DATA[user_id]['video']['encude'] = 'HEVC'
+        DATA[user_id]['video']['vbit'] = '8Bit'
+        DATA[user_id]['audio'] = {}
+        DATA[user_id]['audio']['achannel'] = '2'
+        DATA[user_id]['audio']['acodec'] = 'AAC'
+        # End of Added from VFBITMOD-update
         DATA[user_id]['watermark'] = {}
         DATA[user_id]['watermark']['position'] = '5:5'
         DATA[user_id]['watermark']['size'] = '15'
@@ -100,22 +111,32 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['merge']['fix_blank'] = False
         DATA[user_id]['custom_thumbnail'] = False
         DATA[user_id]['convert_video'] = False
-        DATA[user_id]['convert_quality'] = [720, 480]
+        # DATA[user_id]['convert_quality'] = [720, 480] # Kept original, might be used differently
         DATA[user_id]['convert'] = {}
         DATA[user_id]['convert']['preset'] = 'ultrafast'
-        DATA[user_id]['convert']['use_crf'] = False
-        DATA[user_id]['convert']['crf'] = '23'
+        # DATA[user_id]['convert']['use_crf'] = False # Replaced by global use_crf
+        # DATA[user_id]['convert']['crf'] = '23' # Replaced by global crf
         DATA[user_id]['convert']['map'] = True
-        DATA[user_id]['convert']['encode'] = True
-        DATA[user_id]['convert']['encoder'] = 'libx265'
+        # DATA[user_id]['convert']['encode'] = True # Replaced by convert['encode']
+        # DATA[user_id]['convert']['encoder'] = 'libx265' # Replaced by video['encude']
         DATA[user_id]['convert']['copy_sub'] = False
         DATA[user_id]['convert']['use_queue_size'] = False
         DATA[user_id]['convert']['sync'] = False
         DATA[user_id]['convert']['queue_size'] = '9999'
-        DATA[user_id]['convert']['convert_list'] = [720, 480]
+        DATA[user_id]['convert']['convert_list'] = [720, 480] # Kept original
+        # Added from VFBITMOD-update
+        DATA[user_id]['convert']['encode'] = 'Video'
+        DATA[user_id]['convert']['type'] = 'CRF'
+        DATA[user_id]['use_vbr'] = False
+        DATA[user_id]['vbr'] = '220k'
+        DATA[user_id]['use_abit'] = False
+        DATA[user_id]['abit'] = '128k'
+        DATA[user_id]['use_crf'] = False
+        DATA[user_id]['crf'] = '22'
+        # End of Added from VFBITMOD-update
         DATA[user_id]['custom_name'] = False
         DATA[user_id]['custom_metadata'] = False
-        DATA[user_id]['metadata'] = "Nik66Bots"
+        DATA[user_id]['metadata'] = "Nik66Bots" # Kept original default
         DATA[user_id]['detailed_messages'] = True
         DATA[user_id]['show_stats'] = True
         DATA[user_id]['show_botuptime'] = True
@@ -198,7 +219,7 @@ async def save_restart(chat_id, msg_id):
     except Exception as e:
         LOGGER.info(e)
         return False
-    
+
 ###############------Clear_Restart_IDs------###############
 async def clear_restart():
     try:
@@ -208,3 +229,5 @@ async def clear_restart():
     except Exception as e:
         LOGGER.info(e)
         return False
+
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Database/User_Data.py ---
