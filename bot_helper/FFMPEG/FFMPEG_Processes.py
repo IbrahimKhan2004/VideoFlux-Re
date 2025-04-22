@@ -107,44 +107,10 @@ async def generate_screenshoot(ss_time, input_video, ss_name):
 
 class FFMPEG:
 
-###############------Split_Video------###############
-    async def split_video_file(file, split_size, dirpath, event):
-        success = []
-        split_size = split_size-50000000
-        try:
-            size = getsize(file)
-            parts = ceil(size/split_size)
-            i=1
-            start_time = 0
-            while i <= parts:
-                    file_name, extension = splitext(file)
-                    parted_name = f"{str(file_name)}.part{str(i).zfill(3)}{str(extension)}"
-                    create_direc(f"{dirpath}/split/")
-                    out_path = join(f"{dirpath}/split/", parted_name)
-                    command = ["ffmpeg", "-hide_banner", "-ss", str(start_time), # Reverted zender -> ffmpeg
-                                "-i", f"{str(file)}", "-fs", str(split_size), "-map", "0", "-map_chapters", "-1",
-                                "-c", "copy", f"{out_path}"]
-                    result = await run_process_command(command)
-                    if not result:
-                            await delete_trash(out_path)
-                            command = ["ffmpeg", "-hide_banner", "-ss", str(start_time), # Reverted zender -> ffmpeg
-                                "-i", f"{str(file)}", "-fs", str(split_size), "-map_chapters", "-1",
-                                "-c", "copy", out_path]
-                            result = await run_process_command(command)
-                            if not result:
-                                    await event.reply(f"❗Could Not Split {str(file)}")
-                                    return False
-                    cut_duration = get_video_duration(out_path)
-                    if cut_duration <= 4:
-                            break
-                    success.append(out_path)
-                    start_time += cut_duration - 3
-                    i = i + 1
-            return success
-        except Exception as e:
-            await event.reply(f"❗Error While Splitting {str(file)}\n\n{str(e)}")
-            LOGGER.info(str(e))
-            return False
+    # REMOVED: split_video_file function
+    # ###############------Split_Video------###############
+    # async def split_video_file(file, split_size, dirpath, event):
+    #     ... (function content removed) ...
 
 ###############------Send_ScreenShots------###############
     async def generate_ss(process_status, force_gen=False):
@@ -234,58 +200,9 @@ class FFMPEG:
         else:
             return
 
-
-    ###############------Select_Audio------###############
-    async def select_audio(process_status):
-                                        if get_data()[process_status.user_id]['select_stream']:
-                                                language = get_data()[process_status.user_id]['stream']
-                                                try:
-                                                        get_streams = await execute(f"ffprobe -hide_banner -show_streams -print_format json '{str(process_status.send_files[-1])}'")
-                                                        details = loads(get_streams)
-                                                        print(details)
-                                                        stream_data = {}
-                                                        smsg = ''
-                                                        for stream in details["streams"]:
-                                                                # stream_name = stream["codec_name"]
-                                                                stream_type = stream["codec_type"]
-                                                                codec_long_name = stream['codec_long_name']
-                                                                if stream_type in ("audio"):
-                                                                        mapping = stream["index"]
-                                                                        try:
-                                                                                lang = stream["tags"]["language"]
-                                                                        except:
-                                                                                lang = mapping
-                                                                        sname = f"{stream_type.upper()} - {str(lang).upper()} [{codec_long_name}]"
-                                                                        stream_data[sname] = {}
-                                                                        stream_data[sname]['index'] =mapping
-                                                                        stream_data[sname]['language'] = str(lang).upper()
-                                                                        smsg+= f'`{sname}`\n\n'
-                                                        if len(stream_data)==0:
-                                                                await process_status.event.reply("❗Failed To Find Audio Streams From Video")
-                                                                return
-                                                        elif len(stream_data)==1:
-                                                                await process_status.event.reply("🔶Only One Audio Found In The Video So Skipping Audio Selection.")
-                                                                return
-                                                        else:
-                                                                skeys = list(stream_data.keys())
-                                                                for k in skeys:
-                                                                        if stream_data[k]['language']==language:
-                                                                                cstream = k
-                                                                                stream_no = stream_data[cstream]['index']
-                                                                                amap_options = f'0:a:{str(int(stream_no)-1)}'
-                                                                                process_status.set_amap_options(amap_options)
-                                                                                await process_status.event.reply(f'✅Audio Selected Successfully\n\n`{str(cstream)}`\n\n`STREAM NO: {str(stream_no)}`')
-                                                                                # Corrected caption logic
-                                                                                caption = f"✅Audio: {str(cstream)}\n" + (process_status.caption if process_status.caption else '')
-                                                                                process_status.set_caption(caption)
-                                                                                return
-                                                                await process_status.event.reply(f'❗{language} Language Not Found In Video.')
-                                                                return
-                                                except Exception as e:
-                                                        LOGGER.info(str(e))
-                                                        await process_status.event.reply(f"❌Failed To Get Audio Streams From Video\n\n{str(e)}")
-                                                        return
-                                        else:
-                                            return
+    # REMOVED: select_audio function
+    # ###############------Select_Audio------###############
+    # async def select_audio(process_status):
+    #                                     ... (function content removed) ...
 
 # --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Processes.py ---
