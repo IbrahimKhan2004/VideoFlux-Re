@@ -190,15 +190,18 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 crf = get_data()[user_id]['crf'] if get_data()[user_id]['use_crf'] else 'N/A'
                 vbr = get_data()[user_id]['vbr'] if get_data()[user_id]['use_vbr'] else 'N/A'
                 abr = get_data()[user_id]['abr'] if get_data()[user_id]['use_abr'] else 'N/A' # Added ABR
+                # Highlighted change: Get CBR setting
+                cbr = get_data()[user_id]['cbr'] if get_data()[user_id]['use_cbr'] else 'N/A' # Added CBR
                 abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
                 acodec = get_data()[user_id]['audio']['acodec']
                 achannel = get_data()[user_id]['audio']['achannel']
                 encode_mode = get_data()[user_id]['convert']['encode']
 
+                # Highlighted change: Updated f-string to include CBR
                 text = f"\n**Encoding...**: {encode_mode}\n"\
                          f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
                          f"**Resolution**: {quality} | **EType**: {etype}\n"\
-                         f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr}\n"\
+                         f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr} | **CBR**: {cbr}\n"\
                          f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
                          f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"\
                          f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
@@ -508,7 +511,6 @@ class ProcessStatus:
                                 else:
                                                 process_state = f"{Names.STATUS[self.process_type]} [{total_files} Files]"
                                                 name = str(self.file_name)
-                                # Highlighted change: Corrected user_id access
                                 text =f'{process_state}\n'\
                                                         f'`{name}`\n'\
                                                         f'{get_progress_bar_string(elapsed_time, status.duration)} {elapsed_time * 100 / status.duration:.1f}%\n'\
