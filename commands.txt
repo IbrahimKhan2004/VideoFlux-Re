@@ -11,8 +11,10 @@ gensample - Generate Sample Video
 genss - Generate Screenshots
 changemetadata - Change Video Metadata
 changeindex - Change Index Or Remove Stream
-mirror - Mirror File
-leech - Leech File
+# <<<< START OF DELETED BLOCK >>>>
+# mirror - Mirror File
+# leech - Leech File
+# <<<< END OF DELETED BLOCK >>>>
 # REMOVED: savewatermark - Save Watermark Image
 savethumb - Save Static Thumbnail
 saveconfig - Save Rclone Config
@@ -32,6 +34,8 @@ stats - Get Stats
 speedtest - SpeedTest
 settings - Settings Section
 restart - Restart Bot
-# REMOVED: herokurestart - Restart Heroku Dyno
+# <<<< START OF DELETED BLOCK >>>>
+# herokurestart - Restart Heroku Dyno
+# <<<< END OF DELETED BLOCK >>>>
 
 # --- END OF FILE VideoFlux-Re-master/commands.txt ---
