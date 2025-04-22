@@ -101,7 +101,7 @@ class Config:
     except:
         LOGGER.info("🔶Auth Group ID Not Found, Pyrogram Download and Upload Will Not Work In Group")
         AUTH_GROUP_ID = False
-    NAME = "Nik66Bots" # Kept original name
+    NAME = "BashAFK" # Kept original name
     DOWNLOAD_DIR = f"{getcwd()}/downloads"
     OWNER_ID = int(environ.get("OWNER_ID",""))
     SUDO_USERS = [int(x) for x in environ.get("SUDO_USERS","").split(" ")]
