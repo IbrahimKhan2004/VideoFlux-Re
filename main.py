@@ -19,6 +19,8 @@ files = glob(f'{working_dir}/*.py')
 DATA = Config.DATA
 sudo_users = Config.SUDO_USERS
 LOGGER = Config.LOGGER
+# Highlighted change: Define Pyrogram session name
+PYROGRAM_SESSION_NAME = f"Pyrogram_{Config.NAME}.session"
 
 ###############------Load_Plugins------###############
 def load_plugins(plugin_name):
@@ -130,6 +132,14 @@ if __name__ == "__main__":
     elif Config.RESTART_NOTIFY_ID:
         Telegram.TELETHON_CLIENT.loop.run_until_complete(notify_restart(Config.RESTART_NOTIFY_ID))
     if Config.USE_PYROGRAM:
+        # Highlighted change: Delete existing Pyrogram session file before starting
+        if exists(PYROGRAM_SESSION_NAME):
+            try:
+                remove(PYROGRAM_SESSION_NAME)
+                LOGGER.info(f"🔶Deleted existing Pyrogram session file: {PYROGRAM_SESSION_NAME}")
+            except Exception as e:
+                LOGGER.error(f"❗Failed to delete Pyrogram session file {PYROGRAM_SESSION_NAME}: {e}")
+        # End of highlighted change
         LOGGER.info("🔶Starting Pyrogram Bot")
         pyrogram_bot = Telegram.PYROGRAM_CLIENT.start()
         LOGGER.info(f'✅Pyrogram Session For @{pyrogram_bot.get_me().username} Started Successfully!✅')
