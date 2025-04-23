@@ -970,7 +970,7 @@ async def video_callback(event, txt, user_id, edit):
 # End of highlighted change
 # Highlighted change: Added processing unit callback handler
             elif txt.startswith("videoprocessing_unit"):
-                await saveoptions(user_id, 'processing_unit', new_position, SAVE_TO_DATABASE)
+                await saveoptions(user_id, 'processing_unit', new_position, SAVE_TO_DATABASE) # Use saveoptions for top-level key
                 await event.answer(f"✅Processing Unit - {str(new_position)}")
 # End of highlighted change
 
