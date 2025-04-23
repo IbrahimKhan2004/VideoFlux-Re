@@ -154,7 +154,9 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/convert/{get_output_name(process_status, convert_quality=convert_quality)}"
             file_duration = get_video_duration(input_file)
 
-            command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
+            # Highlighted change: Added -nostdin flag
+            command = ['ffmpeg', '-nostdin', '-hide_banner', # Reverted zender -> ffmpeg, Added -nostdin
+            # End of highlighted change
                                             '-progress', f"{log_file}",
                                             '-i', f'{input_file}']
 
