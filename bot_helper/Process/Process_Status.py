@@ -196,14 +196,18 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 acodec = get_data()[user_id]['audio']['acodec']
                 achannel = get_data()[user_id]['audio']['achannel']
                 encode_mode = get_data()[user_id]['convert']['encode']
+# Highlighted change: Get tune setting
+                video_tune = get_data()[user_id]['video']['tune']
+# End of highlighted change
 
-                # Highlighted change: Updated f-string to include CBR
+                # Highlighted change: Updated f-string to include CBR and Tune
                 text = f"\n**Encoding...**: {encode_mode}\n"\
                          f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
                          f"**Resolution**: {quality} | **EType**: {etype}\n"\
                          f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr} | **CBR**: {cbr}\n"\
                          f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
                          f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"\
+                         f"**Tune**: {video_tune}\n"\
                          f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
                          f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
                          f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
@@ -399,7 +403,9 @@ class ProcessStatus:
                                         LOGGER.info(f"Renaming File {move_dir}/{name}")
                                         rename(f"{move_dir}/{name}", f"{move_dir}/{str(gen_random_string(5))}_{name}")
                                 LOGGER.info(f"Moving File {self.dir}/{name} To {move_dir}/{name}")
+# Highlighted change: Restored the shutil_move line
                                 shutil_move(f"{self.dir}/{name}", f"{move_dir}/{name}")
+# End of highlighted change
                                 self.send_files.append(f"{move_dir}/{name}")
                         else:
                                 LOGGER.info(f"{self.dir}/{name} Not Found In DW List.")
