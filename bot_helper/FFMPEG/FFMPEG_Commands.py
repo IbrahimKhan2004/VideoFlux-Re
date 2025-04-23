@@ -143,9 +143,6 @@ def get_commands(process_status):
 # Highlighted change: Get tune setting
             video_tune = get_data()[process_status.user_id]['video']['tune']
 # End of highlighted change
-# Highlighted change: Get processing unit setting
-            processing_unit = get_data()[process_status.user_id]['processing_unit']
-# End of highlighted change
             # --- End of VFBITMOD-update Integration ---
 
             create_direc(f"{process_status.dir}/convert/")
@@ -184,19 +181,11 @@ def get_commands(process_status):
                 else: # 10Bit
                     command+= ['-pix_fmt','yuv420p10le']
 
-# Highlighted change: Select codec based on processing unit
                 # Video Codec
-                if processing_unit == 'GPU':
-                    if convert_encoder=='HEVC':
-                        command+= ['-vcodec','hevc_nvenc'] # Use NVENC HEVC
-                    else: # H.264
-                        command+= ['-vcodec','h264_nvenc'] # Use NVENC H.264
-                else: # Default to CPU
-                    if convert_encoder=='HEVC':
-                        command+= ['-vcodec','libx265','-vtag', 'hvc1']
-                    else: # H.264
-                        command+= ['-vcodec','libx264']
-# End of highlighted change
+                if convert_encoder=='HEVC':
+                    command+= ['-vcodec','libx265','-vtag', 'hvc1']
+                else: # H.264
+                    command+= ['-vcodec','libx264']
 
 # Highlighted change: Add tune setting if not 'None'
                 # Tune Setting
@@ -204,9 +193,9 @@ def get_commands(process_status):
                     command += ['-tune', video_tune]
 # End of highlighted change
 
-                # Rate Control (CRF, VBR, ABR, or CBR) - Note: NVENC might handle these differently
+                # Rate Control (CRF, VBR, ABR, or CBR)
                 if convert_type=='CRF' and convert_crf is not None:
-                    command+= ['-crf', f'{str(convert_crf)}'] # NVENC might ignore CRF, quality might depend on preset/other flags
+                    command+= ['-crf', f'{str(convert_crf)}']
                 elif convert_type=='VBR' and convert_vbr is not None:
                     command+= ['-b:v', f'{str(convert_vbr)}']
                 elif convert_type=='ABR' and convert_abr is not None:
@@ -286,7 +275,7 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
-            command+= ['-preset', convert_preset] # NVENC might interpret presets differently (p1-p7) or ignore this flag
+            command+= ['-preset', convert_preset]
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
 
@@ -297,9 +286,6 @@ def get_commands(process_status):
         hardmux_preset =  get_data()[process_status.user_id]['hardmux']['preset']
         hardmux_crf = get_data()[process_status.user_id]['hardmux']['crf']
         hardmux_encode_video = get_data()[process_status.user_id]['hardmux']['encode_video']
-# Highlighted change: Get processing unit setting for hardmux
-        processing_unit = get_data()[process_status.user_id]['processing_unit']
-# End of highlighted change
         create_direc(f"{process_status.dir}/hardmux/")
         log_file = f"{process_status.dir}/hardmux/hardmux_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
@@ -311,19 +297,11 @@ def get_commands(process_status):
                                     '-map','0:v',
                                     '-map',f'{str(process_status.amap_options)}']
         if hardmux_encode_video:
-                encoder = get_data()[process_status.user_id]['hardmux']['encoder'] # This is the CPU encoder setting
-# Highlighted change: Select codec based on processing unit for hardmux
-                if processing_unit == 'GPU':
-                    if encoder=='libx265':
-                        command += ['-vcodec','hevc_nvenc', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset] # Keep CRF/Preset for now
-                    else: # libx264
-                        command += ['-vcodec','h264_nvenc', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset] # Keep CRF/Preset for now
-                else: # Default to CPU
-                    if encoder=='libx265':
+                encoder = get_data()[process_status.user_id]['hardmux']['encoder']
+                if encoder=='libx265':
                         command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-                    else:
+                else:
                         command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-# End of highlighted change
         else:
                 command += ['-c:a','copy']
         hardmux_sync = get_data()[process_status.user_id]['hardmux']['sync']
