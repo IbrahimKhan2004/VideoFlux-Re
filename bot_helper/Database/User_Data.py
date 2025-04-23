@@ -165,6 +165,9 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['gen_sample'] = False
         DATA[user_id]['tgdownload'] = "Pyrogram"
         DATA[user_id]['tgupload'] = "Pyrogram"
+# Highlighted change: Added default processing unit setting
+        DATA[user_id]['processing_unit'] = 'CPU' # Added default processing unit
+# End of highlighted change
         # REMOVED: Multi-task defaults
         # DATA[user_id]['multi_tasks'] = False
         # DATA[user_id]['upload_all'] = True
@@ -179,7 +182,8 @@ async def saveoptions(user_id, dname, value, dbsave):
     try:
         if user_id not in DATA:
             DATA[user_id] = {}
-            DATA[user_id][dname] = {}
+            # This part seems incorrect, should just assign value directly
+            # DATA[user_id][dname] = {} # Remove this line
             DATA[user_id][dname] = value
         else:
             DATA[user_id][dname] = value
