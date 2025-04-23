@@ -140,6 +140,9 @@ def get_commands(process_status):
             convert_abr = get_data()[process_status.user_id]['abr'] if get_data()[process_status.user_id]['use_abr'] else None # Use custom if enabled
             # Highlighted change: Get CBR setting
             convert_cbr = get_data()[process_status.user_id]['cbr'] if get_data()[process_status.user_id]['use_cbr'] else None # Use custom if enabled
+# Highlighted change: Get tune setting
+            video_tune = get_data()[process_status.user_id]['video']['tune']
+# End of highlighted change
             # --- End of VFBITMOD-update Integration ---
 
             create_direc(f"{process_status.dir}/convert/")
@@ -183,6 +186,12 @@ def get_commands(process_status):
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
                 else: # H.264
                     command+= ['-vcodec','libx264']
+
+# Highlighted change: Add tune setting if not 'None'
+                # Tune Setting
+                if video_tune != 'None':
+                    command += ['-tune', video_tune]
+# End of highlighted change
 
                 # Rate Control (CRF, VBR, ABR, or CBR)
                 if convert_type=='CRF' and convert_crf is not None:
