@@ -38,6 +38,9 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['video']['qubality'] = '480p [720x480]'
         DATA[user_id]['video']['encude'] = 'HEVC'
         DATA[user_id]['video']['vbit'] = '8Bit'
+# Highlighted change: Added default tune setting
+        DATA[user_id]['video']['tune'] = 'None' # Added default tune setting
+# End of highlighted change
         DATA[user_id]['audio'] = {}
         DATA[user_id]['audio']['achannel'] = '2'
         DATA[user_id]['audio']['acodec'] = 'AAC'
