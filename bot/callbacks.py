@@ -41,9 +41,6 @@ upload_destination_list = ['Rclone', 'Gofile']
 # Highlighted change: Added tune list
 tune_list = ['None', 'fastdecode', 'zerolatency', 'film', 'animation']
 # End of highlighted change
-# Highlighted change: Added processing unit list
-processing_unit_list = ['CPU', 'GPU']
-# End of highlighted change
 
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
@@ -95,10 +92,6 @@ async def callback(event):
 # Highlighted change: Added check for upload_destination key
         if 'upload_destination' not in user_data:
             await saveoptions(user_id, 'upload_destination', 'Rclone', SAVE_TO_DATABASE)
-# End of highlighted change
-# Highlighted change: Added check for processing_unit key
-        if 'processing_unit' not in user_data:
-            await saveoptions(user_id, 'processing_unit', 'CPU', SAVE_TO_DATABASE)
 # End of highlighted change
         # --- End of Key Check ---
 
@@ -968,23 +961,14 @@ async def video_callback(event, txt, user_id, edit):
                 await saveconfig(user_id, 'video', 'tune', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Video Tune - {str(new_position)}")
 # End of highlighted change
-# Highlighted change: Added processing unit callback handler and corrected save function
-            elif txt.startswith("videoprocessing_unit"):
-                await saveoptions(user_id, 'processing_unit', new_position, SAVE_TO_DATABASE) # Use saveoptions for top-level key
-                await event.answer(f"✅Processing Unit - {str(new_position)}")
-# End of highlighted change
 
             # Use .get() with defaults
-            user_data = get_data().get(user_id, {}) # Get user_data once
-            video_settings = user_data.get('video', {})
+            video_settings = get_data().get(user_id, {}).get('video', {})
             video_vbit = video_settings.get('vbit', '8Bit')
             video_encude = video_settings.get('encude', 'HEVC')
             video_qubality = video_settings.get('qubality', '480p [720x480]')
 # Highlighted change: Get tune setting
             video_tune = video_settings.get('tune', 'None')
-# End of highlighted change
-# Highlighted change: Get processing unit setting
-            processing_unit = user_data.get('processing_unit', 'CPU')
 # End of highlighted change
 
             KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'BashAFK')])
@@ -999,11 +983,6 @@ async def video_callback(event, txt, user_id, edit):
 # Highlighted change: Added tune buttons
             KeyBoard.append([Button.inline(f'❤ Tune - {str(video_tune)}', 'BashAFK')])
             for board in gen_keyboard(tune_list, video_tune, "videotune", 3, False): # Display 3 tune options per row
-                KeyBoard.append(board)
-# End of highlighted change
-# Highlighted change: Added processing unit buttons
-            KeyBoard.append([Button.inline(f'❤ Processing Unit - {str(processing_unit)}', 'BashAFK')])
-            for board in gen_keyboard(processing_unit_list, processing_unit, "videoprocessing_unit", 2, False):
                 KeyBoard.append(board)
 # End of highlighted change
 
