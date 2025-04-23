@@ -38,6 +38,9 @@ LOGGER = Config.LOGGER
 # Highlighted change: Added upload destination list
 upload_destination_list = ['Rclone', 'Gofile']
 # End of highlighted change
+# Highlighted change: Added tune list
+tune_list = ['None', 'fastdecode', 'zerolatency', 'film', 'animation']
+# End of highlighted change
 
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
@@ -55,6 +58,11 @@ async def callback(event):
             await saveconfig(user_id, 'video', 'qubality', '480p [720x480]', SAVE_TO_DATABASE)
             await saveconfig(user_id, 'video', 'encude', 'HEVC', SAVE_TO_DATABASE)
             await saveconfig(user_id, 'video', 'vbit', '8Bit', SAVE_TO_DATABASE)
+# Highlighted change: Added check for tune key
+            await saveconfig(user_id, 'video', 'tune', 'None', SAVE_TO_DATABASE) # Add default tune if video dict is missing
+        elif 'tune' not in user_data.get('video', {}): # Check specifically if tune is missing within video dict
+            await saveconfig(user_id, 'video', 'tune', 'None', SAVE_TO_DATABASE) # Add default tune
+# End of highlighted change
         if 'audio' not in user_data:
              await saveconfig(user_id, 'audio', 'achannel', '2', SAVE_TO_DATABASE)
              await saveconfig(user_id, 'audio', 'acodec', 'AAC', SAVE_TO_DATABASE)
@@ -948,12 +956,20 @@ async def video_callback(event, txt, user_id, edit):
             elif txt.startswith("videoquality"):
                 await saveconfig(user_id, 'video', 'qubality', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Quality - {str(new_position)}")
+# Highlighted change: Added tune callback handler
+            elif txt.startswith("videotune"):
+                await saveconfig(user_id, 'video', 'tune', new_position, SAVE_TO_DATABASE)
+                await event.answer(f"✅Video Tune - {str(new_position)}")
+# End of highlighted change
 
             # Use .get() with defaults
             video_settings = get_data().get(user_id, {}).get('video', {})
             video_vbit = video_settings.get('vbit', '8Bit')
             video_encude = video_settings.get('encude', 'HEVC')
             video_qubality = video_settings.get('qubality', '480p [720x480]')
+# Highlighted change: Get tune setting
+            video_tune = video_settings.get('tune', 'None')
+# End of highlighted change
 
             KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'BashAFK')])
             for board in gen_keyboard(encude_list, video_encude, "videoencude", 2, False):
@@ -964,6 +980,11 @@ async def video_callback(event, txt, user_id, edit):
             KeyBoard.append([Button.inline(f'❤ Resolution - {str(video_qubality)}', 'BashAFK')])
             for board in gen_keyboard(qubality_list, video_qubality, "videoquality", 2, False):
                 KeyBoard.append(board)
+# Highlighted change: Added tune buttons
+            KeyBoard.append([Button.inline(f'❤ Tune - {str(video_tune)}', 'BashAFK')])
+            for board in gen_keyboard(tune_list, video_tune, "videotune", 3, False): # Display 3 tune options per row
+                KeyBoard.append(board)
+# End of highlighted change
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
