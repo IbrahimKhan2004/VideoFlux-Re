@@ -199,18 +199,15 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
 # Highlighted change: Get tune setting
                 video_tune = get_data()[user_id]['video']['tune']
 # End of highlighted change
-# Highlighted change: Get processing unit setting
-                processing_unit = get_data()[user_id]['processing_unit']
-# End of highlighted change
 
-                # Highlighted change: Updated f-string to include CBR, Tune and Processing Unit
+                # Highlighted change: Updated f-string to include CBR and Tune
                 text = f"\n**Encoding...**: {encode_mode}\n"\
                          f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
                          f"**Resolution**: {quality} | **EType**: {etype}\n"\
                          f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr} | **CBR**: {cbr}\n"\
                          f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
                          f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"\
-                         f"**Tune**: {video_tune} | **Unit**: {processing_unit}\n"\
+                         f"**Tune**: {video_tune}\n"\
                          f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
                          f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
                          f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
@@ -225,15 +222,9 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                         encoder = get_data()[user_id]['hardmux']['encoder']
                 else:
                         encoder = 'False'
-# Highlighted change: Get processing unit setting for hardmux
-                processing_unit = get_data()[user_id]['processing_unit']
-# End of highlighted change
-# Highlighted change: Added processing unit to hardmux status
                 text = f"\n**SYNC**: {get_data()[user_id]['hardmux']['sync']} | **Preset**: {get_data()[user_id]['hardmux']['preset']}\n"\
                         f"**CRF**: {get_data()[user_id]['hardmux']['crf']} | {qsize_text}\n"\
-                        f"**Encoder**: {encoder} | **Unit**: {processing_unit}\n"\
-                        f"**In.Size**: {get_human_size(input_size)}"
-# End of highlighted change
+                        f"**Encoder**: {encoder} | **In.Size**: {get_human_size(input_size)}"
                 return text
         elif pmode==Names.softmux:
                 text = f"\n**Subtitles Codec**: {get_data()[user_id]['softmux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
