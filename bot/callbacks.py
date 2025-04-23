@@ -968,7 +968,7 @@ async def video_callback(event, txt, user_id, edit):
                 await saveconfig(user_id, 'video', 'tune', new_position, SAVE_TO_DATABASE)
                 await event.answer(f"✅Video Tune - {str(new_position)}")
 # End of highlighted change
-# Highlighted change: Added processing unit callback handler
+# Highlighted change: Added processing unit callback handler and corrected save function
             elif txt.startswith("videoprocessing_unit"):
                 await saveoptions(user_id, 'processing_unit', new_position, SAVE_TO_DATABASE) # Use saveoptions for top-level key
                 await event.answer(f"✅Processing Unit - {str(new_position)}")
