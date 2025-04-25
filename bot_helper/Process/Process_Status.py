@@ -184,7 +184,12 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
         # elif pmode==Names.watermark:
         #         ... (block content removed) ...
         if pmode==Names.merge: # MODIFIED: Changed elif to if
+                # Highlighted change: Added Fix Timestamps display
+                merge_settings = get_data().get(user_id, {}).get('merge', {})
+                merge_fix_timestamps = merge_settings.get('fix_timestamps', False)
                 text = f"\n**MAP**: {get_data()[user_id]['merge']['map']} | **Fix Blank**: {get_data()[user_id]['merge']['fix_blank']}"
+                text += f"\n**Fix Timestamps**: {merge_fix_timestamps}" # Display the setting status
+                # End of highlighted change
                 # Added metadata display from VFBITMOD-update
                 text += f"\n**Metadata**: {get_data()[user_id]['metadata']}"
                 return text
@@ -205,11 +210,11 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 # Highlighted change: Get CBR setting
                 cbr = get_data()[user_id]['cbr'] if get_data()[user_id]['use_cbr'] else 'N/A' # Added CBR
                 abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
-                acodec = get_data()[process_status.user_id]['audio']['acodec']
-                achannel = get_data()[process_status.user_id]['audio']['achannel']
-                encode_mode = get_data()[process_status.user_id]['convert']['encode']
+                acodec = get_data()[user_id]['audio']['acodec'] # Corrected: Use user_id directly
+                achannel = get_data()[user_id]['audio']['achannel'] # Corrected: Use user_id directly
+                encode_mode = get_data()[user_id]['convert']['encode'] # Corrected: Use user_id directly
 # Highlighted change: Get tune setting
-                video_tune = get_data()[process_status.user_id]['video']['tune']
+                video_tune = get_data()[user_id]['video']['tune'] # Corrected: Use user_id directly
 # End of highlighted change
 
                 # Highlighted change: Updated f-string to include CBR and Tune
@@ -539,7 +544,7 @@ class ProcessStatus:
                                                 progress=get_value(refindall("progress=(\w+)", ffmpeg_text), str, "error")
                                                 speed=get_value(refindall("speed=(\d+\.?\d*)", ffmpeg_text), float, 1)
                                                 # Highlighted change: Get current frame count
-                                                current_frame = get_value(refindall("frame=(\d+)", ffmpeg_text), int, 0)
+                                                current_frame = get_value(refindall("frame=\s*(\d+)", ffmpeg_text), int, 0) # Added space tolerance
                                                 # End of highlighted change
                                                 # bitrate = get_value(refindall("bitrate=(.+)", ffmpeg_text), str, "0")
                                                 # fps = get_value(refindall("fps=(.+)", ffmpeg_text), str, "0")
