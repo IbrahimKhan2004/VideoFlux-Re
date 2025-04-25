@@ -120,6 +120,9 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['merge']['map_sub'] = True
         DATA[user_id]['merge']['map'] = True
         DATA[user_id]['merge']['fix_blank'] = False
+        # Highlighted change: Add default for fix_timestamps
+        DATA[user_id]['merge']['fix_timestamps'] = False # Default to False (use -c copy)
+        # End of highlighted change
         # REMOVED: Dynamic thumbnail default
         # DATA[user_id]['custom_thumbnail'] = False
         DATA[user_id]['convert_video'] = False # Kept this, might be used elsewhere? Re-evaluate if needed.
