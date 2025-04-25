@@ -13,10 +13,13 @@ from asyncio import wait_for, create_subprocess_exec
 from asyncio.subprocess import PIPE as asyncioPIPE
 from bot_helper.Database.User_Data import get_data
 from json import loads
-from os.path import getsize, isdir, exists
+from os.path import getsize, isdir, exists, splitext # Added splitext
 from shutil import move as shutil_move
 from os import makedirs, rename
 from aiofiles import open as aio_open
+# Highlighted change: Import get_video_duration
+from bot_helper.Others.Helper_Functions import get_video_duration
+# End of highlighted change
 
 
 def create_direc(direc):
@@ -132,9 +135,14 @@ def get_progress_bar_from_percentage(percentage):
 
 
 def get_progress_bar_string(current,total):
-    completed = int(current) / 8
-    total = int(total) / 8
-    p = 0 if total == 0 else round(completed * 100 / total)
+    # Highlighted change: Handle potential division by zero if total is 0
+    if total == 0:
+        p = 0
+    else:
+        # Ensure current doesn't exceed total for calculation
+        current = min(current, total)
+        p = round(current * 100 / total)
+    # End of highlighted change
     p = min(max(p, 0), 100)
     cFull = p // 8
     p_str = FINISHED_PROGRESS_STR * cFull
@@ -153,11 +161,15 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
                         status_foot+= " | "
                 try:
                         # Added check for time_in_us being zero
-                        if time_in_us != 0:
-                            eta_size = (status.output_size() / time_in_us) * status.duration * 1024 * 1024
-                            status_foot += f"**ETA Size**: {str(get_human_size(eta_size))}"
+                        if time_in_us != 0 and status.duration > 0: # Also check duration > 0
+                            # Estimate ETA size based on current output size and time progress
+                            # Use the reliable duration from ffprobe, not the faulty time_in_us for total estimate
+                            progress_ratio = (time_in_us / 1000000) / status.duration if status.duration > 0 else 0
+                            # Avoid division by zero if progress_ratio is 0
+                            estimated_total_size = (status.output_size() / progress_ratio) if progress_ratio > 0 else 0
+                            status_foot += f"**ETA Size**: {str(get_human_size(estimated_total_size))}"
                         else:
-                            status_foot += "**ETA Size**: N/A (Division by zero prevented)"
+                            status_foot += "**ETA Size**: N/A" # Indicate N/A if calculation isn't possible
                 except Exception as e: # Catch potential errors during calculation
                         LOGGER.error(f"Error calculating ETA Size: {e}")
                         status_foot+= f"**ETA Size**: Error"
@@ -193,11 +205,11 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 # Highlighted change: Get CBR setting
                 cbr = get_data()[user_id]['cbr'] if get_data()[user_id]['use_cbr'] else 'N/A' # Added CBR
                 abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
-                acodec = get_data()[user_id]['audio']['acodec']
-                achannel = get_data()[user_id]['audio']['achannel']
-                encode_mode = get_data()[user_id]['convert']['encode']
+                acodec = get_data()[process_status.user_id]['audio']['acodec']
+                achannel = get_data()[process_status.user_id]['audio']['achannel']
+                encode_mode = get_data()[process_status.user_id]['convert']['encode']
 # Highlighted change: Get tune setting
-                video_tune = get_data()[user_id]['video']['tune']
+                video_tune = get_data()[process_status.user_id]['video']['tune']
 # End of highlighted change
 
                 # Highlighted change: Updated f-string to include CBR and Tune
@@ -278,6 +290,9 @@ class ProcessStatus:
                         self.added_by = f'[{self.user_first_name}](https://t.me/{str(self.user_name)})'
                 else:
                         self.added_by = self.user_first_name
+                # Highlighted change: Add total_frames attribute
+                self.total_frames = 0 # Initialize total_frames
+                # End of highlighted change
 
         # REMOVED: Multi-task related methods
         # def append_multi_tasks(self, task):
@@ -441,10 +456,46 @@ class ProcessStatus:
         def get_task_details(self):
                 return f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`'
 
+        # Highlighted change: Method to estimate total frames
+        def estimate_total_frames(self, duration):
+            """Estimates total frames based on duration and first stream fps."""
+            # This is an estimation, might not be perfectly accurate if fps varies
+            try:
+                # Run ffprobe to get fps of the first video stream
+                # This is a blocking call, consider making async if performance is critical
+                # For simplicity here, we use subprocess.run
+                import subprocess
+                import json
+                cmd = [
+                    "ffprobe", "-v", "error", "-select_streams", "v:0",
+                    "-show_entries", "stream=avg_frame_rate", "-of",
+                    "default=noprint_wrappers=1:nokey=1", self.send_files[-1] # Use last input file
+                ]
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    num, den = map(int, result.stdout.strip().split('/'))
+                    fps = num / den if den else 0
+                    if fps > 0:
+                        self.total_frames = int(duration * fps)
+                        LOGGER.info(f"Estimated total frames for merge: {self.total_frames} (duration: {duration}s, fps: {fps})")
+                        return
+                else:
+                     LOGGER.warning(f"Could not get FPS for frame estimation: {result.stderr}")
+            except Exception as e:
+                LOGGER.error(f"Error estimating total frames: {e}")
+            # Fallback if fps estimation fails
+            self.total_frames = 0
+            LOGGER.warning("Could not estimate total frames, progress percentage might be inaccurate.")
+        # End of highlighted change
+
         async def update_status(self, status):
                 if status.type()==Names.ffmpeg:
                         input_size = status.input_size()
                         ffmpeg_head = generate_ffmpeg_status_head(self.user_id, self.process_type, input_size)
+                        # Highlighted change: Estimate total frames for merge
+                        if self.process_type == Names.merge and self.total_frames == 0:
+                            self.estimate_total_frames(status.duration)
+                        # End of highlighted change
                 total_files = len(self.send_files)
                 error_no = 0
                 # REMOVED: Multi-task number logic
@@ -479,17 +530,24 @@ class ProcessStatus:
                                         LOGGER.info('Status Update: Stopping Because ReturnCode Exists.')
                                         break
                                 if exists(status.log_file):
+                                        # Highlighted change: Read frame count as well
+                                        current_frame = 0 # Default value
+                                        # End of highlighted change
                                         with open(status.log_file, 'r+') as file:
                                                 ffmpeg_text = file.read()
                                                 time_in_us = get_value(refindall("out_time_ms=(.+)", ffmpeg_text), int, 1)
                                                 progress=get_value(refindall("progress=(\w+)", ffmpeg_text), str, "error")
                                                 speed=get_value(refindall("speed=(\d+\.?\d*)", ffmpeg_text), float, 1)
+                                                # Highlighted change: Get current frame count
+                                                current_frame = get_value(refindall("frame=(\d+)", ffmpeg_text), int, 0)
+                                                # End of highlighted change
                                                 # bitrate = get_value(refindall("bitrate=(.+)", ffmpeg_text), str, "0")
                                                 # fps = get_value(refindall("fps=(.+)", ffmpeg_text), str, "0")
                                 else:
                                         time_in_us = 1
                                         progress="error"
                                         speed=1
+                                        current_frame = 0 # Ensure frame is 0 if log doesn't exist
                                 if progress == "end":
                                         break
                                 elif progress == "error":
@@ -507,29 +565,70 @@ class ProcessStatus:
                                                 break
                                         error_no+=1
                                 elapsed_time = time_in_us/1000000
-                                if self.process_type==Names.convert:
-                                                # Updated status message for convert
-                                                process_state = f"{Names.STATUS[self.process_type]} [{self.convert_index}]" # MODIFIED: Removed quality P
-                                                name = status.name
-                                elif self.process_type!=Names.merge:
-                                                process_state = Names.STATUS[self.process_type]
-                                                name = status.name
+                                # Highlighted change: Use frame count for merge progress if available
+                                if self.process_type == Names.merge:
+                                    process_state = f"{Names.STATUS[self.process_type]} [{total_files} Files]"
+                                    name = str(self.file_name) if self.file_name else "Merging..."
+                                    if self.total_frames > 0 and current_frame > 0:
+                                        # Use frame-based progress
+                                        percentage = min(100, (current_frame / self.total_frames) * 100)
+                                        progress_bar = get_progress_bar_string(current_frame, self.total_frames)
+                                        processed_str = f"Frames: {current_frame}/{self.total_frames}"
+                                        # ETA calculation based on frames is more complex, use time-based as fallback
+                                        eta_time = (status.duration - elapsed_time) / speed if speed > 0 else 0
+                                        eta_str = get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"
+                                    else:
+                                        # Fallback to time-based, but cap elapsed_time
+                                        capped_elapsed_time = min(elapsed_time, status.duration)
+                                        percentage = (capped_elapsed_time / status.duration) * 100 if status.duration > 0 else 0
+                                        progress_bar = get_progress_bar_string(capped_elapsed_time, status.duration)
+                                        processed_str = f"{get_readable_time(capped_elapsed_time)} of {get_readable_time(status.duration)}"
+                                        eta_time = (status.duration - capped_elapsed_time) / speed if speed > 0 else 0
+                                        eta_str = get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"
+
+                                    text = f'{process_state}\n'\
+                                           f'`{name}`\n'\
+                                           f'{progress_bar} {percentage:.1f}%\n'\
+                                           f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
+                                           f'**Engine**: FFMPEG'\
+                                           f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
+                                           f'**Processed**: {processed_str}\n'\
+                                           f'**Speed**: {speed:.2f}x | **ETA**: {eta_str}'\
+                                           f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us)}\n'\
+                                           f'`/ffmpeg log {self.process_id}`\n'\
+                                           f"`/cancel process {self.process_id}`"
                                 else:
-                                                process_state = f"{Names.STATUS[self.process_type]} [{total_files} Files]"
-                                                name = str(self.file_name)
-                                text =f'{process_state}\n'\
-                                                        f'`{name}`\n'\
-                                                        f'{get_progress_bar_string(elapsed_time, status.duration)} {elapsed_time * 100 / status.duration:.1f}%\n'\
-                                                        f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
-                                                        f'**Engine**: FFMPEG'\
-                                                        f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
-                                                        f'**Processed**: {get_readable_time(elapsed_time)} of {get_readable_time(status.duration)}\n'\
-                                                        f'**Speed**: {speed}x | **ETA**: {get_readable_time(floor( (status.duration - elapsed_time) / speed))}'\
-                                                        f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us)}\n'\
-                                                        f'`/ffmpeg log {self.process_id}`\n'\
-                                                        f"`/cancel process {self.process_id}`"
+                                    # Original time-based logic for other processes
+                                    if self.process_type==Names.convert:
+                                                    process_state = f"{Names.STATUS[self.process_type]} [{self.convert_index}]" # MODIFIED: Removed quality P
+                                                    name = status.name
+                                    elif self.process_type!=Names.merge: # Should not be merge here anymore
+                                                    process_state = Names.STATUS[self.process_type]
+                                                    name = status.name
+                                    # This else block for merge is now redundant due to the specific handling above
+                                    # else:
+                                    #                 process_state = f"{Names.STATUS[self.process_type]} [{total_files} Files]"
+                                    #                 name = str(self.file_name)
+
+                                    # Cap elapsed time for display to prevent negative ETA
+                                    capped_elapsed_time = min(elapsed_time, status.duration)
+                                    percentage = (capped_elapsed_time / status.duration) * 100 if status.duration > 0 else 0
+                                    eta_time = (status.duration - capped_elapsed_time) / speed if speed > 0 else 0
+
+                                    text =f'{process_state}\n'\
+                                                            f'`{name}`\n'\
+                                                            f'{get_progress_bar_string(capped_elapsed_time, status.duration)} {percentage:.1f}%\n'\
+                                                            f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
+                                                            f'**Engine**: FFMPEG'\
+                                                            f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
+                                                            f'**Processed**: {get_readable_time(capped_elapsed_time)} of {get_readable_time(status.duration)}\n'\
+                                                            f'**Speed**: {speed:.2f}x | **ETA**: {get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"}'\
+                                                            f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us)}\n'\
+                                                            f'`/ffmpeg log {self.process_id}`\n'\
+                                                            f"`/cancel process {self.process_id}`"
+                                # End of highlighted change
                                 self.status_message = text
-                                await asynciosleep(0.5)
+                                await asynciosleep(0.5) # Keep sleep reasonable
                 if status.type()==Names.aria and status.name():
                         if f"{self.dir}/{status.name()}" not in self.dw_files:
                                 self.dw_files.append(f"{self.dir}/{status.name()}")
@@ -541,16 +640,21 @@ class ProcessStatus:
                         if not check_running_process(self.process_id):
                                 client.stop_transmission()
                 try:
-                        speed = current / round(time() - start_time)
+                        # Highlighted change: Prevent division by zero for speed calculation
+                        elapsed = time() - start_time
+                        speed = current / elapsed if elapsed > 0 else 0
+                        eta = (total - current) / speed if speed > 0 else 0
+                        # End of highlighted change
                 except:
-                        speed = 1
+                        speed = 0 # Set speed to 0 if calculation fails
+                        eta = 0 # Set eta to 0 if calculation fails
                 text =f'{status}\n'\
                         f'`{name}`\n'\
                         f'{get_progress_bar_string(current,total)} {current * 100 / total:.1f}%\n'\
                         f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
                         f'**Engine**: {engine}\n'\
                         f'**{mode}**: {get_human_size(current)} of {get_human_size(total)}\n'\
-                        f'**Speed**: {get_human_size(speed)}ps | **ETA**: {get_readable_time((total-current)/speed)}\n'\
+                        f'**Speed**: {get_human_size(speed)}/s | **ETA**: {get_readable_time(eta)}\n'\
                         f"`/cancel process {self.process_id}`"
                 self.status_message = text
                 return
