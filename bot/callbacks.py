@@ -93,6 +93,10 @@ async def callback(event):
         if 'upload_destination' not in user_data:
             await saveoptions(user_id, 'upload_destination', 'Rclone', SAVE_TO_DATABASE)
 # End of highlighted change
+        # Highlighted change: Added check for merge fix_timestamps key
+        if 'merge' not in user_data or 'fix_timestamps' not in user_data.get('merge', {}):
+             await saveconfig(user_id, 'merge', 'fix_timestamps', False, SAVE_TO_DATABASE)
+        # End of highlighted change
         # --- End of Key Check ---
 
         if txt.startswith("settings"):
@@ -741,11 +745,19 @@ async def merge_callback(event, txt, user_id):
             elif txt.startswith("mergefixblank"):
                 await saveconfig(user_id, 'merge', 'fix_blank', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Merge Fix Blank - {str(new_position)}")
+            # Highlighted change: Add handler for the new setting
+            elif txt.startswith("mergefixtimestamps"):
+                await saveconfig(user_id, 'merge', 'fix_timestamps', eval(new_position), SAVE_TO_DATABASE)
+                await event.answer(f"✅Merge Fix Timestamps - {str(new_position)}")
+            # End of highlighted change
 
             # Use .get() with defaults
             merge_settings = get_data().get(user_id, {}).get('merge', {})
             merge_map = merge_settings.get('map', True)
             merge_fix_blank = merge_settings.get('fix_blank', False)
+            # Highlighted change: Get the new setting
+            merge_fix_timestamps = merge_settings.get('fix_timestamps', False)
+            # End of highlighted change
 
             KeyBoard.append([Button.inline(f'🍓Map  - {str(merge_map)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, merge_map, "mergemap", 2, False):
@@ -753,6 +765,11 @@ async def merge_callback(event, txt, user_id):
             KeyBoard.append([Button.inline(f'🚢Fix Blank Outro  - {str(merge_fix_blank)} [Use Only When Necessary]', 'BashAFK')])
             for board in gen_keyboard(bool_list, merge_fix_blank, "mergefixblank", 2, False):
                 KeyBoard.append(board)
+            # Highlighted change: Add button for the new setting
+            KeyBoard.append([Button.inline(f'⏱️Fix Timestamps (Slower) - {str(merge_fix_timestamps)}', 'BashAFK')])
+            for board in gen_keyboard(bool_list, merge_fix_timestamps, "mergefixtimestamps", 2, False):
+                KeyBoard.append(board)
+            # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             try:
                 await event.edit("⚙ Merge Settings", buttons=KeyBoard)
