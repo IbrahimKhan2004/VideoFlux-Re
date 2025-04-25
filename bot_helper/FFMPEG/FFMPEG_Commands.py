@@ -3,7 +3,9 @@
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
-from os.path import isdir, splitext, exists
+# Highlighted change: Import os.path for splitext
+from os.path import isdir, splitext, exists, splitext as os_path_splitext
+# End of highlighted change
 from os import makedirs, remove
 # Highlighted change: Import math for ceil used in bufsize calculation
 from math import ceil
@@ -21,12 +23,12 @@ def get_output_name(process_status, convert_quality=False):
             out_file_name = process_status.send_files[-1].split("/")[-1]
     # Modified to use video quality string if present
     if convert_quality and isinstance(convert_quality, str) and '[' in convert_quality:
-        base_name, extension = splitext(out_file_name)
+        base_name, extension = os_path_splitext(out_file_name) # Use imported splitext
         # Extract resolution like 720p from "720p [1280x720]"
         quality_tag = convert_quality.split(' ')[0]
         out_file_name = f"{base_name}_{quality_tag}{extension}"
     elif convert_quality and isinstance(convert_quality, int): # Fallback for old integer quality
-        base_name, extension = splitext(out_file_name)
+        base_name, extension = os_path_splitext(out_file_name) # Use imported splitext
         out_file_name = f"{base_name}_{str(convert_quality)}p{extension}"
     # Added else case to handle when convert_quality is not provided or not in expected format
     else:
@@ -57,7 +59,10 @@ def get_commands(process_status):
             input_file = f"{process_status.dir}/merge/merge_files.txt"
             with open(input_file, "w", encoding="utf-8") as f:
                         f.write(str(infile_names).strip('\n'))
-            output_file = f"{process_status.dir}/merge/{get_output_name(process_status)}"
+            # Highlighted change: Force .mkv extension for merge output
+            base_output_name, _ = os_path_splitext(get_output_name(process_status)) # Get name without extension
+            output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
+            # End of highlighted change
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}",
                                         "-f", "concat",
@@ -75,7 +80,7 @@ def get_commands(process_status):
             custom_metadata_title = get_data()[process_status.user_id]['metadata']
             command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
             # End of Added metadata
-            command+= ['-y', f'{str(output_file)}']
+            command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
 
     elif process_status.process_type==Names.softmux:
