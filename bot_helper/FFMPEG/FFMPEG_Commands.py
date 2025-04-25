@@ -49,13 +49,17 @@ def get_commands(process_status):
     if process_status.process_type==Names.merge: # MODIFIED: Changed elif to if
             merge_map = get_data()[process_status.user_id]['merge']['map']
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
+            # Highlighted change: Get the new setting
+            merge_fix_timestamps = get_data()[process_status.user_id]['merge'].get('fix_timestamps', False) # Use .get() for safety
+            # End of highlighted change
+
             create_direc(f"{process_status.dir}/merge/")
             log_file = f"{process_status.dir}/merge/merge_logs_{process_status.process_id}.txt"
             infile_names = ""
             file_duration =0
             for dwfile_loc in process_status.send_files:
                 infile_names += f"file '{str(dwfile_loc)}'\n"
-                file_duration += get_video_duration(dwfile_loc)
+                file_duration += get_video_duration(dwfile_loc) # Note: This duration might still be based on individual files
             input_file = f"{process_status.dir}/merge/merge_files.txt"
             with open(input_file, "w", encoding="utf-8") as f:
                         f.write(str(infile_names).strip('\n'))
@@ -74,8 +78,20 @@ def get_commands(process_status):
                 command += ['-vf', 'select=concatdec_select', '-af', 'aselect=concatdec_select,aresample=async=1']
             if merge_map:
                 command+=['-map','0']
-            if not merge_fix_blank:
-                command+= ["-c", "copy"]
+
+            # Highlighted change: Conditional -c copy based on the new setting
+            if not merge_fix_blank: # Only consider -c copy if fix_blank is False
+                if not merge_fix_timestamps: # Add -c copy only if fix_timestamps is also False (default, fast mode)
+                    command+= ["-c", "copy"]
+                else:
+                    # If fixing timestamps (no global -c copy), explicitly copy subtitles
+                    command += ["-c:s", "copy"] # Ensure subtitles are copied
+            else:
+                 # If fix_blank is True, -c copy is already omitted by its logic,
+                 # but we might still want to ensure subtitle copy here too if needed.
+                 command += ["-c:s", "copy"] # Ensure subtitles are copied even with fix_blank
+            # End of highlighted change
+
             # Added metadata from VFBITMOD-update
             custom_metadata_title = get_data()[process_status.user_id]['metadata']
             command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
@@ -115,9 +131,9 @@ def get_commands(process_status):
                         else:
                                 command += ['-vcodec','libx264', '-preset', softmux_preset]
         else:
-                command += ['-c','copy']
+                command += ['-c:v','copy', '-c:a', 'copy'] # Explicitly copy V/A if not encoding
 
-        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"]
+        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"] # Keep subtitle codec setting
 
         return command, log_file, input_file, output_file, file_duration
 
