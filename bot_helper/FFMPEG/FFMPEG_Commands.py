@@ -233,8 +233,9 @@ def get_commands(process_status):
 
                     x265_params.append(f"me={me}")
                     x265_params.append(f"b-adapt={b_adapt}")
-                    # Corrected parameter name: lookahead
-                    x265_params.append(f"lookahead={lookahead}")
+                    # Corrected parameter name and added check for '0'
+                    if lookahead != '0':
+                        x265_params.append(f"lookahead={lookahead}")
                     x265_params.append(f"bframes={bframes}")
                     x265_params.append(f"aq-mode={aq_mode}")
                     x265_params.append(f"cutree={'1' if cutree else '0'}")
@@ -255,8 +256,9 @@ def get_commands(process_status):
                     # x264 doesn't have a direct 'me' setting like x265, 'subme' is related but different
                     # x264 uses b_adapt differently (0, 1, 2)
                     x264_params.append(f"b-adapt={b_adapt}")
-                    # x264 uses lookahead differently
-                    x264_params.append(f"rc-lookahead={lookahead}")
+                    # x264 uses lookahead differently - Added check for '0'
+                    if lookahead != '0':
+                        x264_params.append(f"rc-lookahead={lookahead}")
                     x264_params.append(f"bframes={bframes}")
                     # x264 aq-mode (0, 1, 2)
                     x264_aq_mode = aq_mode if aq_mode in ['0', '1', '2'] else '1' # Default to 1 if x265 value is 3
@@ -405,8 +407,9 @@ def get_commands(process_status):
 
                         x265_params.append(f"me={me}")
                         x265_params.append(f"b-adapt={b_adapt}")
-                        # Corrected parameter name: lookahead
-                        x265_params.append(f"lookahead={lookahead}")
+                        # Corrected parameter name and added check for '0'
+                        if lookahead != '0':
+                            x265_params.append(f"lookahead={lookahead}")
                         x265_params.append(f"bframes={bframes}")
                         x265_params.append(f"aq-mode={aq_mode}")
                         x265_params.append(f"cutree={'1' if cutree else '0'}")
@@ -426,7 +429,9 @@ def get_commands(process_status):
                         # Highlighted change: Construct and add x264 params for hardmux
                         x264_params = []
                         x264_params.append(f"b-adapt={b_adapt}")
-                        x264_params.append(f"rc-lookahead={lookahead}")
+                        # Added check for '0'
+                        if lookahead != '0':
+                            x264_params.append(f"rc-lookahead={lookahead}")
                         x264_params.append(f"bframes={bframes}")
                         x264_aq_mode = aq_mode if aq_mode in ['0', '1', '2'] else '1'
                         x264_params.append(f"aq-mode={x264_aq_mode}")
