@@ -542,7 +542,7 @@ async def _savethumb(event):
         user_id = event.message.sender.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        check_thumbnail = await ask_thumbnail(event, chat_id, user_id, "savethumb") # This function was removed, need to re-evaluate if needed for static thumb
+        # check_thumbnail = await ask_thumbnail(event, chat_id, user_id, "savethumb") # This function was removed, need to re-evaluate if needed for static thumb
         # MODIFIED: Replaced ask_thumbnail logic with simple file download
         Thumbnail_path = f'./userdata/{str(user_id)}_Thumbnail.jpg'
         Thumbnail_check = exists(Thumbnail_path)
@@ -746,22 +746,25 @@ async def _settings(event):
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
         text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
+        # Highlighted change: Updated button layout to match callbacks.py
         await event.reply(text, buttons=[
-        [Button.inline('#️⃣ General', 'general_settings')],
-        [Button.inline('❣ Telegram', 'telegram_settings')],
-        [Button.inline('📝 Progress Bar', 'progress_settings')],
-        # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED
-        # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED
-        [Button.inline('🍧 Merge', 'merge_settings')],
-        [Button.inline('💻 Encode', 'convert_settings')],
-        [Button.inline('🎬 Video ', 'video_settings')],
-        [Button.inline('🔊 Audio', 'audio_settings')],
-        [Button.inline('❤ VBR / 🖤CRF', 'vbrcrf_settings')],
-        [Button.inline('🚍 HardMux', 'hardmux_settings')],
-        [Button.inline('🎮 SoftMux', 'softmux_settings')],
-        # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED
-        [Button.inline('⭕Close Settings', 'close_settings')]
-    ])
+            [Button.inline('#️⃣ General', 'general_settings')],
+            [Button.inline('❣ Telegram', 'telegram_settings')],
+            [Button.inline('📝 Progress Bar', 'progress_settings')],
+            # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED
+            # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED
+            [Button.inline('🍧 Merge', 'merge_settings')],
+            [Button.inline('💻 Encode', 'convert_settings')],
+            [Button.inline('🎬 Video ', 'video_settings')],
+            [Button.inline('🔊 Audio', 'audio_settings')],
+            [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Updated text
+            [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')], # Added button
+            [Button.inline('🚍 HardMux', 'hardmux_settings')],
+            [Button.inline('🎮 SoftMux', 'softmux_settings')],
+            # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED
+            [Button.inline('⭕Close Settings', 'close_settings')]
+        ])
+        # End of highlighted change
         return
 
 # REMOVED: Watermark handler
