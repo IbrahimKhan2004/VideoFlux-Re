@@ -1,6 +1,9 @@
 # --- START OF FILE VideoFlux-Re-master/bot/callbacks.py ---
 
 from telethon import events
+# Highlighted change: Import MessageNotModifiedError
+from telethon.errors.rpcerrorlist import MessageNotModifiedError
+# End of highlighted change
 from telethon.tl.custom import Button
 from config.config import Config
 from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file
@@ -63,6 +66,8 @@ async def callback(event):
             await new_user(user_id, SAVE_TO_DATABASE)
 
         # Ensure user data has new keys before accessing callbacks
+        # This block should now be less critical if start.py handles initial creation,
+        # but it's good as a fallback/safety net.
         user_data = get_data().get(user_id, {}) # Use .get() for safety
         if 'video' not in user_data:
             await saveconfig(user_id, 'video', 'qubality', '480p [720x480]', SAVE_TO_DATABASE)
@@ -111,7 +116,7 @@ async def callback(event):
         if 'advanced_encoding' not in user_data:
              # Call new_user logic implicitly handles this if it's missing,
              # but an explicit check ensures it exists if new_user wasn't called recently
-             # We can rely on the defaults set in new_user or add them here explicitly if needed.
+             # Let's assume new_user handles it for now. If issues arise, add explicit saves here.
              await new_user(user_id, SAVE_TO_DATABASE) # Explicitly call if missing
              user_data = get_data().get(user_id, {}) # Re-fetch user_data after potential creation
         # End of highlighted change
@@ -119,28 +124,33 @@ async def callback(event):
 
         if txt.startswith("settings"):
             text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
-            await event.edit(text, buttons=[
-            [Button.inline('#️⃣ General', 'general_settings')],
-            [Button.inline('❣ Telegram', 'telegram_settings')],
-            [Button.inline('📝 Progress Bar', 'progress_settings')],
-            # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
-            # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
-            [Button.inline('🍧 Merge', 'merge_settings')],
-            # Modified menu items below based on VFBITMOD-update
-            [Button.inline('💻 Encode', 'convert_settings')],
-            [Button.inline('🎬 Video ', 'video_settings')],
-            [Button.inline('🔊 Audio', 'audio_settings')],
-            # Highlighted change: Updated button text for Rate Control
-            [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
-            # End of Modified menu items
-            # Highlighted change: Add Advanced Encoding button
-            [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')],
+            # Highlighted change: Catch MessageNotModifiedError
+            try:
+                await event.edit(text, buttons=[
+                [Button.inline('#️⃣ General', 'general_settings')],
+                [Button.inline('❣ Telegram', 'telegram_settings')],
+                [Button.inline('📝 Progress Bar', 'progress_settings')],
+                # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
+                # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
+                [Button.inline('🍧 Merge', 'merge_settings')],
+                # Modified menu items below based on VFBITMOD-update
+                [Button.inline('💻 Encode', 'convert_settings')],
+                [Button.inline('🎬 Video ', 'video_settings')],
+                [Button.inline('🔊 Audio', 'audio_settings')],
+                # Highlighted change: Updated button text for Rate Control
+                [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
+                # End of Modified menu items
+                # Highlighted change: Add Advanced Encoding button
+                [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')],
+                # End of highlighted change
+                [Button.inline('🚍 HardMux', 'hardmux_settings')],
+                [Button.inline('🎮 SoftMux', 'softmux_settings')],
+                # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
+                [Button.inline('⭕Close Settings', 'close_settings')]
+            ])
+            except MessageNotModifiedError:
+                pass # Ignore if message is identical
             # End of highlighted change
-            [Button.inline('🚍 HardMux', 'hardmux_settings')],
-            [Button.inline('🎮 SoftMux', 'softmux_settings')],
-            # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
-            [Button.inline('⭕Close Settings', 'close_settings')]
-        ])
             return
 
         elif txt=="close_settings":
@@ -510,10 +520,14 @@ async def telegram_callback(event, txt, user_id, chat_id):
             for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_download, "telegramdownload", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Telegram Settings", buttons=KeyBoard)
-            except:
-                pass
+            except MessageNotModifiedError:
+                pass # Ignore if message is identical
+            except Exception as e:
+                LOGGER.error(f"Error editing message in telegram_callback: {e}") # Log other errors
+            # End of highlighted change
             return
 
 ###############------General------###############
@@ -689,10 +703,14 @@ async def general_callback(event, txt, user_id, chat_id):
             # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ General Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in general_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 await TELETHON_CLIENT.send_message(chat_id, "⚙ General Settings", buttons=KeyBoard)
             return
@@ -748,10 +766,14 @@ async def progress_callback(event, txt, user_id):
             for board in gen_keyboard([5, 6, 7, 8, 9, 10], update_time, "progressupdatetime", 3, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Progress Bar Settings", buttons=KeyBoard)
-            except:
-                pass
+            except MessageNotModifiedError:
+                pass # Ignore if message is identical
+            except Exception as e:
+                LOGGER.error(f"Error editing message in progress_callback: {e}") # Log other errors
+            # End of highlighted change
             return
 
 # REMOVED: compress_callback function
@@ -801,10 +823,14 @@ async def merge_callback(event, txt, user_id):
                 KeyBoard.append(board)
             # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Merge Settings", buttons=KeyBoard)
-            except:
-                pass
+            except MessageNotModifiedError:
+                pass # Ignore if message is identical
+            except Exception as e:
+                LOGGER.error(f"Error editing message in merge_callback: {e}") # Log other errors
+            # End of highlighted change
             return
 
 ###############------Convert------###############
@@ -875,10 +901,14 @@ async def convert_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Convert Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in convert_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 try:
                     await event.delete()
@@ -942,10 +972,14 @@ async def hardmux_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Hardmux Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in hardmux_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 try:
                     await event.delete()
@@ -972,10 +1006,14 @@ async def softmux_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Softmux Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in softmux_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 try:
                     await event.delete()
@@ -1035,10 +1073,14 @@ async def video_callback(event, txt, user_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("🎬 Video Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in video_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 try:
                     await event.delete()
@@ -1087,10 +1129,14 @@ async def audio_callback(event, txt, user_id, chat_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("🔊 Audio Settings", buttons=KeyBoard)
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in audio_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 try:
                     await event.delete()
@@ -1172,11 +1218,15 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     # Highlighted change: Updated title
                     await event.edit("❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
-                except:
-                    pass
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
+                except Exception as e:
+                    LOGGER.error(f"Error editing message in vbrcrf_callback: {e}") # Log other errors
+                # End of highlighted change
             else:
                 # Highlighted change: Updated title
                 await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
@@ -1270,11 +1320,13 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
 
             if edit:
+                # Highlighted change: Catch MessageNotModifiedError
                 try:
-                    await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard)
-                # Highlighted change: Add specific exception logging
+                    await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard) # Generic title
+                except MessageNotModifiedError:
+                    pass # Ignore if message is identical
                 except Exception as e:
-                    LOGGER.error(f"Failed to edit message in advanced_encoding_callback: {e}", exc_info=True)
+                    LOGGER.error(f"Error editing message in advanced_encoding_callback: {e}") # Log other errors
                 # End of highlighted change
             else:
                 # This case might not be needed if always called via button
