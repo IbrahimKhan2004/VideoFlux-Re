@@ -42,6 +42,16 @@ upload_destination_list = ['Rclone', 'Gofile']
 tune_list = ['None', 'fastdecode', 'zerolatency', 'film', 'animation']
 # End of highlighted change
 
+# Highlighted change: Add lists for advanced encoding options
+me_list = ['dia', 'hex', 'umh', 'esa', 'tesa'] # Motion Estimation
+b_adapt_list = ['0', '1', '2'] # B-Adapt
+lookahead_list = ['0', '10', '20', '30', '40', '50', '60'] # Lookahead
+bframes_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '16'] # B-Frames
+aq_mode_list = ['0', '1', '2', '3'] # AQ Mode
+threads_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8'] # Threads (0=auto)
+slices_list = ['0', '1', '2', '4', '6', '8'] # Slices (0=auto)
+# End of highlighted change
+
 
 #////////////////////////////////////Callbacks////////////////////////////////////#
 @TELETHON_CLIENT.on(events.CallbackQuery)
@@ -97,6 +107,15 @@ async def callback(event):
         if 'merge' not in user_data or 'fix_timestamps' not in user_data.get('merge', {}):
              await saveconfig(user_id, 'merge', 'fix_timestamps', False, SAVE_TO_DATABASE)
         # End of highlighted change
+        # Highlighted change: Add check for advanced_encoding key
+        if 'advanced_encoding' not in user_data:
+             # Call new_user logic implicitly handles this if it's missing,
+             # but an explicit check ensures it exists if new_user wasn't called recently
+             # We can rely on the defaults set in new_user or add them here explicitly if needed.
+             # Let's assume new_user handles it for now. If issues arise, add explicit saves here.
+             await new_user(user_id, SAVE_TO_DATABASE) # Explicitly call if missing
+             user_data = get_data().get(user_id, {}) # Re-fetch user_data after potential creation
+        # End of highlighted change
         # --- End of Key Check ---
 
         if txt.startswith("settings"):
@@ -115,6 +134,9 @@ async def callback(event):
             # Highlighted change: Updated button text for Rate Control
             [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
             # End of Modified menu items
+            # Highlighted change: Add Advanced Encoding button
+            [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')],
+            # End of highlighted change
             [Button.inline('🚍 HardMux', 'hardmux_settings')],
             [Button.inline('🎮 SoftMux', 'softmux_settings')],
             # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
@@ -208,6 +230,12 @@ async def callback(event):
             await audio_callback(event, txt, user_id, chat_id, True)
             return
         # End of Added from VFBITMOD-update
+
+        # Highlighted change: Add trigger for advanced encoding settings
+        elif txt.startswith("advanced_encoding"):
+            await advanced_encoding_callback(event, txt, user_id, True)
+            return
+        # End of highlighted change
 
         elif txt.startswith("hardmux"):
             await hardmux_callback(event, txt, user_id, True)
@@ -317,7 +345,10 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
 # Highlighted change: Explicitly cast to string for comparison
-        if str(current_value) != str(x):
+        # Ensure comparison handles boolean vs string 'True'/'False'
+        current_str = str(current_value)
+        x_str = str(x)
+        if current_str.lower() != x_str.lower(): # Case-insensitive comparison for bools
 # End of highlighted change
             if callvalue!="watermarkposition":
                 text = f"{str(x)}"
@@ -1152,5 +1183,105 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                 await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
             return
 # End of Added from VFBITMOD-update
+
+# Highlighted change: Add advanced_encoding_callback function
+###############------Advanced Encoding------###############
+async def advanced_encoding_callback(event, txt, user_id, edit):
+            # Extract parameter and value if it's a setting change callback
+            if txt != "advanced_encoding_settings":
+                try:
+                    parts = txt.split("_", 2) # Split into 3 parts: prefix, param_name, value
+                    prefix = parts[0] + "_" + parts[1] # e.g., advanced_encoding_me
+                    param_name = parts[1].replace('-', '_') # e.g., b_adapt
+                    new_value = parts[2]
+
+                    # Convert boolean strings
+                    if new_value.lower() == 'true':
+                        new_value = True
+                    elif new_value.lower() == 'false':
+                        new_value = False
+
+                    await saveconfig(user_id, 'advanced_encoding', param_name, new_value, SAVE_TO_DATABASE)
+                    await event.answer(f"✅ {param_name.replace('_','-').capitalize()} set to {str(new_value)}")
+                except IndexError:
+                    LOGGER.warning(f"Could not parse advanced encoding callback: {txt}")
+                except Exception as e:
+                    LOGGER.error(f"Error saving advanced encoding setting: {e}")
+
+            # Get current settings
+            adv_settings = get_data().get(user_id, {}).get('advanced_encoding', {})
+            # Use .get() with defaults for safety when retrieving current values
+            current_me = adv_settings.get('me', 'hex')
+            current_b_adapt = adv_settings.get('b_adapt', '2')
+            current_lookahead = adv_settings.get('lookahead', '20')
+            current_bframes = adv_settings.get('bframes', '4')
+            current_aq_mode = adv_settings.get('aq_mode', '2')
+            current_cutree = adv_settings.get('cutree', True)
+            current_threads = adv_settings.get('threads', '0')
+            current_frame_threads = adv_settings.get('frame_threads', '0')
+            current_slices = adv_settings.get('slices', '0') # Get slices setting
+
+            KeyBoard = []
+
+            # Motion Estimation (me)
+            KeyBoard.append([Button.inline(f"Motion Estimation (me): {current_me}", 'BashAFK')])
+            for board in gen_keyboard(me_list, current_me, "advanced_encoding_me", 3, False):
+                KeyBoard.append(board)
+
+            # B-Adapt
+            KeyBoard.append([Button.inline(f"B-Adapt: {current_b_adapt}", 'BashAFK')])
+            for board in gen_keyboard(b_adapt_list, current_b_adapt, "advanced_encoding_b_adapt", 3, False):
+                KeyBoard.append(board)
+
+            # Lookahead
+            KeyBoard.append([Button.inline(f"Lookahead: {current_lookahead}", 'BashAFK')])
+            for board in gen_keyboard(lookahead_list, current_lookahead, "advanced_encoding_lookahead", 4, False):
+                KeyBoard.append(board)
+
+            # B-Frames
+            KeyBoard.append([Button.inline(f"B-Frames: {current_bframes}", 'BashAFK')])
+            for board in gen_keyboard(bframes_list, current_bframes, "advanced_encoding_bframes", 4, False):
+                KeyBoard.append(board)
+
+            # AQ Mode
+            KeyBoard.append([Button.inline(f"AQ Mode: {current_aq_mode}", 'BashAFK')])
+            for board in gen_keyboard(aq_mode_list, current_aq_mode, "advanced_encoding_aq_mode", 4, False):
+                KeyBoard.append(board)
+
+            # CU-Tree
+            KeyBoard.append([Button.inline(f"CU-Tree (x265): {current_cutree}", 'BashAFK')])
+            for board in gen_keyboard(bool_list, current_cutree, "advanced_encoding_cutree", 2, False):
+                KeyBoard.append(board)
+
+            # Threads (Pools)
+            KeyBoard.append([Button.inline(f"Threads (Pools - 0=auto): {current_threads}", 'BashAFK')])
+            for board in gen_keyboard(threads_list, current_threads, "advanced_encoding_threads", 4, False):
+                KeyBoard.append(board)
+
+            # Frame Threads
+            KeyBoard.append([Button.inline(f"Frame Threads (0=auto): {current_frame_threads}", 'BashAFK')])
+            for board in gen_keyboard(threads_list[:5], current_frame_threads, "advanced_encoding_frame_threads", 4, False): # Limit options for frame threads
+                KeyBoard.append(board)
+
+            # Slices
+            KeyBoard.append([Button.inline(f"Slices (0=auto): {current_slices}", 'BashAFK')])
+            for board in gen_keyboard(slices_list, current_slices, "advanced_encoding_slices", 4, False):
+                KeyBoard.append(board)
+
+            KeyBoard.append([Button.inline(f'↩Back', 'settings')])
+
+            if edit:
+                try:
+                    await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard) # Generic title
+                except:
+                    pass
+            else:
+                # This case might not be needed if always called via button
+                try:
+                    await event.delete()
+                except: pass
+                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🛠️ Advanced Encoding Settings", buttons=KeyBoard)
+            return
+# End of highlighted change
 
 # --- END OF FILE VideoFlux-Re-master/bot/callbacks.py ---
