@@ -353,12 +353,18 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             boards.append(current_list)
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
-# Highlighted change: Explicitly cast to string for comparison
-        # Ensure comparison handles boolean vs string 'True'/'False'
+        # Highlighted change: Refined comparison for different types
         current_str = str(current_value)
         x_str = str(x)
-        if current_str.lower() != x_str.lower(): # Case-insensitive comparison for bools
-# End of highlighted change
+        # Use case-insensitive comparison for boolean strings
+        is_current = False
+        if isinstance(current_value, bool):
+            is_current = current_str.lower() == x_str.lower()
+        else:
+            is_current = current_str == x_str
+
+        if not is_current:
+        # End of highlighted change
             if callvalue!="watermarkposition":
                 text = f"{str(x)}"
             else:
@@ -1237,6 +1243,8 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
 ###############------Advanced Encoding------###############
 async def advanced_encoding_callback(event, txt, user_id, edit):
             # Extract parameter and value if it's a setting change callback
+            # Highlighted change: Fetch settings *after* potential update
+            should_regenerate_keyboard = False
             if txt != "advanced_encoding_settings":
                 try:
                     parts = txt.split("_", 2) # Split into 3 parts: prefix, param_name, value
@@ -1252,13 +1260,17 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
 
                     await saveconfig(user_id, 'advanced_encoding', param_name, new_value, SAVE_TO_DATABASE)
                     await event.answer(f"✅ {param_name.replace('_','-').capitalize()} set to {str(new_value)}")
+                    should_regenerate_keyboard = True # Flag to regenerate keyboard
                 except IndexError:
                     LOGGER.warning(f"Could not parse advanced encoding callback: {txt}")
+                    await event.answer("⚠️ Error parsing selection.") # Inform user
                 except Exception as e:
                     LOGGER.error(f"Error saving advanced encoding setting: {e}")
+                    await event.answer("⚠️ Error saving setting.") # Inform user
 
-            # Get current settings
+            # Get current settings (fetch *after* potential saveconfig)
             adv_settings = get_data().get(user_id, {}).get('advanced_encoding', {})
+            # End of highlighted change
             # Use .get() with defaults for safety when retrieving current values
             current_me = adv_settings.get('me', 'hex')
             current_b_adapt = adv_settings.get('b_adapt', '2')
@@ -1319,7 +1331,9 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
 
-            if edit:
+            # Highlighted change: Only edit if needed (initial load or after a change)
+            if edit or should_regenerate_keyboard:
+            # End of highlighted change
                 # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard) # Generic title
@@ -1328,12 +1342,12 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
                 except Exception as e:
                     LOGGER.error(f"Error editing message in advanced_encoding_callback: {e}") # Log other errors
                 # End of highlighted change
-            else:
-                # This case might not be needed if always called via button
-                try:
-                    await event.delete()
-                except: pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🛠️ Advanced Encoding Settings", buttons=KeyBoard)
+            # This else block might not be needed if always called via button
+            # else:
+            #     try:
+            #         await event.delete()
+            #     except: pass
+            #     await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🛠️ Advanced Encoding Settings", buttons=KeyBoard)
             return
 # End of highlighted change
 
