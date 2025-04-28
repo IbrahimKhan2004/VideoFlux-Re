@@ -171,6 +171,21 @@ async def new_user(user_id, dbsave):
         # REMOVED: Multi-task defaults
         # DATA[user_id]['multi_tasks'] = False
         # DATA[user_id]['upload_all'] = True
+
+        # Highlighted change: Add advanced encoding defaults
+        DATA[user_id]['advanced_encoding'] = {}
+        DATA[user_id]['advanced_encoding']['me'] = 'hex' # Motion Estimation method
+        DATA[user_id]['advanced_encoding']['b_adapt'] = '2' # Adaptive B-frame decision (0, 1, 2)
+        DATA[user_id]['advanced_encoding']['lookahead'] = '20' # Lookahead frames (e.g., 0-60)
+        DATA[user_id]['advanced_encoding']['bframes'] = '4' # Max consecutive B-frames (e.g., 0-16)
+        DATA[user_id]['advanced_encoding']['aq_mode'] = '2' # AQ Mode (0-3)
+        DATA[user_id]['advanced_encoding']['cutree'] = True # Use CU-Tree (True/False)
+        DATA[user_id]['advanced_encoding']['threads'] = '0' # Encoder pool threads (0=auto)
+        DATA[user_id]['advanced_encoding']['frame_threads'] = '0' # Frame threads (0=auto, usually 1 for WPP)
+        DATA[user_id]['advanced_encoding']['slices'] = '0' # Slices (0=auto)
+        # DATA[user_id]['advanced_encoding']['wpp'] = True # WPP (usually auto-enabled with threads) - Let's omit direct control for simplicity
+        # End of highlighted change
+
         if dbsave:
             data = await db.save_data(str(DATA))
         else:
@@ -182,7 +197,9 @@ async def saveoptions(user_id, dname, value, dbsave):
     try:
         if user_id not in DATA:
             DATA[user_id] = {}
-            DATA[user_id][dname] = {}
+            # Highlighted change: Check if dname exists before assigning (though unlikely needed here)
+            # if dname not in DATA[user_id]:
+            #      DATA[user_id][dname] = {} # This line was incorrect, should just assign value
             DATA[user_id][dname] = value
         else:
             DATA[user_id][dname] = value
