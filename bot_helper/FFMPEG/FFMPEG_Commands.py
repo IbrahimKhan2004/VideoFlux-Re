@@ -220,7 +220,6 @@ def get_commands(process_status):
                 # Get common values using .get() with defaults from adv_settings
                 me = adv_settings.get('me', 'hex')
                 b_adapt = adv_settings.get('b_adapt', '2')
-                lookahead = adv_settings.get('lookahead', '20')
                 bframes = adv_settings.get('bframes', '4')
                 aq_mode = adv_settings.get('aq_mode', '2')
                 threads = adv_settings.get('threads', '0') # 0 = auto
@@ -234,8 +233,6 @@ def get_commands(process_status):
                     x265_params.append(f"me={me}")
                     x265_params.append(f"b-adapt={b_adapt}")
                     # Corrected parameter name and added check for '0'
-                    if lookahead != '0':
-                        x265_params.append(f"lookahead={lookahead}")
                     x265_params.append(f"bframes={bframes}")
                     x265_params.append(f"aq-mode={aq_mode}")
                     x265_params.append(f"cutree={'1' if cutree else '0'}")
@@ -257,8 +254,8 @@ def get_commands(process_status):
                     # x264 uses b_adapt differently (0, 1, 2)
                     x264_params.append(f"b-adapt={b_adapt}")
                     # x264 uses lookahead differently - Added check for '0'
-                    if lookahead != '0':
-                        x264_params.append(f"rc-lookahead={lookahead}")
+                    # if lookahead != '0': # REMOVED lookahead param
+                    #     x264_params.append(f"rc-lookahead={lookahead}") # REMOVED lookahead param
                     x264_params.append(f"bframes={bframes}")
                     # x264 aq-mode (0, 1, 2)
                     x264_aq_mode = aq_mode if aq_mode in ['0', '1', '2'] else '1' # Default to 1 if x265 value is 3
@@ -391,7 +388,7 @@ def get_commands(process_status):
                 # Highlighted change: Get common advanced params for hardmux
                 me = adv_settings.get('me', 'hex')
                 b_adapt = adv_settings.get('b_adapt', '2')
-                lookahead = adv_settings.get('lookahead', '20')
+                # lookahead = adv_settings.get('lookahead', '20') # REMOVED lookahead retrieval
                 bframes = adv_settings.get('bframes', '4')
                 aq_mode = adv_settings.get('aq_mode', '2')
                 threads = adv_settings.get('threads', '0')
@@ -408,8 +405,8 @@ def get_commands(process_status):
                         x265_params.append(f"me={me}")
                         x265_params.append(f"b-adapt={b_adapt}")
                         # Corrected parameter name and added check for '0'
-                        if lookahead != '0':
-                            x265_params.append(f"lookahead={lookahead}")
+                        # if lookahead != '0': # REMOVED lookahead param
+                        #     x265_params.append(f"lookahead={lookahead}") # REMOVED lookahead param
                         x265_params.append(f"bframes={bframes}")
                         x265_params.append(f"aq-mode={aq_mode}")
                         x265_params.append(f"cutree={'1' if cutree else '0'}")
@@ -430,8 +427,8 @@ def get_commands(process_status):
                         x264_params = []
                         x264_params.append(f"b-adapt={b_adapt}")
                         # Added check for '0'
-                        if lookahead != '0':
-                            x264_params.append(f"rc-lookahead={lookahead}")
+                        # if lookahead != '0': # REMOVED lookahead param
+                        #     x264_params.append(f"rc-lookahead={lookahead}") # REMOVED lookahead param
                         x264_params.append(f"bframes={bframes}")
                         x264_aq_mode = aq_mode if aq_mode in ['0', '1', '2'] else '1'
                         x264_params.append(f"aq-mode={x264_aq_mode}")
