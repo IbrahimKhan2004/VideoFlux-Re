@@ -220,6 +220,7 @@ def get_commands(process_status):
                 # Get common values using .get() with defaults from adv_settings
                 me = adv_settings.get('me', 'hex')
                 b_adapt = adv_settings.get('b_adapt', '2')
+                # lookahead = adv_settings.get('lookahead', '20') # REMOVED lookahead retrieval
                 bframes = adv_settings.get('bframes', '4')
                 aq_mode = adv_settings.get('aq_mode', '2')
                 threads = adv_settings.get('threads', '0') # 0 = auto
@@ -233,6 +234,8 @@ def get_commands(process_status):
                     x265_params.append(f"me={me}")
                     x265_params.append(f"b-adapt={b_adapt}")
                     # Corrected parameter name and added check for '0'
+                    # if lookahead != '0': # REMOVED lookahead param
+                    #     x265_params.append(f"lookahead={lookahead}") # REMOVED lookahead param
                     x265_params.append(f"bframes={bframes}")
                     x265_params.append(f"aq-mode={aq_mode}")
                     x265_params.append(f"cutree={'1' if cutree else '0'}")
