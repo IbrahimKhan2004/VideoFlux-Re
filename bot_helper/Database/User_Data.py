@@ -176,7 +176,6 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['advanced_encoding'] = {}
         DATA[user_id]['advanced_encoding']['me'] = 'hex' # Motion Estimation method
         DATA[user_id]['advanced_encoding']['b_adapt'] = '2' # Adaptive B-frame decision (0, 1, 2)
-        DATA[user_id]['advanced_encoding']['lookahead'] = '20' # Lookahead frames (e.g., 0-60)
         DATA[user_id]['advanced_encoding']['bframes'] = '4' # Max consecutive B-frames (e.g., 0-16)
         DATA[user_id]['advanced_encoding']['aq_mode'] = '2' # AQ Mode (0-3)
         DATA[user_id]['advanced_encoding']['cutree'] = True # Use CU-Tree (True/False)
