@@ -1,9 +1,6 @@
 # --- START OF FILE VideoFlux-Re-master/bot/callbacks.py ---
 
 from telethon import events
-# Highlighted change: Import MessageNotModifiedError
-from telethon.errors.rpcerrorlist import MessageNotModifiedError
-# End of highlighted change
 from telethon.tl.custom import Button
 from config.config import Config
 from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file
@@ -66,8 +63,6 @@ async def callback(event):
             await new_user(user_id, SAVE_TO_DATABASE)
 
         # Ensure user data has new keys before accessing callbacks
-        # This block should now be less critical if start.py handles initial creation,
-        # but it's good as a fallback/safety net.
         user_data = get_data().get(user_id, {}) # Use .get() for safety
         if 'video' not in user_data:
             await saveconfig(user_id, 'video', 'qubality', '480p [720x480]', SAVE_TO_DATABASE)
@@ -116,7 +111,7 @@ async def callback(event):
         if 'advanced_encoding' not in user_data:
              # Call new_user logic implicitly handles this if it's missing,
              # but an explicit check ensures it exists if new_user wasn't called recently
-             # Let's assume new_user handles it for now. If issues arise, add explicit saves here.
+             # We can rely on the defaults set in new_user or add them here explicitly if needed.
              await new_user(user_id, SAVE_TO_DATABASE) # Explicitly call if missing
              user_data = get_data().get(user_id, {}) # Re-fetch user_data after potential creation
         # End of highlighted change
@@ -124,33 +119,28 @@ async def callback(event):
 
         if txt.startswith("settings"):
             text = f"⚙ Hi {get_mention(event)} Choose Your Settings"
-            # Highlighted change: Catch MessageNotModifiedError
-            try:
-                await event.edit(text, buttons=[
-                [Button.inline('#️⃣ General', 'general_settings')],
-                [Button.inline('❣ Telegram', 'telegram_settings')],
-                [Button.inline('📝 Progress Bar', 'progress_settings')],
-                # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
-                # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
-                [Button.inline('🍧 Merge', 'merge_settings')],
-                # Modified menu items below based on VFBITMOD-update
-                [Button.inline('💻 Encode', 'convert_settings')],
-                [Button.inline('🎬 Video ', 'video_settings')],
-                [Button.inline('🔊 Audio', 'audio_settings')],
-                # Highlighted change: Updated button text for Rate Control
-                [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
-                # End of Modified menu items
-                # Highlighted change: Add Advanced Encoding button
-                [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')],
-                # End of highlighted change
-                [Button.inline('🚍 HardMux', 'hardmux_settings')],
-                [Button.inline('🎮 SoftMux', 'softmux_settings')],
-                # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
-                [Button.inline('⭕Close Settings', 'close_settings')]
-            ])
-            except MessageNotModifiedError:
-                pass # Ignore if message is identical
+            await event.edit(text, buttons=[
+            [Button.inline('#️⃣ General', 'general_settings')],
+            [Button.inline('❣ Telegram', 'telegram_settings')],
+            [Button.inline('📝 Progress Bar', 'progress_settings')],
+            # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED: Compression button
+            # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED: Watermark button
+            [Button.inline('🍧 Merge', 'merge_settings')],
+            # Modified menu items below based on VFBITMOD-update
+            [Button.inline('💻 Encode', 'convert_settings')],
+            [Button.inline('🎬 Video ', 'video_settings')],
+            [Button.inline('🔊 Audio', 'audio_settings')],
+            # Highlighted change: Updated button text for Rate Control
+            [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')], # Modified button text
+            # End of Modified menu items
+            # Highlighted change: Add Advanced Encoding button
+            [Button.inline('🛠️ Advanced Encoding', 'advanced_encoding_settings')],
             # End of highlighted change
+            [Button.inline('🚍 HardMux', 'hardmux_settings')],
+            [Button.inline('🎮 SoftMux', 'softmux_settings')],
+            # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED: SoftReMux button
+            [Button.inline('⭕Close Settings', 'close_settings')]
+        ])
             return
 
         elif txt=="close_settings":
@@ -353,18 +343,12 @@ def gen_keyboard(values_list, current_value, callvalue, items, hide):
             boards.append(current_list)
             current_list = []
         value = f"{str(callvalue)}_{str(x)}"
-        # Highlighted change: Refined comparison for different types
+# Highlighted change: Explicitly cast to string for comparison
+        # Ensure comparison handles boolean vs string 'True'/'False'
         current_str = str(current_value)
         x_str = str(x)
-        # Use case-insensitive comparison for boolean strings
-        is_current = False
-        if isinstance(current_value, bool):
-            is_current = current_str.lower() == x_str.lower()
-        else:
-            is_current = current_str == x_str
-
-        if not is_current:
-        # End of highlighted change
+        if current_str.lower() != x_str.lower(): # Case-insensitive comparison for bools
+# End of highlighted change
             if callvalue!="watermarkposition":
                 text = f"{str(x)}"
             else:
@@ -526,14 +510,10 @@ async def telegram_callback(event, txt, user_id, chat_id):
             for board in gen_keyboard(["Telethon", "Pyrogram"], telegram_download, "telegramdownload", 2, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Telegram Settings", buttons=KeyBoard)
-            except MessageNotModifiedError:
-                pass # Ignore if message is identical
-            except Exception as e:
-                LOGGER.error(f"Error editing message in telegram_callback: {e}") # Log other errors
-            # End of highlighted change
+            except:
+                pass
             return
 
 ###############------General------###############
@@ -709,14 +689,10 @@ async def general_callback(event, txt, user_id, chat_id):
             # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ General Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in general_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 await TELETHON_CLIENT.send_message(chat_id, "⚙ General Settings", buttons=KeyBoard)
             return
@@ -772,14 +748,10 @@ async def progress_callback(event, txt, user_id):
             for board in gen_keyboard([5, 6, 7, 8, 9, 10], update_time, "progressupdatetime", 3, False):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Progress Bar Settings", buttons=KeyBoard)
-            except MessageNotModifiedError:
-                pass # Ignore if message is identical
-            except Exception as e:
-                LOGGER.error(f"Error editing message in progress_callback: {e}") # Log other errors
-            # End of highlighted change
+            except:
+                pass
             return
 
 # REMOVED: compress_callback function
@@ -829,14 +801,10 @@ async def merge_callback(event, txt, user_id):
                 KeyBoard.append(board)
             # End of highlighted change
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
-            # Highlighted change: Catch MessageNotModifiedError
             try:
                 await event.edit("⚙ Merge Settings", buttons=KeyBoard)
-            except MessageNotModifiedError:
-                pass # Ignore if message is identical
-            except Exception as e:
-                LOGGER.error(f"Error editing message in merge_callback: {e}") # Log other errors
-            # End of highlighted change
+            except:
+                pass
             return
 
 ###############------Convert------###############
@@ -907,14 +875,10 @@ async def convert_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Convert Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in convert_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 try:
                     await event.delete()
@@ -978,14 +942,10 @@ async def hardmux_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Hardmux Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in hardmux_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 try:
                     await event.delete()
@@ -1012,14 +972,10 @@ async def softmux_callback(event, txt, user_id, edit):
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("⚙ Softmux Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in softmux_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 try:
                     await event.delete()
@@ -1079,14 +1035,10 @@ async def video_callback(event, txt, user_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("🎬 Video Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in video_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 try:
                     await event.delete()
@@ -1135,14 +1087,10 @@ async def audio_callback(event, txt, user_id, chat_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     await event.edit("🔊 Audio Settings", buttons=KeyBoard)
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in audio_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 try:
                     await event.delete()
@@ -1224,15 +1172,11 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
-                # Highlighted change: Catch MessageNotModifiedError
                 try:
                     # Highlighted change: Updated title
                     await event.edit("❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in vbrcrf_callback: {e}") # Log other errors
-                # End of highlighted change
+                except:
+                    pass
             else:
                 # Highlighted change: Updated title
                 await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
@@ -1243,34 +1187,40 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
 ###############------Advanced Encoding------###############
 async def advanced_encoding_callback(event, txt, user_id, edit):
             # Extract parameter and value if it's a setting change callback
-            # Highlighted change: Fetch settings *after* potential update
-            should_regenerate_keyboard = False
             if txt != "advanced_encoding_settings":
                 try:
-                    parts = txt.split("_", 2) # Split into 3 parts: prefix, param_name, value
-                    prefix = parts[0] + "_" + parts[1] # e.g., advanced_encoding_me
-                    param_name = parts[1].replace('-', '_') # e.g., b_adapt
-                    new_value = parts[2]
+                    # Highlighted change: Improved parsing logic
+                    prefix = "advanced_encoding_"
+                    if txt.startswith(prefix):
+                         # Split the part after the prefix by the last underscore
+                         param_part = txt[len(prefix):]
+                         parts = param_part.rsplit("_", 1)
+                         if len(parts) == 2:
+                             param_name = parts[0] # e.g., 'me', 'b_adapt', 'slices'
+                             new_value_str = parts[1]
 
-                    # Convert boolean strings
-                    if new_value.lower() == 'true':
-                        new_value = True
-                    elif new_value.lower() == 'false':
-                        new_value = False
+                             # Convert boolean strings
+                             if new_value_str.lower() == 'true':
+                                 new_value = True
+                             elif new_value_str.lower() == 'false':
+                                 new_value = False
+                             else:
+                                 new_value = new_value_str # Keep as string otherwise (for numbers/text)
 
-                    await saveconfig(user_id, 'advanced_encoding', param_name, new_value, SAVE_TO_DATABASE)
-                    await event.answer(f"✅ {param_name.replace('_','-').capitalize()} set to {str(new_value)}")
-                    should_regenerate_keyboard = True # Flag to regenerate keyboard
-                except IndexError:
-                    LOGGER.warning(f"Could not parse advanced encoding callback: {txt}")
-                    await event.answer("⚠️ Error parsing selection.") # Inform user
+                             await saveconfig(user_id, 'advanced_encoding', param_name, new_value, SAVE_TO_DATABASE)
+                             await event.answer(f"✅ {param_name.replace('_','-').capitalize()} set to {str(new_value)}")
+                         else:
+                             LOGGER.warning(f"Could not parse advanced encoding callback structure: {txt}")
+                    else:
+                         LOGGER.warning(f"Callback prefix mismatch: {txt}")
+                    # End of highlighted change
                 except Exception as e:
                     LOGGER.error(f"Error saving advanced encoding setting: {e}")
-                    await event.answer("⚠️ Error saving setting.") # Inform user
+                    await event.answer("Error saving setting.", alert=True)
 
-            # Get current settings (fetch *after* potential saveconfig)
+
+            # Get current settings
             adv_settings = get_data().get(user_id, {}).get('advanced_encoding', {})
-            # End of highlighted change
             # Use .get() with defaults for safety when retrieving current values
             current_me = adv_settings.get('me', 'hex')
             current_b_adapt = adv_settings.get('b_adapt', '2')
@@ -1331,23 +1281,17 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
 
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
 
-            # Highlighted change: Only edit if needed (initial load or after a change)
-            if edit or should_regenerate_keyboard:
-            # End of highlighted change
-                # Highlighted change: Catch MessageNotModifiedError
+            if edit:
                 try:
                     await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard) # Generic title
-                except MessageNotModifiedError:
-                    pass # Ignore if message is identical
-                except Exception as e:
-                    LOGGER.error(f"Error editing message in advanced_encoding_callback: {e}") # Log other errors
-                # End of highlighted change
-            # This else block might not be needed if always called via button
-            # else:
-            #     try:
-            #         await event.delete()
-            #     except: pass
-            #     await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🛠️ Advanced Encoding Settings", buttons=KeyBoard)
+                except:
+                    pass
+            else:
+                # This case might not be needed if always called via button
+                try:
+                    await event.delete()
+                except: pass
+                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "🛠️ Advanced Encoding Settings", buttons=KeyBoard)
             return
 # End of highlighted change
 
