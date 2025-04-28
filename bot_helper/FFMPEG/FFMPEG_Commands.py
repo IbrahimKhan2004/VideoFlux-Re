@@ -166,6 +166,10 @@ def get_commands(process_status):
 # End of highlighted change
             # --- End of VFBITMOD-update Integration ---
 
+            # Highlighted change: Get advanced encoding settings
+            adv_settings = get_data().get(process_status.user_id, {}).get('advanced_encoding', {})
+            # End of highlighted change
+
             create_direc(f"{process_status.dir}/convert/")
             log_file = f"{process_status.dir}/convert/convert_logs_{process_status.process_id}.txt"
             if exists(log_file):
@@ -205,10 +209,59 @@ def get_commands(process_status):
                     command+= ['-pix_fmt','yuv420p10le']
 
                 # Video Codec
+                using_x265 = False # Flag to check if x265 is used
                 if convert_encoder=='HEVC':
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
+                    using_x265 = True
                 else: # H.264
                     command+= ['-vcodec','libx264']
+
+                # Highlighted change: Construct and add x265/x264 params
+                # Get common values using .get() with defaults from adv_settings
+                me = adv_settings.get('me', 'hex')
+                b_adapt = adv_settings.get('b_adapt', '2')
+                lookahead = adv_settings.get('lookahead', '20')
+                bframes = adv_settings.get('bframes', '4')
+                aq_mode = adv_settings.get('aq_mode', '2')
+                threads = adv_settings.get('threads', '0') # 0 = auto
+                slices = adv_settings.get('slices', '0') # 0 = auto
+
+                if using_x265:
+                    x265_params = []
+                    cutree = adv_settings.get('cutree', True)
+                    frame_threads = adv_settings.get('frame_threads', '0') # 0 = auto
+
+                    # Append to list
+                    x265_params.append(f"me={me}")
+                    x265_params.append(f"b-adapt={b_adapt}")
+                    x265_params.append(f"lookahead={lookahead}")
+                    x265_params.append(f"bframes={bframes}")
+                    x265_params.append(f"aq-mode={aq_mode}")
+                    x265_params.append(f"cutree={'1' if cutree else '0'}")
+                    if threads != '0': # Only add if not auto
+                        x265_params.append(f"pools={threads}") # x265 uses 'pools'
+                    if frame_threads != '0': # Only add if not auto
+                         x265_params.append(f"frame-threads={frame_threads}")
+                    if slices != '0': # Only add if not auto
+                        x265_params.append(f"slices={slices}")
+                    # WPP is usually handled automatically based on threads, omit direct control
+
+                    if x265_params: # Only add if list is not empty
+                        command += ['-x265-params', ":".join(x265_params)]
+                else: # libx264 specific flags
+                    # Add individual flags for x264
+                    command += ['-me', me]
+                    command += ['-b-adapt', b_adapt]
+                    command += ['-rc-lookahead', lookahead]
+                    command += ['-bf', bframes]
+                    command += ['-aq-mode', aq_mode]
+                    # No direct 'cutree' equivalent, omitting for x264
+                    if threads != '0':
+                        command += ['-threads', threads] # FFmpeg general thread flag
+                    # No direct 'frame-threads' equivalent for x264 params
+                    if slices != '0':
+                        command += ['-slices', slices] # FFmpeg general slices flag
+                # End of highlighted change
 
 # Highlighted change: Add tune setting if not 'None'
                 # Tune Setting
@@ -309,6 +362,9 @@ def get_commands(process_status):
         hardmux_preset =  get_data()[process_status.user_id]['hardmux']['preset']
         hardmux_crf = get_data()[process_status.user_id]['hardmux']['crf']
         hardmux_encode_video = get_data()[process_status.user_id]['hardmux']['encode_video']
+        # Highlighted change: Get advanced encoding settings
+        adv_settings = get_data().get(process_status.user_id, {}).get('advanced_encoding', {})
+        # End of highlighted change
         create_direc(f"{process_status.dir}/hardmux/")
         log_file = f"{process_status.dir}/hardmux/hardmux_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
@@ -321,12 +377,56 @@ def get_commands(process_status):
                                     '-map',f'{str(process_status.amap_options)}']
         if hardmux_encode_video:
                 encoder = get_data()[process_status.user_id]['hardmux']['encoder']
+                # Highlighted change: Apply advanced settings for hardmux
+                # Get common values using .get() with defaults from adv_settings
+                me = adv_settings.get('me', 'hex')
+                b_adapt = adv_settings.get('b_adapt', '2')
+                lookahead = adv_settings.get('lookahead', '20')
+                bframes = adv_settings.get('bframes', '4')
+                aq_mode = adv_settings.get('aq_mode', '2')
+                threads = adv_settings.get('threads', '0') # 0 = auto
+                slices = adv_settings.get('slices', '0') # 0 = auto
+
                 if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-                else:
-                        command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-        else:
+                        command += ['-vcodec','libx265', '-vtag', 'hvc1']
+                        # Construct and add x265 params for hardmux
+                        x265_params = []
+                        cutree = adv_settings.get('cutree', True)
+                        frame_threads = adv_settings.get('frame_threads', '0') # 0 = auto
+
+                        x265_params.append(f"me={me}")
+                        x265_params.append(f"b-adapt={b_adapt}")
+                        x265_params.append(f"lookahead={lookahead}")
+                        x265_params.append(f"bframes={bframes}")
+                        x265_params.append(f"aq-mode={aq_mode}")
+                        x265_params.append(f"cutree={'1' if cutree else '0'}")
+                        if threads != '0':
+                            x265_params.append(f"pools={threads}")
+                        if frame_threads != '0':
+                             x265_params.append(f"frame-threads={frame_threads}")
+                        if slices != '0':
+                            x265_params.append(f"slices={slices}")
+
+                        if x265_params:
+                            command += ['-x265-params', ":".join(x265_params)]
+                        command += ['-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset] # Add CRF and preset after params
+                else: # libx264
+                        command += ['-vcodec','libx264']
+                        # Add individual flags for x264
+                        command += ['-me', me]
+                        command += ['-b-adapt', b_adapt]
+                        command += ['-rc-lookahead', lookahead]
+                        command += ['-bf', bframes]
+                        command += ['-aq-mode', aq_mode]
+                        if threads != '0':
+                            command += ['-threads', threads]
+                        if slices != '0':
+                            command += ['-slices', slices]
+                        command += ['-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset] # Add CRF and preset
+                # End of highlighted change
+        else: # If not encoding video, copy audio
                 command += ['-c:a','copy']
+
         hardmux_sync = get_data()[process_status.user_id]['hardmux']['sync']
         hardmux_use_queue_size = get_data()[process_status.user_id]['hardmux']['use_queue_size']
         if hardmux_use_queue_size:
