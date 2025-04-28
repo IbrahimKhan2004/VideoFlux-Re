@@ -112,7 +112,6 @@ async def callback(event):
              # Call new_user logic implicitly handles this if it's missing,
              # but an explicit check ensures it exists if new_user wasn't called recently
              # We can rely on the defaults set in new_user or add them here explicitly if needed.
-             # Let's assume new_user handles it for now. If issues arise, add explicit saves here.
              await new_user(user_id, SAVE_TO_DATABASE) # Explicitly call if missing
              user_data = get_data().get(user_id, {}) # Re-fetch user_data after potential creation
         # End of highlighted change
@@ -1272,9 +1271,11 @@ async def advanced_encoding_callback(event, txt, user_id, edit):
 
             if edit:
                 try:
-                    await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard) # Generic title
-                except:
-                    pass
+                    await event.edit("🛠️ Advanced Encoding Settings", buttons=KeyBoard)
+                # Highlighted change: Add specific exception logging
+                except Exception as e:
+                    LOGGER.error(f"Failed to edit message in advanced_encoding_callback: {e}", exc_info=True)
+                # End of highlighted change
             else:
                 # This case might not be needed if always called via button
                 try:
