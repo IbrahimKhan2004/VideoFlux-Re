@@ -33,7 +33,7 @@ class Names:
                         merge: "🍧Merging",
                         softmux: "🎮SoftMuxing Subtitles",
                         # softremux: "🛩SoftReMuxing Subtitles",
-                        convert: "🚜Converting Video",
+                        convert: "🚜 Encoding Video",
                         hardmux: "🚍HardMuxing Subtitle",
                         changeMetadata: "🪀Changing MetaData",
                         changeindex: "🎨Changing Index"}
