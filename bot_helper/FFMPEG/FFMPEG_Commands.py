@@ -191,24 +191,46 @@ def get_commands(process_status):
                 # Video Codec
                 if convert_encoder=='HEVC':
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
+# Highlighted change: Add VP9 encoder logic
+                elif convert_encoder=='VP9':
+                    command+= ['-vcodec','libvpx-vp9']
+                    # Map preset to cpu-used and set deadline
+                    command+= ['-deadline', 'good'] # Common deadline
+                    if convert_preset == 'ultrafast':
+                        command+= ['-cpu-used', '5']
+                    elif convert_preset == 'superfast':
+                        command+= ['-cpu-used', '4']
+                    elif convert_preset == 'veryfast':
+                        command+= ['-cpu-used', '3']
+                    elif convert_preset == 'faster':
+                        command+= ['-cpu-used', '2']
+                    elif convert_preset == 'fast':
+                        command+= ['-cpu-used', '1']
+                    else: # medium, slow, slower, veryslow map to best quality
+                        command+= ['-cpu-used', '0']
+# End of highlighted change
                 else: # H.264
                     command+= ['-vcodec','libx264']
 
-# Highlighted change: Add tune setting if not 'None'
+# Highlighted change: Add tune setting if not 'None' and encoder is not VP9
                 # Tune Setting
-                if video_tune != 'None':
+                if video_tune != 'None' and convert_encoder != 'VP9':
                     command += ['-tune', video_tune]
 # End of highlighted change
 
                 # Rate Control (CRF, VBR, ABR, or CBR)
                 if convert_type=='CRF' and convert_crf is not None:
                     command+= ['-crf', f'{str(convert_crf)}']
+# Highlighted change: Add -b:v 0 for VP9 CRF
+                    if convert_encoder == 'VP9':
+                        command+= ['-b:v', '0'] # Required for VP9 CRF
+# End of highlighted change
                 elif convert_type=='VBR' and convert_vbr is not None:
                     command+= ['-b:v', f'{str(convert_vbr)}']
                 elif convert_type=='ABR' and convert_abr is not None:
                     command+= ['-b:v', f'{str(convert_abr)}'] # ABR (1-pass) uses -b:v
-                # Highlighted change: Added CBR handling
-                elif convert_type=='CBR' and convert_cbr is not None:
+# Highlighted change: Added CBR handling (only if not VP9)
+                elif convert_type=='CBR' and convert_cbr is not None and convert_encoder != 'VP9':
                     # For CBR, set minrate, maxrate same as bitrate, and bufsize (e.g., 2*bitrate)
                     bitrate_str = str(convert_cbr)
                     bufsize_str = bitrate_str # Default bufsize = bitrate if parsing fails
@@ -230,17 +252,23 @@ def get_commands(process_status):
                         pass # Keep default bufsize if parsing fails
 
                     command += ['-b:v', bitrate_str, '-minrate', bitrate_str, '-maxrate', bitrate_str, '-bufsize', bufsize_str]
+# End of highlighted change
                 # If type is set but value is None (not enabled), FFmpeg might use defaults or error.
                 # Consider adding a default CRF/VBR if type is selected but value isn't enabled.
                 elif convert_type=='CRF': # Default CRF if enabled but no value set
                      command+= ['-crf', '23'] # Example default
+# Highlighted change: Add -b:v 0 for VP9 CRF default
+                     if convert_encoder == 'VP9':
+                         command+= ['-b:v', '0'] # Required for VP9 CRF
+# End of highlighted change
                 elif convert_type=='VBR': # Default VBR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
                 elif convert_type=='ABR': # Default ABR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
-                # Highlighted change: Added CBR default fallback
-                elif convert_type=='CBR': # Default CBR if enabled but no value set
+# Highlighted change: Added CBR default fallback (only if not VP9)
+                elif convert_type=='CBR' and convert_encoder != 'VP9': # Default CBR if enabled but no value set
                      command += ['-b:v', '1500k', '-minrate', '1500k', '-maxrate', '1500k', '-bufsize', '3000k'] # Example default
+# End of highlighted change
 
             else: # Only Audio encode or no video encode
                 command+=['-c:v', 'copy']
@@ -282,7 +310,10 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
-            command+= ['-preset', convert_preset]
+# Highlighted change: Apply preset only if not VP9 (VP9 uses cpu-used)
+            if convert_encoder != 'VP9':
+                command+= ['-preset', convert_preset]
+# End of highlighted change
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
 
