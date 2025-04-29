@@ -216,18 +216,34 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
 # Highlighted change: Get tune setting
                 video_tune = get_data()[user_id]['video']['tune'] # Corrected: Use user_id directly
 # End of highlighted change
+# Highlighted change: Get preset setting
+                convert_preset = get_data()[user_id]['convert']['preset'] # Get preset
+# End of highlighted change
 
-                # Highlighted change: Updated f-string to include CBR and Tune
+# Highlighted change: Updated f-string to conditionally display Tune/CBR and show correct preset for VP9
                 text = f"\n**Encoding...**: {encode_mode}\n"\
                          f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
-                         f"**Resolution**: {quality} | **EType**: {etype}\n"\
-                         f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr} | **CBR**: {cbr}\n"\
-                         f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
-                         f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"\
-                         f"**Tune**: {video_tune}\n"\
-                         f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {get_data()[user_id]['convert']['preset']}\n"\
-                         f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
-                         f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
+                         f"**Resolution**: {quality} | **EType**: {etype}\n"
+
+                # Conditionally add CRF/VBR/ABR line (always shown)
+                text += f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr}"
+                # Conditionally add CBR (only if not VP9)
+                if encoder != 'VP9':
+                    text += f" | **CBR**: {cbr}"
+                text += "\n" # Newline after rate control
+
+                text += f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
+                          f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"
+
+                # Conditionally add Tune (only if not VP9)
+                if encoder != 'VP9':
+                    text += f"**Tune**: {video_tune}\n"
+
+                # Display preset (always shown, value is interpreted differently for VP9)
+                text += f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {convert_preset}\n"\
+                          f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
+                          f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
+# End of highlighted change
                 # --- End of VFBITMOD-update Status Head ---
                 return text
         elif pmode==Names.hardmux:
