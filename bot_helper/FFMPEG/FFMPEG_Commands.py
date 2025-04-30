@@ -209,25 +209,12 @@ def get_commands(process_status):
                     else: # medium, slow, slower, veryslow map to best quality
                         command+= ['-cpu-used', '0']
 # End of highlighted change
-# Highlighted change: Add AV1 encoder logic
-                elif convert_encoder=='AV1':
-                    command+= ['-vcodec','libsvtav1']
-                    # Map text preset to SVT-AV1 numerical preset
-                    svt_preset_map = {
-                        'ultrafast': 12, 'superfast': 10, 'veryfast': 8,
-                        'faster': 7, 'fast': 6, 'medium': 5, 'slow': 4,
-                        'slower': 3, 'veryslow': 2
-                    }
-                    # Use medium (e.g., 6) as default if preset not in map or invalid
-                    svt_preset_num = svt_preset_map.get(convert_preset, 6)
-                    command += ['-preset', str(svt_preset_num)]
-# End of highlighted change
                 else: # H.264
                     command+= ['-vcodec','libx264']
 
-# Highlighted change: Add tune setting if not 'None' and encoder is not VP9 or AV1
+# Highlighted change: Add tune setting if not 'None' and encoder is not VP9
                 # Tune Setting
-                if video_tune != 'None' and convert_encoder not in ['VP9', 'AV1']:
+                if video_tune != 'None' and convert_encoder != 'VP9':
                     command += ['-tune', video_tune]
 # End of highlighted change
 
@@ -242,8 +229,8 @@ def get_commands(process_status):
                     command+= ['-b:v', f'{str(convert_vbr)}']
                 elif convert_type=='ABR' and convert_abr is not None:
                     command+= ['-b:v', f'{str(convert_abr)}'] # ABR (1-pass) uses -b:v
-# Highlighted change: Added CBR handling (only if not VP9 or AV1)
-                elif convert_type=='CBR' and convert_cbr is not None and convert_encoder not in ['VP9', 'AV1']:
+# Highlighted change: Added CBR handling (only if not VP9)
+                elif convert_type=='CBR' and convert_cbr is not None and convert_encoder != 'VP9':
                     # For CBR, set minrate, maxrate same as bitrate, and bufsize (e.g., 2*bitrate)
                     bitrate_str = str(convert_cbr)
                     bufsize_str = bitrate_str # Default bufsize = bitrate if parsing fails
@@ -274,16 +261,12 @@ def get_commands(process_status):
                      if convert_encoder == 'VP9':
                          command+= ['-b:v', '0'] # Required for VP9 CRF
 # End of highlighted change
-# Highlighted change: Add default CRF for AV1
-                     elif convert_encoder == 'AV1':
-                         command+= ['-crf', '30'] # Example default CRF for AV1
-# End of highlighted change
                 elif convert_type=='VBR': # Default VBR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
                 elif convert_type=='ABR': # Default ABR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
-# Highlighted change: Added CBR default fallback (only if not VP9 or AV1)
-                elif convert_type=='CBR' and convert_encoder not in ['VP9', 'AV1']: # Default CBR if enabled but no value set
+# Highlighted change: Added CBR default fallback (only if not VP9)
+                elif convert_type=='CBR' and convert_encoder != 'VP9': # Default CBR if enabled but no value set
                      command += ['-b:v', '1500k', '-minrate', '1500k', '-maxrate', '1500k', '-bufsize', '3000k'] # Example default
 # End of highlighted change
 
@@ -327,8 +310,8 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
-# Highlighted change: Apply text preset only if not VP9 or AV1
-            if convert_encoder not in ['VP9', 'AV1']:
+# Highlighted change: Apply preset only if not VP9 (VP9 uses cpu-used)
+            if convert_encoder != 'VP9':
                 command+= ['-preset', convert_preset]
 # End of highlighted change
             command+= ['-y', f"{output_file}"]
