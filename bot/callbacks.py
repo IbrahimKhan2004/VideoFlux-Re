@@ -21,8 +21,8 @@ abit_list = ['64k', '96k', '128k', '160k', '192k', '256k', '320k', '512k', '640k
 achannel_list = ['2', '6']
 qubality_list = ['480p [720x360]', '480p [720x480]', '720p [1280x640]', '720p [1280x720]', '1080p [1920x960]', '1080p [1920x1080]']
 encode_list = ['Video', 'Audio', 'Video Audio [Both]']
-# Highlighted change: Added 'VP9' to encude_list
-encude_list = ['H.264', 'HEVC', 'VP9'] # Added VP9
+# Highlighted change: Added 'AV1' to encude_list
+encude_list = ['H.264', 'HEVC', 'VP9', 'AV1'] # Added AV1
 # End of highlighted change
 # Highlighted change: Added CBR to type_list
 type_list = ['CRF', 'VBR', 'ABR', 'CBR'] # Added CBR
@@ -995,7 +995,7 @@ async def video_callback(event, txt, user_id, edit):
 
             KeyBoard.append([Button.inline(f'❤ Encoder - {str(video_encude)}', 'BashAFK')])
 # Highlighted change: Updated items per row for encude_list
-            for board in gen_keyboard(encude_list, video_encude, "videoencude", 3, False): # Changed items per row to 3 for VP9
+            for board in gen_keyboard(encude_list, video_encude, "videoencude", 4, False): # Changed items per row to 4 for AV1
 # End of highlighted change
                 KeyBoard.append(board)
             KeyBoard.append([Button.inline(f'❤ VideoBit - {str(video_vbit)}', 'BashAFK')])
@@ -1004,8 +1004,8 @@ async def video_callback(event, txt, user_id, edit):
             KeyBoard.append([Button.inline(f'❤ Resolution - {str(video_qubality)}', 'BashAFK')])
             for board in gen_keyboard(qubality_list, video_qubality, "videoquality", 2, False):
                 KeyBoard.append(board)
-# Highlighted change: Added tune buttons conditionally
-            if current_encoder != 'VP9': # Only show Tune if encoder is not VP9
+# Highlighted change: Added tune buttons conditionally (hide for VP9 and AV1)
+            if current_encoder not in ['VP9', 'AV1']: # Only show Tune if encoder is not VP9 or AV1
                 KeyBoard.append([Button.inline(f'❤ Tune - {str(video_tune)}', 'BashAFK')])
                 for board in gen_keyboard(tune_list, video_tune, "videotune", 3, False): # Display 3 tune options per row
                     KeyBoard.append(board)
@@ -1146,8 +1146,8 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
             KeyBoard.append([Button.inline(f'💙 ABR - {str(use_abr)} [Click To See]', 'abr_value')])
             for board in gen_keyboard(bool_list, use_abr, "vbrcrfabr", 2, False):
                 KeyBoard.append(board)
-# Highlighted change: Added CBR button row conditionally
-            if current_encoder != 'VP9': # Only show CBR if encoder is not VP9
+# Highlighted change: Added CBR button row conditionally (hide for VP9 and AV1)
+            if current_encoder not in ['VP9', 'AV1']: # Only show CBR if encoder is not VP9 or AV1
                 KeyBoard.append([Button.inline(f'💚 CBR - {str(use_cbr)} [Click To See]', 'cbr_value')])
                 for board in gen_keyboard(bool_list, use_cbr, "vbrcrfcbr", 2, False):
                     KeyBoard.append(board)
