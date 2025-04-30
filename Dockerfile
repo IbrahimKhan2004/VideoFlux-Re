@@ -1,41 +1,8 @@
 FROM python:3.9
 
-ENV DEBIAN_FRONTEND=noninteractive
-# Install basic dependencies + tools needed to extract the static build
-RUN apt -qq update && \
-    apt -qq install -y --no-install-recommends wget unzip p7zip-full curl busybox aria2 xz-utils && \
-    rm -rf /var/lib/apt/lists/*
 
-# --- START: Install Static FFmpeg with libsvtav1 ---
-# Removed FFMPEG_VERSION ARG as we use the latest release URL now
-ARG TARGETPLATFORM
-# Determine architecture for download URL
-RUN case ${TARGETPLATFORM} in \
-         "linux/amd64") ARCH=amd64 ;; \
-         "linux/arm64") ARCH=arm64 ;; \
-         *) echo "Unsupported architecture: ${TARGETPLATFORM}"; exit 1 ;; \
-    esac && \
-    # Highlighted change: Use the URL for the latest stable release build
-    FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-${ARCH}-static.tar.xz" && \
-    # End of highlighted change
-    echo "Downloading FFmpeg from ${FFMPEG_URL}" && \
-    # Download FFmpeg static build
-    wget -q ${FFMPEG_URL} -O ffmpeg.tar.xz && \
-    # Create directory for extraction
-    mkdir /ffmpeg-static && \
-    # Extract FFmpeg
-    tar -xf ffmpeg.tar.xz -C /ffmpeg-static --strip-components=1 && \
-    # Copy ffmpeg and ffprobe to /usr/local/bin (which is usually in PATH)
-    cp /ffmpeg-static/ffmpeg /usr/local/bin/ && \
-    cp /ffmpeg-static/ffprobe /usr/local/bin/ && \
-    # Make them executable
-    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe && \
-    # Clean up downloaded file and extracted folder
-    rm ffmpeg.tar.xz && \
-    rm -rf /ffmpeg-static && \
-    # Verify installation (optional but good)
-    ffmpeg -version
-# --- END: Install Static FFmpeg ---
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt -qq update && apt -qq install -y ffmpeg wget unzip p7zip-full curl busybox aria2
 
 COPY . /app
 WORKDIR /app
@@ -47,7 +14,7 @@ RUN bash install.sh
 
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-ENV PORT=8000
+ENV PORT = 8000
 EXPOSE 8000
 
 CMD sh start.sh
