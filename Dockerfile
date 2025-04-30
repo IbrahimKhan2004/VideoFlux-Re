@@ -1,21 +1,39 @@
 FROM python:3.9
 
-
 ENV DEBIAN_FRONTEND=noninteractive
-# Highlighted change: Modified apt install sequence to add deb-multimedia for potentially newer ffmpeg with libsvtav1
+# Install basic dependencies + tools needed to extract the static build
 RUN apt -qq update && \
-    apt -qq install -y --no-install-recommends wget unzip p7zip-full curl busybox aria2 gnupg && \
-    # Add deb-multimedia repository
-    echo "deb https://www.deb-multimedia.org bullseye main" > /etc/apt/sources.list.d/deb-multimedia.list && \
-    # Import deb-multimedia key
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5C808C2B65558117 && \
-    # Update again after adding new repo
-    apt -qq update && \
-    # Install ffmpeg (hopefully from deb-multimedia) - allow untrusted as key import might sometimes be tricky in Docker
-    apt -qq install -y --allow-unauthenticated ffmpeg && \
-    # Clean up
+    apt -qq install -y --no-install-recommends wget unzip p7zip-full curl busybox aria2 xz-utils && \
     rm -rf /var/lib/apt/lists/*
-# End of highlighted change
+
+# --- START: Install Static FFmpeg with libsvtav1 ---
+ARG FFMPEG_VERSION=6.1.1
+ARG TARGETPLATFORM
+# Determine architecture for download URL
+RUN case ${TARGETPLATFORM} in \
+         "linux/amd64") ARCH=amd64 ;; \
+         "linux/arm64") ARCH=arm64 ;; \
+         *) echo "Unsupported architecture: ${TARGETPLATFORM}"; exit 1 ;; \
+    esac && \
+    FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-${FFMPEG_VERSION}-${ARCH}-static.tar.xz" && \
+    echo "Downloading FFmpeg from ${FFMPEG_URL}" && \
+    # Download FFmpeg static build
+    wget -q ${FFMPEG_URL} -O ffmpeg.tar.xz && \
+    # Create directory for extraction
+    mkdir /ffmpeg-static && \
+    # Extract FFmpeg
+    tar -xf ffmpeg.tar.xz -C /ffmpeg-static --strip-components=1 && \
+    # Copy ffmpeg and ffprobe to /usr/local/bin (which is usually in PATH)
+    cp /ffmpeg-static/ffmpeg /usr/local/bin/ && \
+    cp /ffmpeg-static/ffprobe /usr/local/bin/ && \
+    # Make them executable
+    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe && \
+    # Clean up downloaded file and extracted folder
+    rm ffmpeg.tar.xz && \
+    rm -rf /ffmpeg-static && \
+    # Verify installation (optional but good)
+    ffmpeg -version
+# --- END: Install Static FFmpeg ---
 
 COPY . /app
 WORKDIR /app
