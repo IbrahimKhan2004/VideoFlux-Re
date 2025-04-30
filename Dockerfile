@@ -7,7 +7,7 @@ RUN apt -qq update && \
     rm -rf /var/lib/apt/lists/*
 
 # --- START: Install Static FFmpeg with libsvtav1 ---
-ARG FFMPEG_VERSION=6.1.1
+# Removed FFMPEG_VERSION ARG as we use the latest release URL now
 ARG TARGETPLATFORM
 # Determine architecture for download URL
 RUN case ${TARGETPLATFORM} in \
@@ -15,7 +15,9 @@ RUN case ${TARGETPLATFORM} in \
          "linux/arm64") ARCH=arm64 ;; \
          *) echo "Unsupported architecture: ${TARGETPLATFORM}"; exit 1 ;; \
     esac && \
-    FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-${FFMPEG_VERSION}-${ARCH}-static.tar.xz" && \
+    # Highlighted change: Use the URL for the latest stable release build
+    FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-${ARCH}-static.tar.xz" && \
+    # End of highlighted change
     echo "Downloading FFmpeg from ${FFMPEG_URL}" && \
     # Download FFmpeg static build
     wget -q ${FFMPEG_URL} -O ffmpeg.tar.xz && \
