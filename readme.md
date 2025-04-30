@@ -5,7 +5,7 @@ A multi-feature Telegram bot for video processing tasks like merging, converting
 ## Features
 
 *   **Merge:** Combine multiple video files into one.
-*   **Convert:** Encode videos to different formats (H.264, HEVC, VP9), resolutions, bit depths, and apply various rate control methods.
+*   **Convert:** Encode videos to different formats (H.264, HEVC, VP9, **<ins>AV1</ins>**), resolutions, bit depths, and apply various rate control methods.
 *   **HardMux:** Burn subtitles directly into the video stream.
 *   **SoftMux:** Add subtitles as separate selectable tracks within the video container.
 *   **Metadata/Index Manipulation:**
@@ -93,6 +93,7 @@ You can configure encoding options via `/settings`.
 *   **HEVC (libx265):** Good compression efficiency, widely supported on modern devices.
 *   **H.264 (libx264):** Very compatible, good quality, slightly less efficient than HEVC.
 *   **VP9 (libvpx-vp9):** Open source, good compression, well-suited for web streaming.
+*   **<ins>AV1 (libsvtav1):</ins>** <ins>Newer open source codec, potentially better compression than HEVC/VP9 at lower bitrates. Encoding can be slower than libx265 but faster than libaom-av1. Requires newer hardware/software for playback.</ins>
 
 ### Rate Control (`/settings` -> `Rate Control (VBR/CRF/ABR/CBR)`)
 
@@ -100,9 +101,10 @@ Rate control determines how the encoder allocates bitrate to maintain quality or
 
 *   **CRF (Constant Rate Factor):**
     *   **Goal:** Achieve a consistent *perceptual quality* level throughout the video. Bitrate varies based on scene complexity.
-    *   **How:** You set a CRF value (e.g., 18-28 for H.264/HEVC, 15-35 for VP9). Lower values = higher quality = larger file size.
+    *   **How:** You set a CRF value (e.g., 18-28 for H.264/HEVC, 15-35 for VP9, **<ins>25-40 for AV1</ins>**). Lower values = higher quality = larger file size.
     *   **When:** Best for archiving or when target quality is more important than exact file size.
     *   **VP9 Specific:** When using CRF with VP9, the bot automatically adds `-b:v 0` to the FFmpeg command, which is required.
+    *   **<ins>AV1 Specific:</ins>** <ins>CRF is a good option for AV1 quality control.</ins>
     *   **Bot Setting:** Enable `Use CRF` and set the desired `CRF` value.
 
 *   **VBR (Variable Bitrate):**
@@ -121,7 +123,7 @@ Rate control determines how the encoder allocates bitrate to maintain quality or
     *   **Goal:** Keep the bitrate as constant as possible throughout the video.
     *   **How:** Set a target bitrate. FFmpeg tries to strictly adhere to this rate, often requiring `-minrate` and `-maxrate` to be set to the same value, along with an appropriate `-bufsize`.
     *   **When:** Sometimes required for specific streaming protocols or hardware, but often less efficient quality-wise compared to CRF/VBR.
-    *   **VP9 Specific:** Achieving *true* CBR with 1-pass VP9 is difficult and not recommended. **This bot disables the CBR option when VP9 is selected as the encoder.**
+    *   **VP9/AV1 Specific:** Achieving *true* CBR with 1-pass VP9/AV1 is difficult and not recommended. **<ins>This bot disables the CBR option when VP9 or AV1 is selected as the encoder.</ins>**
     *   **Bot Setting:** Enable `Use CBR` and set the desired `CBR` value (e.g., `1500k`). (Only available for H.264/HEVC).
 
 **Which Rate Control Type to Choose in Settings?** (`/settings` -> `Convert` -> `Encode Type`)
@@ -129,17 +131,17 @@ Rate control determines how the encoder allocates bitrate to maintain quality or
 This setting tells the bot *which* of the enabled rate control values (CRF, VBR, ABR, or CBR) to actually *use* for the `/convert` command.
 
 1.  Go to `/settings` -> `Rate Control`.
-2.  Enable *one* of the `Use CRF`, `Use VBR`, `Use ABR`, or `Use CBR` options (remember CBR is unavailable for VP9).
+2.  Enable *one* of the `Use CRF`, `Use VBR`, `Use ABR`, or `Use CBR` options (remember CBR is unavailable for VP9/AV1).
 3.  Set the corresponding value (CRF number, or bitrate like `2000k`).
 4.  Go to `/settings` -> `Convert`.
 5.  Select the `Encode Type` that matches the rate control you enabled (CRF, VBR, ABR, or CBR).
 
-**Example:** To use CRF 23 for HEVC conversion:
-1.  `/settings` -> `Rate Control` -> Enable `Use CRF` -> Set `CRF` to `23`. Ensure other `Use...` options are off.
+**Example:** To use CRF 30 for AV1 conversion:
+1.  `/settings` -> `Rate Control` -> Enable `Use CRF` -> Set `CRF` to `30`. Ensure other `Use...` options are off.
 2.  `/settings` -> `Convert` -> Select `Encode Type` -> `CRF`.
-3.  `/settings` -> `Video` -> Select `Encoder` -> `HEVC`.
+3.  `/settings` -> `Video` -> Select `Encoder` -> `AV1`.
 
-### VP9 Specific Settings (`/settings` -> `Video`)
+### Encoder Specific Settings (`/settings` -> `Video`)
 
 *   **VP9 Presets:** VP9 doesn't use presets like H.264/HEVC. Instead, it uses `-cpu-used`. The bot maps the familiar preset names to `-cpu-used` values:
     *   `ultrafast`: `-cpu-used 5` (Fastest, lowest quality)
@@ -150,12 +152,24 @@ This setting tells the bot *which* of the enabled rate control values (CRF, VBR,
     *   `medium`, `slow`, `slower`, `veryslow`: `-cpu-used 0` (Slowest, highest quality potential for a given rate control)
     The bot also uses `-deadline good` for 1-pass encodes.
 
-*   **VP9 Tune:** The `-tune` parameter (like `film`, `animation`) is generally *not* applicable to VP9. **The Tune option in the bot settings is hidden when VP9 is selected.**
+*   **<ins>AV1 Presets (SVT-AV1):</ins>** <ins>The SVT-AV1 encoder uses numerical presets (0-13). Lower numbers mean slower encoding but better quality/efficiency. Higher numbers are faster but offer less quality/efficiency. The bot maps the text presets to these numbers internally:</ins>
+    *   <ins>`ultrafast`: `-preset 12`</ins>
+    *   <ins>`superfast`: `-preset 10`</ins>
+    *   <ins>`veryfast`: `-preset 8`</ins>
+    *   <ins>`faster`: `-preset 7`</ins>
+    *   <ins>`fast`: `-preset 6`</ins>
+    *   <ins>`medium`: `-preset 5` (Good balance)</ins>
+    *   <ins>`slow`: `-preset 4`</ins>
+    *   <ins>`slower`: `-preset 3`</ins>
+    *   <ins>`veryslow`: `-preset 2`</ins>
+    <ins>(Note: The bot uses preset 6 as a fallback if an invalid preset name is somehow selected).</ins>
+
+*   **Tune:** The `-tune` parameter (like `film`, `animation`) is generally *not* applicable to VP9 or AV1 (SVT-AV1). **<ins>The Tune option in the bot settings is hidden when VP9 or AV1 is selected.</ins>**
 
 ### Other Video Settings (`/settings` -> `Video`)
 
 *   **Resolution:** Choose the desired output resolution (e.g., `720p [1280x720]`).
-*   **VideoBit (Bit Depth):** Choose `8Bit` or `10Bit` (10-bit often provides better quality and compression but might have compatibility issues with older devices).
+*   **VideoBit (Bit Depth):** Choose `8Bit` or `10Bit` (10-bit often provides better quality and compression but might have compatibility issues with older devices. AV1 often performs well in 10-bit).
 
 ### Other Audio Settings (`/settings` -> `Audio`)
 
@@ -171,6 +185,7 @@ This setting tells the bot *which* of the enabled rate control values (CRF, VBR,
     ```bash
     docker build -t videoflux-bot .
     ```
+    *(Ensure the Dockerfile successfully installs an FFmpeg version with libsvtav1 support. See the Dockerfile comments for potential methods like using deb-multimedia).*
 2.  Run the container:
     ```bash
     docker run -d --name videoflux --restart always -v $(pwd)/userdata:/app/userdata -v $(pwd)/downloads:/app/downloads --env-file config.env videoflux-bot
@@ -186,12 +201,12 @@ This setting tells the bot *which* of the enabled rate control values (CRF, VBR,
     ```bash
     docker-compose up -d --build
     ```
-    *(This uses the provided `docker-compose.yml` which mounts the current directory. Adjust volumes as needed.)*
+    *(This uses the provided `docker-compose.yml` which mounts the current directory. Adjust volumes as needed. Ensure the Dockerfile builds successfully with AV1 support).*
 
 ### Manual (Not Recommended for Production)
 
 1.  Install Python 3.9+.
-2.  Install dependencies: `apt update && apt install -y ffmpeg wget unzip p7zip-full curl busybox aria2 git`
+2.  Install dependencies: `apt update && apt install -y ffmpeg wget unzip p7zip-full curl busybox aria2 git` *(Ensure your system's FFmpeg includes libsvtav1 support. You might need to add a PPA or compile from source).*
 3.  Install Rclone: `bash <(wget -qO- https://rclone.org/install.sh)`
 4.  Install Python packages: `pip3 install --no-cache-dir -r requirements.txt`
 5.  Create `config.env` or set environment variables.
