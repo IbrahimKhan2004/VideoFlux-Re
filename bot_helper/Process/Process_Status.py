@@ -220,26 +220,26 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 convert_preset = get_data()[user_id]['convert']['preset'] # Get preset
 # End of highlighted change
 
-# Highlighted change: Updated f-string to conditionally display Tune/CBR and show correct preset for VP9/AV1
+# Highlighted change: Updated f-string to conditionally display Tune/CBR and show correct preset for VP9
                 text = f"\n**Encoding...**: {encode_mode}\n"\
                          f"**Encode**: {encoder} | **In.Size**: {get_human_size(input_size)}\n"\
                          f"**Resolution**: {quality} | **EType**: {etype}\n"
 
                 # Conditionally add CRF/VBR/ABR line (always shown)
                 text += f"**CRF**: {crf} | **VBR**: {vbr} | **ABR**: {abr}"
-                # Conditionally add CBR (only if not VP9 or AV1)
-                if encoder not in ['VP9', 'AV1']:
+                # Conditionally add CBR (only if not VP9)
+                if encoder != 'VP9':
                     text += f" | **CBR**: {cbr}"
                 text += "\n" # Newline after rate control
 
                 text += f"**VideoBit**: {vbit} | **AudioBit**: {abit}\n"\
                           f"**Audio Codec**: {acodec} | **Audio Channel**: {achannel}\n"
 
-                # Conditionally add Tune (only if not VP9 or AV1)
-                if encoder not in ['VP9', 'AV1']:
+                # Conditionally add Tune (only if not VP9)
+                if encoder != 'VP9':
                     text += f"**Tune**: {video_tune}\n"
 
-                # Display preset (always shown, value is interpreted differently for VP9/AV1)
+                # Display preset (always shown, value is interpreted differently for VP9)
                 text += f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {convert_preset}\n"\
                           f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
                           f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
