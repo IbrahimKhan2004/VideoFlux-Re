@@ -191,11 +191,15 @@ def get_commands(process_status):
                 # Video Codec
                 if convert_encoder=='HEVC':
                     command+= ['-vcodec','libx265','-vtag', 'hvc1']
-# Highlighted change: Add VP9 encoder logic
+# Highlighted change: Add VP9 encoder logic with threading
                 elif convert_encoder=='VP9':
                     command+= ['-vcodec','libvpx-vp9']
                     # Map preset to cpu-used and set deadline
                     command+= ['-deadline', 'good'] # Common deadline
+                    # Add automatic threads and row-mt
+                    command+= ['-threads', '0'] # Auto-detect threads
+                    command+= ['-row-mt', '1']  # Enable row multi-threading
+                    # Set cpu-used based on preset
                     if convert_preset == 'ultrafast':
                         command+= ['-cpu-used', '5']
                     elif convert_preset == 'superfast':
@@ -212,7 +216,7 @@ def get_commands(process_status):
                 else: # H.264
                     command+= ['-vcodec','libx264']
 
-# Highlighted change: Add tune setting if not 'None' and encoder is not VP9
+# Highlighted change: Add tune setting if not 'None' and encoder is not VP9 (AV1 removed)
                 # Tune Setting
                 if video_tune != 'None' and convert_encoder != 'VP9':
                     command += ['-tune', video_tune]
@@ -229,7 +233,7 @@ def get_commands(process_status):
                     command+= ['-b:v', f'{str(convert_vbr)}']
                 elif convert_type=='ABR' and convert_abr is not None:
                     command+= ['-b:v', f'{str(convert_abr)}'] # ABR (1-pass) uses -b:v
-# Highlighted change: Added CBR handling (only if not VP9)
+# Highlighted change: Added CBR handling (only if not VP9) (AV1 removed)
                 elif convert_type=='CBR' and convert_cbr is not None and convert_encoder != 'VP9':
                     # For CBR, set minrate, maxrate same as bitrate, and bufsize (e.g., 2*bitrate)
                     bitrate_str = str(convert_cbr)
@@ -265,7 +269,7 @@ def get_commands(process_status):
                      command+= ['-b:v', '1500k'] # Example default
                 elif convert_type=='ABR': # Default ABR if enabled but no value set
                      command+= ['-b:v', '1500k'] # Example default
-# Highlighted change: Added CBR default fallback (only if not VP9)
+# Highlighted change: Added CBR default fallback (only if not VP9) (AV1 removed)
                 elif convert_type=='CBR' and convert_encoder != 'VP9': # Default CBR if enabled but no value set
                      command += ['-b:v', '1500k', '-minrate', '1500k', '-maxrate', '1500k', '-bufsize', '3000k'] # Example default
 # End of highlighted change
@@ -310,7 +314,7 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
-# Highlighted change: Apply preset only if not VP9 (VP9 uses cpu-used)
+# Highlighted change: Apply text preset only if not VP9 (AV1 removed)
             if convert_encoder != 'VP9':
                 command+= ['-preset', convert_preset]
 # End of highlighted change
