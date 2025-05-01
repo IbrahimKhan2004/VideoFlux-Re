@@ -121,7 +121,7 @@ async def process_status_checker():
             break
         try:
             for task in working_task:
-                    if time()-task['process_status'].ping>600:
+                    if time()-task['process_status'].ping>1800:
                         LOGGER.info(f"Removing {task['process_status'].process_type} Process Because Of No Response.")
                         await task['process_status'].event.reply(f"❗Removing This Task From Working Tasks As It Is Not Responding From Last 10 Minutes.")
                         await clear_trash(task, False, []) # MODIFIED: Pass empty list for multi_tasks
