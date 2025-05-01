@@ -147,59 +147,61 @@ async def upload_gofile(process_status):
                 # Add the folderId parameter
                 data.add_field('folderId', root_folder_id)
 
-                # Use aiofiles for async file reading
-                # Highlighted change: Stream the file instead of reading all at once
-                async with aiofiles.open(file_path, 'rb') as f:
-                    # Pass the file object directly to add_field for streaming
+                # >>> CHANGED: Use synchronous open() so aiohttp.FormData can stream file correctly
+                with open(file_path, 'rb') as f:
                     data.add_field('file',
-                                   f, # Pass the async file handle
-
+                                   f,  # Pass the sync file handle
                                    filename=filename,
-                                   content_type='application/octet-stream') # Or detect mime type
+                                   content_type='application/octet-stream')
+                # <<< END CHANGE
 
-                    # Make the POST request *inside* the file open block
-                    # This ensures the file is open while aiohttp streams it
-                    # Add the Authorization header for the upload itself
-                    async with session.post(GOFILE_UPLOAD_API, data=data, headers={"Authorization": f"Bearer {GOFILE_API_TOKEN}"}) as response:
-                        upload_duration = time() - start_time
+                # Make the POST request (file is already in FormData)
+                async with session.post(
+                    GOFILE_UPLOAD_API,
+                    data=data,
+                    headers={"Authorization": f"Bearer {GOFILE_API_TOKEN}"}
+                ) as response:
+                    upload_duration = time() - start_time
+                    response_text = await response.text()
+                    LOGGER.debug(f"Gofile API response status: {response.status}")
+                    LOGGER.debug(f"Gofile API response body: {response_text}")
 
-                        response_text = await response.text()
-                        LOGGER.debug(f"Gofile API response status: {response.status}")
-                        LOGGER.debug(f"Gofile API response body: {response_text}")
-
-                        if response.status == 200:
-                            try:
-                                response_data = await response.json()
-                                if response_data.get("status") == "ok":
-                                    download_page = response_data.get("data", {}).get("downloadPage", "N/A")
-                                    file_size_str = get_human_size(os.path.getsize(file_path))
-                                    success_message = (
-                                        f"✅ Successfully Uploaded `{filename}` to Gofile\n\n"
-                                        f"🔗 Link: {download_page}\n"
-                                        f"💽 Size: {file_size_str}\n"
-                                        f"⏱ Time: {int(upload_duration)}s\n\n"
-                                        f"{caption}"
-                                    )
-                                    await event.reply(success_message)
-                                    LOGGER.info(f"Successfully uploaded {filename} to Gofile: {download_page}")
-                                else:
-                                    error_detail = response_data.get("status", "Unknown error")
-                                    await event.reply(f"❌ Gofile upload failed for `{filename}`. Reason: {error_detail}")
-                                    LOGGER.error(f"Gofile API returned error for {filename}: {error_detail} | Response: {response_text}")
-                            except Exception as json_e: # Catch JSON decoding errors
-                                await event.reply(f"❌ Failed to parse Gofile response for `{filename}`. Status: {response.status}. Response: ```{response_text[:1000]}...```")
-                                LOGGER.error(f"Failed to parse Gofile JSON response for {filename}: {json_e} | Status: {response.status} | Response: {response_text}")
-                        else:
-                            await event.reply(f"❌ Gofile upload failed for `{filename}`. HTTP Status: {response.status}. Response: ```{response_text[:1000]}...```")
-                            LOGGER.error(f"Gofile upload HTTP error for {filename}: Status {response.status} | Response: {response_text}")
-                # End of highlighted change
+                    if response.status == 200:
+                        try:
+                            response_data = await response.json()
+                            if response_data.get("status") == "ok":
+                                download_page = response_data.get("data", {}).get("downloadPage", "N/A")
+                                file_size_str = get_human_size(os.path.getsize(file_path))
+                                success_message = (
+                                    f"✅ Successfully Uploaded `{filename}` to Gofile\n\n"
+                                    f"🔗 Link: {download_page}\n"
+                                    f"💽 Size: {file_size_str}\n"
+                                    f"⏱ Time: {int(upload_duration)}s\n\n"
+                                    f"{caption}"
+                                )
+                                await event.reply(success_message)
+                                LOGGER.info(f"Successfully uploaded {filename} to Gofile: {download_page}")
+                            else:
+                                error_detail = response_data.get("status", "Unknown error")
+                                await event.reply(f"❌ Gofile upload failed for `{filename}`. Reason: {error_detail}")
+                                LOGGER.error(f"Gofile API returned error for {filename}: {error_detail} | Response: {response_text}")
+                        except Exception as json_e:  # Catch JSON decoding errors
+                            await event.reply(
+                                f"❌ Failed to parse Gofile response for `{filename}`. Status: {response.status}. Response: ```{response_text[:1000]}...```"
+                            )
+                            LOGGER.error(f"Failed to parse Gofile JSON response for {filename}: {json_e} | Status: {response.status} | Response: {response_text}")
+                    else:
+                        await event.reply(
+                            f"❌ Gofile upload failed for `{filename}`. HTTP Status: {response.status}. Response: ```{response_text[:1000]}...```"
+                        )
+                        LOGGER.error(f"Gofile upload HTTP error for {filename}: Status {response.status} | Response: {response_text}")
 
             except aiohttp.ClientError as e:
                 # Highlighted change: Check if the error is specifically a timeout error
                 # Check for timeout explicitly (ClientTimeoutError is raised in newer aiohttp)
-                if isinstance(e, aiohttp.ClientTimeoutError) or isinstance(e, TimeoutError) : # Add TimeoutError for broader compatibility
-                     await event.reply(f"❌ Gofile upload timed out for `{filename}` after {UPLOAD_TIMEOUT_SECONDS}s. Server might be slow or network unstable.")
-                     LOGGER.error(f"Gofile upload timed out for {filename}.")
+                if isinstance(e, aiohttp.ClientTimeoutError) or isinstance(e, TimeoutError):  # Add TimeoutError for broader compatibility
+                    await event.reply(f"❌ Gofile upload timed out for `{filename}` after {UPLOAD_TIMEOUT_SECONDS}s. Server might be slow or network unstable.")
+                    LOGGER.error(f"Gofile upload timed out for {filename}.")
                 else:
                     await event.reply(f"❌ Network error during Gofile upload for `{filename}`: {e}")
                     LOGGER.error(f"Network error during Gofile upload for {filename}: {e}")
@@ -207,10 +209,10 @@ async def upload_gofile(process_status):
             except Exception as e:
                 # Catch MemoryError specifically if it still occurs somehow
                 if isinstance(e, MemoryError):
-                     await event.reply(f"❌ Ran out of memory during Gofile upload for `{filename}`. File might be too large for available resources.")
-                     LOGGER.error(f"MemoryError during Gofile upload for {filename}. File size: {get_human_size(os.path.getsize(file_path))}")
+                    await event.reply(f"❌ Ran out of memory during Gofile upload for `{filename}`. File might be too large for available resources.")
+                    LOGGER.error(f"MemoryError during Gofile upload for {filename}. File size: {get_human_size(os.path.getsize(file_path))}")
                 else:
                     await event.reply(f"❌ An unexpected error occurred during Gofile upload for `{filename}`: {e}")
-                    LOGGER.exception(f"Unexpected error during Gofile upload for {filename}:") # Log full traceback
+                    LOGGER.exception(f"Unexpected error during Gofile upload for {filename}:")  # Log full traceback
 
     LOGGER.info(f"Gofile upload process finished for {process_id}")
