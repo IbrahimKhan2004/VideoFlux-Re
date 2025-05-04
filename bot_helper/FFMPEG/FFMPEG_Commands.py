@@ -3,15 +3,12 @@
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
-# Highlighted change: Import os.path for splitext and join
-from os.path import isdir, splitext, exists, splitext as os_path_splitext, join as os_path_join # Added join
+# Highlighted change: Import os.path for splitext
+from os.path import isdir, splitext, exists, splitext as os_path_splitext
 # End of highlighted change
 from os import makedirs, remove
 # Highlighted change: Import math for ceil used in bufsize calculation
 from math import ceil
-# Highlighted change: Import LOGGER
-from config.config import LOGGER
-# End of highlighted change
 
 def create_direc(direc):
     if not isdir(direc):
@@ -40,32 +37,6 @@ def get_output_name(process_status, convert_quality=False):
     return out_file_name
 
 
-# Highlighted change: Function to generate credit subtitle file
-def generate_credit_subtitle(process_status):
-    """Generates a temporary .srt file with credit text."""
-    user_id = process_status.user_id
-    credit_text_setting = get_data().get(user_id, {}).get('credit_subtitle_text', "")
-    default_credit_text = "[ Encoded By BashAFK ~ TG_Eliteflix_Official ]"
-
-    text_to_use = credit_text_setting if credit_text_setting else default_credit_text
-
-    # Ensure the directory exists
-    create_direc(process_status.dir)
-    credit_srt_path = os_path_join(process_status.dir, "credit_subtitle.srt") # Use os.path.join
-
-    credit_content = f"1\n00:00:00,000 --> 00:01:00,000\n{text_to_use}"
-
-    try:
-        # Use 'w' mode to overwrite if exists, with utf-8 encoding
-        with open(credit_srt_path, "w", encoding="utf-8") as f:
-            f.write(credit_content)
-        LOGGER.info(f"Generated credit subtitle file: {credit_srt_path}")
-        return credit_srt_path
-    except Exception as e:
-        LOGGER.error(f"Failed to generate credit subtitle file for {process_status.process_id}: {e}")
-        return None
-# End of highlighted change
-
 def get_commands(process_status):
     # REMOVED: Compress command block
     # if process_status.process_type==Names.compress:
@@ -78,9 +49,6 @@ def get_commands(process_status):
     if process_status.process_type==Names.merge: # MODIFIED: Changed elif to if
             merge_map = get_data()[process_status.user_id]['merge']['map']
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
-# Highlighted change: Check if credit subtitle should be added
-            add_credit_sub = get_data().get(process_status.user_id, {}).get('add_credit_subtitle', False)
-# End of highlighted change
             create_direc(f"{process_status.dir}/merge/")
             log_file = f"{process_status.dir}/merge/merge_logs_{process_status.process_id}.txt"
             infile_names = ""
@@ -100,41 +68,14 @@ def get_commands(process_status):
                                         "-f", "concat",
                                         "-safe", "0"]
             if merge_fix_blank:
-                 command += ['-segment_time_metadata', '1']
-            command+=["-i", f'{str(input_file)}'] # Input 0: Concatenated videos
-
-# Highlighted change: Add credit subtitle input if enabled
-            credit_srt_file = None
-            if add_credit_sub:
-                credit_srt_file = generate_credit_subtitle(process_status)
-                if credit_srt_file:
-                    command += ['-i', credit_srt_file] # Input 1: Credit subtitle
-# End of highlighted change
-
+                command += ['-segment_time_metadata', '1']
+            command+=["-i", f'{str(input_file)}']
             if merge_fix_blank:
                 command += ['-vf', 'select=concatdec_select', '-af', 'aselect=concatdec_select,aresample=async=1']
-
             if merge_map:
-                # Explicit mapping needed if adding credit sub or not using simple copy
-                command += ['-map', '0:v?', '-map', '0:a?'] # Map video/audio from concat input (0)
-                if credit_srt_file:
-                    command += ['-map', '1:s:0'] # Map credit sub (input 1, stream 0) -> output sub 0
-                    command += ['-map', '0:s?'] # Map existing subs from concat input (0) -> output sub 1 onwards
-                    command += ['-c:s:0', 'mov_text'] # Encode credit sub (output sub 0)
-                    command += ['-metadata:s:s:0', 'title="English Credit"', '-metadata:s:s:0', 'language=eng']
-                    command += ['-disposition:s:0', 'default']
-                    # Copy video, audio, and existing subs (output subs 1 onwards)
-                    command += ['-c:v', 'copy', '-c:a', 'copy']
-                    # Determine number of existing subs to copy (this is complex without ffprobe, rely on FFmpeg default or copy all)
-                    command += ['-c:s', 'copy'] # Apply copy to all subtitle streams *except* the one specified before (s:0)
-                else:
-                    # No credit sub, map existing subs and copy all
-                    command += ['-map', '0:s?'] # Map existing subs from input 0
-                    command += ["-c", "copy"] # Simple copy if no credit sub and fix_blank is false
-            elif not merge_fix_blank: # If merge_map is false and fix_blank is false
-                 # If credit sub was added, we MUST map, so this case implies no credit sub
-                 command+= ["-c", "copy"] # Simple copy
-
+                command+=['-map','0']
+            if not merge_fix_blank:
+                command+= ["-c", "copy"]
             # Added metadata from VFBITMOD-update
             custom_metadata_title = get_data()[process_status.user_id]['metadata']
             command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
@@ -205,9 +146,6 @@ def get_commands(process_status):
             # Highlighted change: Get CBR setting
             convert_cbr = get_data()[process_status.user_id]['cbr'] if get_data()[process_status.user_id]['use_cbr'] else None # Use custom if enabled
 # Highlighted change: Get tune setting
-# Highlighted change: Check if credit subtitle should be added
-            add_credit_sub = get_data().get(process_status.user_id, {}).get('add_credit_subtitle', False)
-# End of highlighted change
             video_tune = get_data()[process_status.user_id]['video']['tune']
 # End of highlighted change
             # --- End of VFBITMOD-update Integration ---
@@ -225,15 +163,7 @@ def get_commands(process_status):
             command = ['ffmpeg', '-nostdin', '-hide_banner', # Reverted zender -> ffmpeg, Added -nostdin
             # End of highlighted change
                                             '-progress', f"{log_file}",
-                                            '-i', f'{input_file}'] # Input 0: Main video
-
-# Highlighted change: Add credit subtitle input if enabled
-            credit_srt_file = None
-            if add_credit_sub:
-                credit_srt_file = generate_credit_subtitle(process_status)
-                if credit_srt_file:
-                    command += ['-i', credit_srt_file] # Input 1: Credit subtitle
-# End of highlighted change
+                                            '-i', f'{input_file}']
 
             # --- Start of VFBITMOD-update Command Logic ---
             # Video Encoding Part
@@ -376,32 +306,12 @@ def get_commands(process_status):
                 command+= ['-c:a', 'copy']
 
             # Common Settings
-            # Stream Mapping
             if convert_map:
-                command += ['-map', '0:v?', '-map', f'{str(process_status.amap_options)}?'] # Map video/audio from input 0
-                if credit_srt_file:
-                    command += ['-map', '1:s:0'] # Map credit sub (input 1) -> output sub 0
-                    if convert_copysub:
-                        command += ['-map', '0:s?'] # Map existing subs from input 0 -> output sub 1 onwards
-                elif convert_copysub:
-                     command += ["-map", "0:s?"] # Map existing subs if no credit sub
-            # Subtitle Codec Handling (must come after mapping)
-            subtitle_output_index = 0 # Start index for output subtitles
-            if credit_srt_file:
-                command += ['-c:s:0', 'mov_text'] # Encode credit sub (output sub 0)
-                command += ['-metadata:s:s:0', 'title="English Credit"', '-metadata:s:s:0', 'language=eng']
-                command += ['-disposition:s:0', 'default']
-                subtitle_output_index = 1 # Next subtitle stream will be index 1
-
+                command+=['-map','0:v?',
+                                            '-map',f'{str(process_status.amap_options)}?',
+                                            "-map", "0:s?"]
             if convert_copysub:
-                # Apply copy codec to subsequent subtitle streams if they exist and were mapped
-                # We assume existing subs start from output index subtitle_output_index
-                # FFmpeg might handle this automatically if no specific codec is set, but being explicit is safer
-                # This requires knowing how many existing subs there are, which is hard without ffprobe.
-                # A simpler approach is to set the default subtitle codec to copy *after* setting the credit one.
-                command += [f'-c:s:{i}', 'copy' for i in range(subtitle_output_index, 10)] # Apply copy to potential next 10 subs (safer than guessing exact count)
-                # Or just set the general subtitle codec to copy if map is false but copy_sub is true
-                # if not convert_map: command += ["-c:s", "copy"] # This might override the mov_text for credit sub if not careful with order
+                command+= ["-c:s", "copy"]
 
             convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
             if convert_use_queue_size:
@@ -414,10 +324,6 @@ def get_commands(process_status):
             if convert_encoder != 'VP9':
                 command+= ['-preset', convert_preset]
 # End of highlighted change
-            # Add global metadata title
-            custom_metadata_title = get_data()[process_status.user_id]['metadata']
-            command += ['-metadata', f"title={custom_metadata_title}"]
-
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
 
