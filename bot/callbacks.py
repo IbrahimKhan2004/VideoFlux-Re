@@ -3,7 +3,7 @@
 from telethon import events
 from telethon.tl.custom import Button
 from config.config import Config
-from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file, get_text_data # Added get_text_data
+from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file #get_text_data # Added get_text_data
 from bot_helper.Database.User_Data import get_data, new_user, saveconfig, saveoptions, resetdatabase
 from os.path import exists
 from bot_helper.Telegram.Telegram_Client import Telegram
