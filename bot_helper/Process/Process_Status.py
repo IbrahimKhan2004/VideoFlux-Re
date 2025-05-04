@@ -17,12 +17,12 @@ from os.path import getsize, isdir, exists, splitext # Added splitext
 from shutil import move as shutil_move
 from os import makedirs, rename
 from aiofiles import open as aio_open
-# Highlighted change: Import get_video_duration
+# Highlighted change: Import get_video_duration and rclone_get_link from Helper_Functions
 from bot_helper.Others.Helper_Functions import get_video_duration
 # End of highlighted change
-# Highlighted change: Import rclone_get_link
-from bot_helper.Rclone.Rclone_Upload import rclone_get_link
-# End of highlighted change
+# Highlighted change: Import rclone_get_link from Helper_Functions instead of Rclone_Upload
+from bot_helper.Others.Helper_Functions import rclone_get_link
+# End of highlighted change (Corrected import location)
 
 
 def create_direc(direc):
@@ -110,17 +110,18 @@ async def check_file_drive_link(search_command, event, fileloc, r_config, drive_
 
 
 
-async def rclone_get_link(remote,name, conf):
-        cmd =  ["rclone", "link", f'--config={conf}', f"{remote}:{name}"]
-        LOGGER.info(f"Getting Uploaded File {name} Link From {remote}")
-        process = await create_subprocess_exec(*cmd, stdout=asyncioPIPE, stderr=asyncioPIPE)
-        out, _ = await process.communicate()
-        url = out.decode().strip()
-        return_code = await process.wait()
-        if return_code == 0:
-                return url
-        else:
-                return False
+# This function is now defined in Helper_Functions.py
+# async def rclone_get_link(remote,name, conf):
+#         cmd =  ["rclone", "link", f'--config={conf}', f"{remote}:{name}"]
+#         LOGGER.info(f"Getting Uploaded File {name} Link From {remote}")
+#         process = await create_subprocess_exec(*cmd, stdout=asyncioPIPE, stderr=asyncioPIPE)
+#         out, _ = await process.communicate()
+#         url = out.decode().strip()
+#         return_code = await process.wait()
+#         if return_code == 0:
+#                 return url
+#         else:
+#                 return False
 
 
 
