@@ -1,8 +1,10 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Others/Helper_Functions.py ---
+
 from time import time
 from os import remove, mkdir
 from shutil import rmtree
 from asyncio import get_event_loop
-from os.path import exists, isdir
+from os.path import exists, isdir # Keep existing imports
 from subprocess import PIPE as subprocessPIPE, STDOUT as subprocessSTDOUT
 from subprocess import run as subprocessrun, check_output
 from shlex import split as shlexsplit
@@ -18,6 +20,9 @@ from config.config import Config
 from dotenv import dotenv_values
 from psutil import disk_usage, cpu_percent, swap_memory, cpu_count, virtual_memory, net_io_counters, boot_time
 from magic import Magic
+# Highlighted change: Add imports needed for rclone_get_link
+from asyncio import create_subprocess_exec
+from asyncio.subprocess import PIPE as asyncioPIPE
 from re import search as re_search
 from urllib.parse import parse_qs, urlparse
 
@@ -93,7 +98,7 @@ def get_time_from_string(check_time):
         return datetime.strptime(check_time, '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(IST).strftime('%I:%M:%S %p (%d-%b)')
     except:
         return check_time
-    
+
 
 ###############------Size_Functions------###############
 def get_human_size(num):
@@ -172,7 +177,7 @@ async def check_file_exists(file):
         return True
     else:
         return False
-    
+
 
 ###############------Check_Files_Exists------###############
 async def check_files_exists(files):
@@ -323,7 +328,7 @@ def get_value(dlist, dtype, value):
 def get_env_dict(env_file):
     if exists(env_file):
         return dict(dotenv_values(env_file))
-    
+
 
 ###############------Get_keys_List_ENV_File------###############
 def get_env_keys(env_file):
@@ -415,7 +420,7 @@ def get_media_streams(path):
             is_video = True
         elif stream.get('codec_type') == 'audio':
             is_audio = True
-            
+
     return is_video, is_audio, is_image
 
 
@@ -439,3 +444,20 @@ def getIdFromUrl(link):
             return parse_qs(parsed.query)['id'][0]
         except:
             return False
+
+# Highlighted change: Added rclone_get_link function moved from Rclone_Upload.py
+async def rclone_get_link(remote,name, conf):
+        """Gets the public link for a file uploaded via rclone."""
+        cmd =  ["rclone", "link", f'--config={conf}', f"{remote}:{name}"]
+        LOGGER.info(f"Getting Uploaded File {name} Link From {remote}")
+        process = await create_subprocess_exec(*cmd, stdout=asyncioPIPE, stderr=asyncioPIPE)
+        out, err = await process.communicate() # Capture stderr as well
+        url = out.decode().strip()
+        return_code = await process.wait()
+        if return_code == 0 and url: # Check if URL is not empty
+                return url
+        else:
+                LOGGER.error(f"Failed to get rclone link for {remote}:{name}. Return Code: {return_code}, Stderr: {err.decode().strip()}")
+                return False
+# End of highlighted change
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Others/Helper_Functions.py ---
