@@ -20,6 +20,9 @@ from aiofiles import open as aio_open
 # Highlighted change: Import get_video_duration
 from bot_helper.Others.Helper_Functions import get_video_duration
 # End of highlighted change
+# Highlighted change: Import rclone_get_link
+from bot_helper.Rclone.Rclone_Upload import rclone_get_link
+# End of highlighted change
 
 
 def create_direc(direc):
@@ -187,9 +190,11 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 # Highlighted change: Added Fix Timestamps display
                 merge_settings = get_data().get(user_id, {}).get('merge', {})
                 merge_fix_timestamps = merge_settings.get('fix_timestamps', False)
+# Highlighted change: Get credit subtitle setting status
+                add_credit_sub = get_data().get(user_id, {}).get('add_credit_subtitle', True)
                 text = f"\n**MAP**: {get_data()[user_id]['merge']['map']} | **Fix Blank**: {get_data()[user_id]['merge']['fix_blank']}"
-                text += f"\n**Fix Timestamps**: {merge_fix_timestamps}" # Display the setting status
-                # End of highlighted change
+                text += f"\n**Fix Timestamps**: {merge_fix_timestamps} | **Credit Sub**: {add_credit_sub}" # Display the setting status
+# End of highlighted change
                 # Added metadata display from VFBITMOD-update
                 text += f"\n**Metadata**: {get_data()[user_id]['metadata']}"
                 return text
@@ -212,6 +217,8 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 abit = get_data()[user_id]['abit'] if get_data()[user_id]['use_abit'] else 'N/A'
                 acodec = get_data()[user_id]['audio']['acodec'] # Corrected: Use user_id directly
                 achannel = get_data()[user_id]['audio']['achannel'] # Corrected: Use user_id directly
+# Highlighted change: Get credit subtitle setting status
+                add_credit_sub = get_data().get(user_id, {}).get('add_credit_subtitle', True)
                 encode_mode = get_data()[user_id]['convert']['encode'] # Corrected: Use user_id directly
 # Highlighted change: Get tune setting
                 video_tune = get_data()[user_id]['video']['tune'] # Corrected: Use user_id directly
@@ -241,7 +248,7 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
 
                 # Display preset (always shown, value is interpreted differently for VP9)
                 text += f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {convert_preset}\n"\
-                          f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
+                          f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subs**: {get_data()[user_id]['convert']['copy_sub']} | **Credit Sub**: {add_credit_sub}\n"\
                           f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
 # End of highlighted change
                 # --- End of VFBITMOD-update Status Head ---
@@ -554,16 +561,23 @@ class ProcessStatus:
                                         # Highlighted change: Read frame count as well
                                         current_frame = 0 # Default value
                                         # End of highlighted change
-                                        with open(status.log_file, 'r+') as file:
-                                                ffmpeg_text = file.read()
-                                                time_in_us = get_value(refindall("out_time_ms=(.+)", ffmpeg_text), int, 1)
-                                                progress=get_value(refindall("progress=(\w+)", ffmpeg_text), str, "error")
-                                                speed=get_value(refindall("speed=(\d+\.?\d*)", ffmpeg_text), float, 1)
-                                                # Highlighted change: Get current frame count
-                                                current_frame = get_value(refindall("frame=\s*(\d+)", ffmpeg_text), int, 0) # Added space tolerance
-                                                # End of highlighted change
-                                                # bitrate = get_value(refindall("bitrate=(.+)", ffmpeg_text), str, "0")
-                                                # fps = get_value(refindall("fps=(.+)", ffmpeg_text), str, "0")
+                                        try: # Add try-except for file reading
+                                            async with aio_open(status.log_file, 'r+') as file: # Use async open
+                                                    ffmpeg_text = await file.read() # Use await
+                                                    time_in_us = get_value(refindall("out_time_ms=(.+)", ffmpeg_text), int, 1)
+                                                    progress=get_value(refindall("progress=(\w+)", ffmpeg_text), str, "error")
+                                                    speed=get_value(refindall("speed=(\d+\.?\d*)", ffmpeg_text), float, 1)
+                                                    # Highlighted change: Get current frame count
+                                                    current_frame = get_value(refindall("frame=\s*(\d+)", ffmpeg_text), int, 0) # Added space tolerance
+                                                    # End of highlighted change
+                                                    # bitrate = get_value(refindall("bitrate=(.+)", ffmpeg_text), str, "0")
+                                                    # fps = get_value(refindall("fps=(.+)", ffmpeg_text), str, "0")
+                                        except Exception as log_read_err:
+                                            LOGGER.warning(f"Could not read ffmpeg log file {status.log_file}: {log_read_err}")
+                                            time_in_us = 1
+                                            progress="error"
+                                            speed=1
+                                            current_frame = 0 # Ensure frame is 0 if log read fails
                                 else:
                                         time_in_us = 1
                                         progress="error"
