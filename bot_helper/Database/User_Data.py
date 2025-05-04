@@ -41,10 +41,6 @@ async def new_user(user_id, dbsave):
 # Highlighted change: Added default tune setting
         DATA[user_id]['video']['tune'] = 'None' # Added default tune setting
 # End of highlighted change
-# Highlighted change: Added default credit subtitle settings
-        DATA[user_id]['add_credit_subtitle'] = True # Default to ON
-        DATA[user_id]['credit_subtitle_text'] = "" # Default to empty (uses hardcoded text)
-# End of highlighted change
         DATA[user_id]['audio'] = {}
         DATA[user_id]['audio']['achannel'] = '2'
         DATA[user_id]['audio']['acodec'] = 'AAC'
@@ -124,9 +120,6 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['merge']['map_sub'] = True
         DATA[user_id]['merge']['map'] = True
         DATA[user_id]['merge']['fix_blank'] = False
-# Highlighted change: Added merge fix_timestamps default
-        DATA[user_id]['merge']['fix_timestamps'] = False # Default to False
-# End of highlighted change
         # REMOVED: Dynamic thumbnail default
         # DATA[user_id]['custom_thumbnail'] = False
         DATA[user_id]['convert_video'] = False # Kept this, might be used elsewhere? Re-evaluate if needed.
