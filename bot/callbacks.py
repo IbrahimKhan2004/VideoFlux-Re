@@ -3,7 +3,7 @@
 from telethon import events
 from telethon.tl.custom import Button
 from config.config import Config
-from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file
+from bot_helper.Others.Helper_Functions import delete_all, get_config, get_env_dict, export_env_file, get_text_data # Added get_text_data
 from bot_helper.Database.User_Data import get_data, new_user, saveconfig, saveoptions, resetdatabase
 from os.path import exists
 from bot_helper.Telegram.Telegram_Client import Telegram
@@ -100,7 +100,13 @@ async def callback(event):
         # Highlighted change: Added check for merge fix_timestamps key
         if 'merge' not in user_data or 'fix_timestamps' not in user_data.get('merge', {}):
              await saveconfig(user_id, 'merge', 'fix_timestamps', False, SAVE_TO_DATABASE)
-        # End of highlighted change
+# End of highlighted change
+# Highlighted change: Added check for credit subtitle keys
+        if 'add_credit_subtitle' not in user_data:
+            await saveoptions(user_id, 'add_credit_subtitle', True, SAVE_TO_DATABASE)
+        if 'credit_subtitle_text' not in user_data: # Check separately in case only one is missing
+            await saveoptions(user_id, 'credit_subtitle_text', "", SAVE_TO_DATABASE)
+# End of highlighted change
         # --- End of Key Check ---
 
         if txt.startswith("settings"):
@@ -529,6 +535,26 @@ async def general_callback(event, txt, user_id, chat_id):
                             return
                 await saveoptions(user_id, 'custom_metadata', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Custom Metadata - {str(new_position)}")
+# Highlighted change: Added handlers for credit subtitle settings
+            elif txt.startswith("generaladd_credit_subtitle"):
+                await saveoptions(user_id, 'add_credit_subtitle', eval(new_position), SAVE_TO_DATABASE)
+                await event.answer(f"✅Add Credit Subtitle - {str(new_position)}")
+            elif txt.startswith("generalset_credit_text"):
+                current_credit_text = user_data.get('credit_subtitle_text', "")
+                display_text = current_credit_text if current_credit_text else "[ Encoded By BashAFK ~ TG_Eliteflix_Official ] (Default)"
+                await event.answer(f"Current Credit Text:\n{display_text}\n\nSend new text or 'default' to use the standard credit.", alert=True)
+                credit_text_input = await get_text_data(chat_id, user_id, event, 120, "Send New Credit Text or 'default'")
+                if credit_text_input:
+                    new_text = credit_text_input.message.message.strip()
+                    if new_text.lower() == 'default':
+                        await saveoptions(user_id, 'credit_subtitle_text', "", SAVE_TO_DATABASE)
+                        await credit_text_input.reply("✅Credit text set to default.")
+                    else:
+                        await saveoptions(user_id, 'credit_subtitle_text', new_text, SAVE_TO_DATABASE)
+                        await credit_text_input.reply(f"✅Credit text set to:\n{new_text}")
+                    edit = False # Force message refresh
+                return # Don't fall through after handling this
+# End of highlighted change
             elif txt.startswith("generaluploadtg"):
                 if not eval(new_position):
                     # Highlighted change: Check for Rclone config OR Gofile (no config needed for Gofile yet)
@@ -595,6 +621,9 @@ async def general_callback(event, txt, user_id, chat_id):
             ss_no = user_data.get('ss_no', 5)
             gen_sample = user_data.get('gen_sample', False)
 
+# Highlighted change: Get credit subtitle settings
+            add_credit_subtitle = user_data.get('add_credit_subtitle', True)
+# End of highlighted change
             KeyBoard = []
             # REMOVED: Audio selection buttons
             # KeyBoard.append([Button.inline(f'🥝Auto Select Audio - {str(select_stream)}', 'BashAFK')])
@@ -617,6 +646,13 @@ async def general_callback(event, txt, user_id, chat_id):
             KeyBoard.append([Button.inline(f'🪀Custom Metadata - {str(custom_metadata)} [Click To See]', 'custom_metedata')])
             for board in gen_keyboard(bool_list, custom_metadata, "generalcustommetadata", 2, False):
                 KeyBoard.append(board)
+# Highlighted change: Add credit subtitle buttons
+            KeyBoard.append([Button.inline(f'✨Add Credit Subtitle - {str(add_credit_subtitle)}', 'BashAFK')])
+            for board in gen_keyboard(bool_list, add_credit_subtitle, "generaladd_credit_subtitle", 2, False):
+                KeyBoard.append(board)
+            if add_credit_subtitle:
+                KeyBoard.append([Button.inline(f'✏️Set Credit Text (Click to Change/View)', 'generalset_credit_text')])
+# End of highlighted change
             KeyBoard.append([Button.inline(f'🧵Upload On TG - {str(upload_tg)}', 'BashAFK')])
             for board in gen_keyboard(bool_list, upload_tg, "generaluploadtg", 2, False):
                 KeyBoard.append(board)
@@ -668,6 +704,8 @@ async def general_callback(event, txt, user_id, chat_id):
                 except:
                     pass
             else:
+                # If edit is False (likely after setting text), send a new message instead of editing
+                await event.delete() # Delete the "Send New Credit Text..." prompt
                 await TELETHON_CLIENT.send_message(chat_id, "⚙ General Settings", buttons=KeyBoard)
             return
 
@@ -1166,6 +1204,8 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                     pass
             else:
                 # Highlighted change: Updated title
+                # If edit is False (likely after setting text), send a new message instead of editing
+                await event.delete() # Delete the prompt message
                 await TELETHON_CLIENT.send_message(chat_id, "❤ Rate Control (VBR/CRF/ABR/CBR) Settings", buttons=KeyBoard) # Modified title
             return
 # End of Added from VFBITMOD-update
