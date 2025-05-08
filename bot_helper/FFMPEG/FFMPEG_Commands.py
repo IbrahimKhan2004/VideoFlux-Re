@@ -54,7 +54,10 @@ def get_commands(process_status):
             infile_names = ""
             file_duration =0
             for dwfile_loc in process_status.send_files:
-                infile_names += f"file '{str(dwfile_loc)}'\n"
+# START OF MODIFIED BLOCK ###################################################
+                escaped_dwfile_loc = str(dwfile_loc).replace("'", "'\\''") # Escape single quotes for concat demuxer
+                infile_names += f"file '{escaped_dwfile_loc}'\n"
+# END OF MODIFIED BLOCK #####################################################
                 file_duration += get_video_duration(dwfile_loc)
             input_file = f"{process_status.dir}/merge/merge_files.txt"
             with open(input_file, "w", encoding="utf-8") as f:
@@ -63,13 +66,11 @@ def get_commands(process_status):
             base_output_name, _ = os_path_splitext(get_output_name(process_status)) # Get name without extension
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
-# START OF MODIFIED BLOCK ###################################################
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}",
                                         "-f", "concat",
                                         "-safe", "0",
                                         "-ignore_unknown"] # Added -ignore_unknown flag
-# END OF MODIFIED BLOCK #####################################################
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
             command+=["-i", f'{str(input_file)}']
