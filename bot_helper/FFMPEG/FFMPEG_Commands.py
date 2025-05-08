@@ -63,10 +63,13 @@ def get_commands(process_status):
             base_output_name, _ = os_path_splitext(get_output_name(process_status)) # Get name without extension
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
+# START OF MODIFIED BLOCK ###################################################
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}",
                                         "-f", "concat",
-                                        "-safe", "0"]
+                                        "-safe", "0",
+                                        "-ignore_unknown"] # Added -ignore_unknown flag
+# END OF MODIFIED BLOCK #####################################################
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
             command+=["-i", f'{str(input_file)}']
