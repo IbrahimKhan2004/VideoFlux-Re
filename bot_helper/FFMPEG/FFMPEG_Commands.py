@@ -47,17 +47,15 @@ def get_commands(process_status):
     #     ... (block content removed) ...
 
     if process_status.process_type==Names.merge: # MODIFIED: Changed elif to if
-            merge_map = get_data()[process_status.user_id]['merge']['map']
+            merge_map = get_data()[process_status.user_id]['merge']['map'] # Yeh setting abhi bhi use ho sakti hai decide karne ke liye ki map karna hai ya nahi
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
             create_direc(f"{process_status.dir}/merge/")
             log_file = f"{process_status.dir}/merge/merge_logs_{process_status.process_id}.txt"
             infile_names = ""
             file_duration =0
             for dwfile_loc in process_status.send_files:
-# START OF MODIFIED BLOCK ###################################################
                 escaped_dwfile_loc = str(dwfile_loc).replace("'", "'\\''") # Escape single quotes for concat demuxer
                 infile_names += f"file '{escaped_dwfile_loc}'\n"
-# END OF MODIFIED BLOCK #####################################################
                 file_duration += get_video_duration(dwfile_loc)
             input_file = f"{process_status.dir}/merge/merge_files.txt"
             with open(input_file, "w", encoding="utf-8") as f:
@@ -76,8 +74,18 @@ def get_commands(process_status):
             command+=["-i", f'{str(input_file)}']
             if merge_fix_blank:
                 command += ['-vf', 'select=concatdec_select', '-af', 'aselect=concatdec_select,aresample=async=1']
-            if merge_map:
-                command+=['-map','0']
+# START OF MODIFIED BLOCK ###################################################
+            if merge_map: # Agar user ne settings mein map True rakha hai
+                command+=['-map','0:v?', # Video streams map karo (agar hain)
+                           '-map','0:a?', # Audio streams map karo (agar hain)
+                           '-map','0:s?'] # Subtitle streams map karo (agar hain)
+                # Attachments (0:t) ko yahan explicitly map nahi kiya gaya hai
+            # Agar merge_map False hai, toh FFmpeg default stream selection karega (usually best video, best audio)
+            # ya fir agar -c copy hai toh specific mapping zaroori ho jaati hai.
+            # Is case mein, agar merge_map False hai aur -c copy hai, toh FFmpeg error de sakta hai.
+            # Behtar hai ki merge_map hamesha True rakha jaaye merge ke liye aur specific streams map kiye jaayein.
+            # For simplicity, assuming merge_map True means we want video, audio, subtitles.
+# END OF MODIFIED BLOCK #####################################################
             if not merge_fix_blank:
                 command+= ["-c", "copy"]
             # Added metadata from VFBITMOD-update
