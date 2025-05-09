@@ -54,8 +54,10 @@ def get_commands(process_status):
             infile_names = ""
             file_duration =0
             for dwfile_loc in process_status.send_files:
+# START OF MODIFIED BLOCK ###################################################
                 escaped_dwfile_loc = str(dwfile_loc).replace("'", "'\\''") # Escape single quotes for concat demuxer
                 infile_names += f"file '{escaped_dwfile_loc}'\n"
+# END OF MODIFIED BLOCK #####################################################
                 file_duration += get_video_duration(dwfile_loc)
             input_file = f"{process_status.dir}/merge/merge_files.txt"
             with open(input_file, "w", encoding="utf-8") as f:
@@ -92,39 +94,18 @@ def get_commands(process_status):
         softmux_encode = get_data()[process_status.user_id]['softmux']['encode']
         create_direc(f"{process_status.dir}/softmux/")
         log_file = f"{process_status.dir}/softmux/softmux_logs_{process_status.process_id}.txt"
-        input_file = f'{str(process_status.send_files[-1])}' # This is the main video file (input 0)
+        input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/softmux/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Main video input (index 0)
-
-        # Add all subtitle files as inputs and prepare their mapping
-        subtitle_input_options = []
-        subtitle_stream_maps = []
-        attachment_stream_maps = [] # To store attachment maps from subtitle files
-
-        for idx, subtitle_path in enumerate(process_status.subtitles):
-            input_index = idx + 1 # Subtitle files start from input index 1
-            subtitle_input_options += ['-i', f'{str(subtitle_path)}']
-            subtitle_stream_maps += ['-map', f'{input_index}:s?'] # Map all subtitle streams from this subtitle file
-            # Also map all attachment streams from this subtitle file
-            attachment_stream_maps += ['-map', f'{input_index}:t?']
-
-        command += subtitle_input_options
-
-        # Mapping streams:
-        command += ['-map','0:v?'] # Map original video stream from input 0 (main video)
-        command += ['-map',f'{str(process_status.amap_options)}?'] # Map original audio streams from input 0 (main video)
-        command += ['-map','0:s?'] # Map original subtitle streams from input 0 (main video)
-# START OF MODIFIED BLOCK ###################################################
-        # command += ['-map','0:t?'] # REMOVED: Do not map attachments from original video (input 0)
-# END OF MODIFIED BLOCK #####################################################
-
-        command += subtitle_stream_maps # Add maps for new subtitle streams
-        command += attachment_stream_maps # Add maps for attachments from subtitle files
-
-        command += ['-disposition:s:0','default'] 
-        
+        input_sub = []
+        sub_map = []
+        smap = 1
+        for subtitle in process_status.subtitles:
+            input_sub += ['-i', f'{str(subtitle)}']
+            sub_map+= ['-map', f'{smap}:0']
+            smap +=1
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
+        command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
         if softmux_encode:
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
                 if softmux_use_crf:
@@ -137,13 +118,11 @@ def get_commands(process_status):
                                 command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
                         else:
                                 command += ['-vcodec','libx264', '-preset', softmux_preset]
-                command += ['-c:a', 'copy']
-                command += ['-c:t', 'copy'] 
         else:
                 command += ['-c','copy']
 
-        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"]
-        command += ["-y", f"{output_file}"]
+        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"]
+
         return command, log_file, input_file, output_file, file_duration
 
     # REMOVED: SoftReMux command block
