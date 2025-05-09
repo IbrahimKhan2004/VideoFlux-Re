@@ -92,27 +92,39 @@ def get_commands(process_status):
         softmux_encode = get_data()[process_status.user_id]['softmux']['encode']
         create_direc(f"{process_status.dir}/softmux/")
         log_file = f"{process_status.dir}/softmux/softmux_logs_{process_status.process_id}.txt"
-        input_file = f'{str(process_status.send_files[-1])}'
+        input_file = f'{str(process_status.send_files[-1])}' # This is the main video file (input 0)
         output_file = f"{process_status.dir}/softmux/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        input_sub = []
-        sub_map = []
-        smap = 1
-        for subtitle in process_status.subtitles:
-            input_sub += ['-i', f'{str(subtitle)}']
-            sub_map+= ['-map', f'{smap}:0']
-            smap +=1
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        command+= input_sub # Add new subtitle input files
-# START OF MODIFIED BLOCK ###################################################
-        # Mapping streams: new subtitles, then original video, audio, original subtitles, and original attachments
-        command += sub_map # Maps new subtitles (e.g., -map 1:0, -map 2:0 for inputs from input_sub)
-        command += ['-map','0:v?'] # Map original video stream from input 0 (optional)
-        command += ['-map',f'{str(process_status.amap_options)}?'] # Map original audio streams from input 0 (e.g., 0:a, optional)
-        command += ['-map','0:s?'] # Map original subtitle streams from input 0 (optional)
-        command += ['-map','0:t?'] # Map original attachment streams from input 0 (e.g., fonts, optional)
-        command += ['-disposition:s:0','default'] # Set the first output subtitle stream as default
+        
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Main video input (index 0)
 
+        # Add all subtitle files as inputs and prepare their mapping
+        subtitle_input_options = []
+        subtitle_stream_maps = []
+        attachment_stream_maps = [] # To store attachment maps from subtitle files
+
+        for idx, subtitle_path in enumerate(process_status.subtitles):
+            input_index = idx + 1 # Subtitle files start from input index 1
+            subtitle_input_options += ['-i', f'{str(subtitle_path)}']
+            subtitle_stream_maps += ['-map', f'{input_index}:s?'] # Map all subtitle streams from this subtitle file
+            # Also map all attachment streams from this subtitle file
+            attachment_stream_maps += ['-map', f'{input_index}:t?']
+
+        command += subtitle_input_options
+
+        # Mapping streams:
+        command += ['-map','0:v?'] # Map original video stream from input 0 (main video)
+        command += ['-map',f'{str(process_status.amap_options)}?'] # Map original audio streams from input 0 (main video)
+        command += ['-map','0:s?'] # Map original subtitle streams from input 0 (main video)
+# START OF MODIFIED BLOCK ###################################################
+        # command += ['-map','0:t?'] # REMOVED: Do not map attachments from original video (input 0)
+# END OF MODIFIED BLOCK #####################################################
+
+        command += subtitle_stream_maps # Add maps for new subtitle streams
+        command += attachment_stream_maps # Add maps for attachments from subtitle files
+
+        command += ['-disposition:s:0','default'] 
+        
         if softmux_encode:
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
                 if softmux_use_crf:
@@ -125,17 +137,13 @@ def get_commands(process_status):
                                 command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
                         else:
                                 command += ['-vcodec','libx264', '-preset', softmux_preset]
-                # If video is encoded, explicitly copy audio and attachments
                 command += ['-c:a', 'copy']
-                command += ['-c:t', 'copy']
+                command += ['-c:t', 'copy'] 
         else:
-                # If not encoding video, copy all mapped streams (video, audio, original subs, attachments)
                 command += ['-c','copy']
 
-        # Set codec for all subtitle streams (original and new ones that were mapped)
         command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"]
         command += ["-y", f"{output_file}"]
-# END OF MODIFIED BLOCK #####################################################
         return command, log_file, input_file, output_file, file_duration
 
     # REMOVED: SoftReMux command block
