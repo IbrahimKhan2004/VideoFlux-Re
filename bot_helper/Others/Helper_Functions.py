@@ -1,3 +1,4 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/Others/Helper_Functions.py ---
 from time import time
 from os import remove, mkdir
 from shutil import rmtree
@@ -16,6 +17,10 @@ from string import ascii_lowercase, digits
 from random import choices
 from config.config import Config
 from dotenv import dotenv_values
+# <<<<< MODIFIED/ADDED START >>>>>
+# psutil is already imported, subprocess is already imported
+import psutil # Ensure psutil is imported if not already (it is in the original)
+# <<<<< MODIFIED/ADDED END >>>>>
 from psutil import disk_usage, cpu_percent, swap_memory, cpu_count, virtual_memory, net_io_counters, boot_time
 from magic import Magic
 from re import search as re_search
@@ -251,6 +256,42 @@ async def execute(cmnd: str) -> Tuple[str, str, int, int]:
 
 #////////////////////////////////////Other_Functions////////////////////////////////////#
 
+# <<<<< MODIFIED/ADDED START >>>>>
+###############------Get_CPU_Specific_Info------###############
+def get_cpu_specific_info():
+    cpu_model_name = "N/A"
+    current_frequency = "N/A"
+    try:
+        # Try getting model name using lscpu first as it's often more concise
+        # Use subprocessrun which is already imported
+        process = subprocessrun(['lscpu'], capture_output=True, text=True, check=False)
+        if process.returncode == 0:
+            for line in process.stdout.splitlines():
+                if line.startswith("Model name:"):
+                    cpu_model_name = line.split(":", 1)[1].strip()
+                    break
+        # Fallback to /proc/cpuinfo if lscpu didn't work or didn't provide the model name
+        if cpu_model_name == "N/A": # Check if model name is still N/A
+            with open('/proc/cpuinfo', 'r', encoding='utf-8') as f: # Specify encoding
+                for line in f:
+                    if line.strip().startswith("model name"): # Use strip() for robustness
+                        cpu_model_name = line.split(":", 1)[1].strip()
+                        break
+    except FileNotFoundError:
+        LOGGER.error("Cannot find /proc/cpuinfo or lscpu for CPU model name.")
+    except Exception as e:
+        LOGGER.error(f"Error getting CPU model name: {e}")
+
+    try:
+        freq = psutil.cpu_freq()
+        if freq:
+            # Format to show current frequency, rounded to nearest MHz
+            current_frequency = f"{freq.current:.0f} MHz"
+    except Exception as e:
+        LOGGER.error(f"Error getting CPU frequency with psutil: {e}")
+
+    return cpu_model_name, current_frequency
+# <<<<< MODIFIED/ADDED END >>>>>
 
 ###############------Rclone_Accounts------###############
 async def get_config(file):
@@ -352,6 +393,8 @@ async def get_host_stats():
         total, used, free, disk = disk_usage('/')
         swap = swap_memory()
         memory = virtual_memory()
+# <<<<< MODIFIED/ADDED START >>>>>
+        cpu_model, cpu_freq = get_cpu_specific_info() # Get CPU model and frequency
         stats =f'<b>Commit Date:</b> {last_commit}\n\nVersion: {Config.VERSION}\n\n'\
                     f'<b>Bot Uptime:</b> {get_readable_time(time() - botStartTime)}\n'\
                     f'<b>OS Uptime:</b> {get_readable_time(time() - boot_time())}\n\n'\
@@ -359,7 +402,7 @@ async def get_host_stats():
                     f'<b>Used:</b> {get_size(used)} | <b>Free:</b> {get_size(free)}\n\n'\
                     f'<b>Upload:</b> {get_size(net_io_counters().bytes_sent)}\n'\
                     f'<b>Download:</b> {get_size(net_io_counters().bytes_recv)}\n\n'\
-                    f'<b>CPU:</b> {cpu_percent(interval=0.5)}%\n'\
+                    f'<b>CPU:</b> {cpu_percent(interval=0.5)}% | <b>Model:</b> {cpu_model} | <b>Freq:</b> {cpu_freq}\n'\
                     f'<b>RAM:</b> {memory.percent}%\n'\
                     f'<b>DISK:</b> {disk}%\n\n'\
                     f'<b>Physical Cores:</b> {cpu_count(logical=False)}\n'\
@@ -368,6 +411,7 @@ async def get_host_stats():
                     f'<b>Memory Total:</b> {get_size(memory.total)}\n'\
                     f'<b>Memory Free:</b> {get_size(memory.available)}\n'\
                     f'<b>Memory Used:</b> {get_size(memory.used)}'
+# <<<<< MODIFIED/ADDED END >>>>>
         return stats
 
 
@@ -439,3 +483,4 @@ def getIdFromUrl(link):
             return parse_qs(parsed.query)['id'][0]
         except:
             return False
+# --- END OF FILE VideoFlux-Re-master/bot_helper/Others/Helper_Functions.py ---
