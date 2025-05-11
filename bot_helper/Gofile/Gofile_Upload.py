@@ -17,7 +17,7 @@ from typing import Union
 # --- Gofile API Configuration ---
 # Highlighted change: GOFILE_API_TOKEN is no longer used for anonymous upload
 # GOFILE_API_TOKEN = "lBZPR77YTHyquQPpDlCoMbiYWh8B0mbK" # Hardcoded API Token
-GOFILE_API_BASE = "https://api.gofile.io/servers
+GOFILE_API_BASE = "https://api.gofile.io/servers"
 " # Still needed for server list if not using upload.gofile.io
 # Gofile API endpoint - Using the main upload endpoint which handles anonymous uploads
 GOFILE_UPLOAD_API = "https://upload.gofile.io/uploadfile"
