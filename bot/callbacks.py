@@ -36,7 +36,9 @@ bool_list = [True, False]
 ws_name = {'5:5': 'Top Left', 'main_w-overlay_w-5:5': 'Top Right', '5:main_h-overlay_h': 'Bottom Left', 'main_w-overlay_w-5:main_h-overlay_h-5': 'Bottom Right'}
 ws_value = {'Top Left': '5:5', 'Top Right': 'main_w-overlay_w-5:5', 'Bottom Left': '5:main_h-overlay_h', 'Bottom Right': 'main_w-overlay_w-5:main_h-overlay_h-5'}
 TELETHON_CLIENT = Telegram.TELETHON_CLIENT
-punc = ['!', '|', '{', '}', ';', ':', "'", '=', '"', '\\', ',', '<', '>', '/', '?', '@', '#', '$', '%', '^', '&', '*', '~', "  ", "\t", "+", "b'", "'"]
+# START OF MODIFIED BLOCK
+punc = ['!', '|', '{', '}', ';', ':', "'", '=', '"', '\\', ',', '<', '>', '/', '?', '@', '#', '$', '%', '^', '&', '*', "  ", "\t", "+", "b'", "'"] # Removed ~ (tilde)
+# END OF MODIFIED BLOCK
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 LOGGER = Config.LOGGER
 # Highlighted change: Added upload destination list
@@ -364,7 +366,7 @@ async def get_metadata(chat_id, user_id, event, timeout, message):
                 LOGGER.info(e)
                 return False
             metadata = new_event.message.message
-            for ele in punc:
+            for ele in punc: # This loop removes characters defined in punc list
                 if ele in metadata:
                         metadata = metadata.replace(ele, '')
             return metadata
@@ -891,7 +893,7 @@ async def convert_callback(event, txt, user_id, edit):
                     await event.answer(f"✅Use Target File Size - {str(new_position)}")
                 # Note: The 'converttargetsizemb_VALUE' case is handled by the direct 'converttargetsizemb' check now.
 # END OF MODIFIED BLOCK
-            KeyBoard = []
+            KeyBoard = [] # Moved KeyBoard initialization here to ensure it's always defined before use
             # Use .get() with defaults
             convert_settings = get_data().get(user_id, {}).get('convert', {})
             convert_encode = convert_settings.get('encode', 'Video')
@@ -941,7 +943,8 @@ async def convert_callback(event, txt, user_id, edit):
             for board in gen_keyboard(bool_list, use_target_size, "convertusetargetsize", 2, False): # Callback: convertusetargetsize_True/False
                 KeyBoard.append(board)
             if use_target_size: # Only show if enabled
-                KeyBoard.append([Button.inline(f'⚖️Target Size - {str(target_size_mb)} MB [Click To Change]', 'converttargetsizemb')]) # Direct callback: converttargetsizemb
+                KeyBoard.append([Button.inline(f'⚖️Target Size - {str(target_size_mb)} MB [Click To See]', 'target_size_value')]) # Changed to display value
+                KeyBoard.append([Button.inline('⚙️Change Target Size', 'converttargetsizemb')]) # Button to trigger change
             # End of highlighted change
 # END OF MODIFIED BLOCK
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
@@ -952,10 +955,10 @@ async def convert_callback(event, txt, user_id, edit):
                     pass
             else:
                 try:
-                    await event.delete()
+                    await event.delete() # Delete the prompt message
                 except:
                     pass
-                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Convert Settings", buttons=KeyBoard)
+                await Telegram.TELETHON_CLIENT.send_message(event.chat.id, "⚙ Convert Settings", buttons=KeyBoard) # Send new menu
             return
 
 ###############------Hardmux------###############
