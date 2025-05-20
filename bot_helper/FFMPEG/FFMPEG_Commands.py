@@ -9,6 +9,9 @@ from os.path import isdir, splitext, exists, splitext as os_path_splitext
 from os import makedirs, remove
 # Highlighted change: Import math for ceil used in bufsize calculation
 from math import ceil
+# START OF MODIFIED BLOCK
+from config.config import LOGGER # Import LOGGER
+# END OF MODIFIED BLOCK
 
 def create_direc(direc):
     if not isdir(direc):
@@ -188,7 +191,7 @@ def get_commands(process_status):
             # --- Start of Target File Size Logic ---
             if use_target_size and target_size_mb > 0 and file_duration > 0:
                 process_status.update_process_message(f"🎯Calculating for Target Size: {target_size_mb}MB\n{process_status.get_task_details()}")
-                Names.LOGGER.info(f"Target Size Mode: Aiming for ~{target_size_mb} MB for {input_file}.")
+                LOGGER.info(f"Target Size Mode: Aiming for ~{target_size_mb} MB for {input_file}.") # Use LOGGER
 
                 _final_audio_codec_for_calc = convert_acodec
                 _final_audio_bitrate_str_for_calc = convert_abit
@@ -196,13 +199,13 @@ def get_commands(process_status):
                 _default_forced_audio_bitrate = "128k" # Default audio bitrate if not set
 
                 if _final_audio_codec_for_calc.lower() == "copy":
-                    Names.LOGGER.warning(f"Target Size Mode: Audio codec was 'copy', overriding to '{_default_forced_audio_codec}' for calculation.")
+                    LOGGER.warning(f"Target Size Mode: Audio codec was 'copy', overriding to '{_default_forced_audio_codec}' for calculation.") # Use LOGGER
                     _final_audio_codec_for_calc = _default_forced_audio_codec
                     if not _final_audio_bitrate_str_for_calc:
                         _final_audio_bitrate_str_for_calc = _default_forced_audio_bitrate
-                        Names.LOGGER.info(f"Target Size Mode: Audio bitrate for 'copy' not set, using default '{_final_audio_bitrate_str_for_calc}'.")
+                        LOGGER.info(f"Target Size Mode: Audio bitrate for 'copy' not set, using default '{_final_audio_bitrate_str_for_calc}'.") # Use LOGGER
                 elif not _final_audio_bitrate_str_for_calc: # Audio re-encode selected, but no bitrate
-                    Names.LOGGER.warning(f"Target Size Mode: Audio codec is '{_final_audio_codec_for_calc}', but no audio bitrate. Using default '{_default_forced_audio_bitrate}'.")
+                    LOGGER.warning(f"Target Size Mode: Audio codec is '{_final_audio_codec_for_calc}', but no audio bitrate. Using default '{_default_forced_audio_bitrate}'.") # Use LOGGER
                     _final_audio_bitrate_str_for_calc = _default_forced_audio_bitrate
 
                 target_total_bits = target_size_mb * 1024 * 1024 * 8
@@ -217,11 +220,11 @@ def get_commands(process_status):
                     else: # Assume bps if no suffix
                         audio_bitrate_bps_for_calc = int(_final_audio_bitrate_str_for_calc)
                 except ValueError as e_parse_audio_br:
-                    Names.LOGGER.error(f"Target Size Mode: Error parsing determined audio bitrate '{_final_audio_bitrate_str_for_calc}': {e_parse_audio_br}. Using fallback 128kbps for calculation.")
+                    LOGGER.error(f"Target Size Mode: Error parsing determined audio bitrate '{_final_audio_bitrate_str_for_calc}': {e_parse_audio_br}. Using fallback 128kbps for calculation.") # Use LOGGER
                     audio_bitrate_bps_for_calc = 128 * 1000
                     # Update the actual audio settings if they were problematic
-                    convert_abit = "128k"
-                    if convert_acodec.lower() == "copy": convert_acodec = _default_forced_audio_codec
+                    convert_abit = "128k" # This will be used by the audio encoding part later
+                    if convert_acodec.lower() == "copy": convert_acodec = _default_forced_audio_codec # This will be used by audio encoding part
 
 
                 # Consider number of audio channels for audio_total_bits if needed, but FFmpeg handles this.
@@ -242,17 +245,17 @@ def get_commands(process_status):
                     calculated_video_bitrate_bps = max(calculated_video_bitrate_bps, min_video_bitrate_bps)
                     calculated_video_bitrate_str = f"{calculated_video_bitrate_bps // 1000}k" # Convert to kbps string
 
-                    Names.LOGGER.info(f"Target Size Mode: Calculated target video bitrate: {calculated_video_bitrate_str}")
-                    Names.LOGGER.info(f"Target Size Mode: Audio will be: '{_final_audio_codec_for_calc}' at '{_final_audio_bitrate_str_for_calc}' (used for calculation).")
+                    LOGGER.info(f"Target Size Mode: Calculated target video bitrate: {calculated_video_bitrate_str}") # Use LOGGER
+                    LOGGER.info(f"Target Size Mode: Audio will be: '{_final_audio_codec_for_calc}' at '{_final_audio_bitrate_str_for_calc}' (used for calculation).") # Use LOGGER
                     use_calculated_abr_for_video = True
                 else:
-                    Names.LOGGER.warning(f"Target Size Mode: Target file size {target_size_mb}MB is too small for the video duration ({file_duration}s) and determined audio bitrate '{_final_audio_bitrate_str_for_calc}'. Video will use standard rate control settings from user.")
+                    LOGGER.warning(f"Target Size Mode: Target file size {target_size_mb}MB is too small for the video duration ({file_duration}s) and determined audio bitrate '{_final_audio_bitrate_str_for_calc}'. Video will use standard rate control settings from user.") # Use LOGGER
                     use_calculated_abr_for_video = False
 
             elif use_target_size and target_size_mb > 0 and file_duration <= 0:
-                Names.LOGGER.warning("Target Size Mode: Cannot determine video duration. Target file size feature disabled for this conversion.")
+                LOGGER.warning("Target Size Mode: Cannot determine video duration. Target file size feature disabled for this conversion.") # Use LOGGER
             elif use_target_size and target_size_mb <= 0:
-                Names.LOGGER.info("Target Size Mode: Disabled by user (Target MB is 0 or less).")
+                LOGGER.info("Target Size Mode: Disabled by user (Target MB is 0 or less).") # Use LOGGER
             # --- End of Target File Size Logic ---
 # END OF MODIFIED BLOCK
 
@@ -322,7 +325,7 @@ def get_commands(process_status):
 # START OF MODIFIED BLOCK
                 # Rate Control (CRF, VBR, ABR, or CBR) - Target Size ABR takes precedence
                 if use_calculated_abr_for_video and calculated_video_bitrate_str:
-                    Names.LOGGER.info(f"Applying calculated ABR video bitrate for Target Size: {calculated_video_bitrate_str}")
+                    LOGGER.info(f"Applying calculated ABR video bitrate for Target Size: {calculated_video_bitrate_str}") # Use LOGGER
                     command += ['-b:v', calculated_video_bitrate_str]
                     # If VP9, ensure -b:v 0 is NOT set when using target ABR
                     if convert_encoder == 'VP9':
@@ -393,7 +396,7 @@ def get_commands(process_status):
                     # Use the potentially overridden audio settings from target size calculation
                     _actual_audio_codec_to_use = _final_audio_codec_for_calc # From target size logic
                     _actual_audio_bitrate_to_use = _final_audio_bitrate_str_for_calc # From target size logic
-                    Names.LOGGER.info(f"Target Size Mode: Applying audio codec '{_actual_audio_codec_to_use}' and bitrate '{_actual_audio_bitrate_to_use}' for FFmpeg.")
+                    LOGGER.info(f"Target Size Mode: Applying audio codec '{_actual_audio_codec_to_use}' and bitrate '{_actual_audio_bitrate_to_use}' for FFmpeg.") # Use LOGGER
 
 
                 if _actual_audio_codec_to_use.lower() == 'copy' and not (use_target_size and target_size_mb > 0 and file_duration > 0) : # only copy if not overridden by target size
