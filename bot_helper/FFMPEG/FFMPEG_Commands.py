@@ -91,10 +91,25 @@ def get_commands(process_status):
 # END OF MODIFIED BLOCK #####################################################
             if not merge_fix_blank:
                 command+= ["-c", "copy"]
-            # Added metadata from VFBITMOD-update
-            custom_metadata_title = get_data()[process_status.user_id]['metadata']
-            command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
-            # End of Added metadata
+# START OF MODIFIED BLOCK
+            # Apply Global and Fixed Metadata for Merge
+            custom_metadata_text = get_data()[process_status.user_id].get('metadata', '')
+            is_custom_metadata_enabled = get_data()[process_status.user_id].get('custom_metadata', False)
+
+            if is_custom_metadata_enabled and custom_metadata_text:
+                LOGGER.info(f"Applying User's Global Metadata Text to Merge: '{custom_metadata_text}'")
+                command += ['-metadata', f'title={custom_metadata_text}']
+                command += ['-metadata', f'author={custom_metadata_text}']
+                command += ['-metadata', f'encoded_by={custom_metadata_text}']
+                command += ['-metadata', f'comment={custom_metadata_text}']
+                command += ['-metadata:s:v:0', f'title={custom_metadata_text}']
+                command += ['-metadata:s:a', f'title={custom_metadata_text}']
+                command += ['-metadata:s:s', f'title={custom_metadata_text}'] # Assumes subtitles are part of the input files being merged
+
+            command += ['-metadata', 'description=Visit TG-@Eliteflix_Official']
+            command += ['-metadata', 'telegram=Downloaded From @Eliteflix_Official']
+            LOGGER.info("Applied fixed metadata (Description, Telegram) to Merge.")
+# END OF MODIFIED BLOCK
             command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
 
@@ -113,27 +128,57 @@ def get_commands(process_status):
         smap = 1
         for subtitle in process_status.subtitles:
             input_sub += ['-i', f'{str(subtitle)}']
-            sub_map+= ['-map', f'{smap}:0']
+            sub_map+= ['-map', f'{smap}:0'] # Map subtitle stream from its own input
             smap +=1
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
-        if softmux_encode:
+        command+= input_sub # Add subtitle inputs
+        # Map video, audio from main input, then map subtitle streams from their respective inputs
+        command+= ['-map','0:v?', '-map',f'0:a?'] # Use 0:a? to map all audio from main input
+        for i in range(len(process_status.subtitles)):
+            command+= ['-map', f'{i+1}:s:0'] # Map the first subtitle stream from each subtitle input file
+        command+= ['-disposition:s:0','default'] # Set first overall subtitle track as default (optional)
+
+        if softmux_encode: # If video re-encoding is enabled for softmux
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
                 if softmux_use_crf:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+                                command += ['-c:v','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
                         else:
-                                command += ['-vcodec','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+                                command += ['-c:v','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
                 else:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
+                                command += ['-c:v','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
                         else:
-                                command += ['-vcodec','libx264', '-preset', softmux_preset]
-        else:
-                command += ['-c','copy']
+                                command += ['-c:v','libx264', '-preset', softmux_preset]
+                command += ['-c:a', 'copy'] # Typically audio is copied in softmux unless specified otherwise
+        else: # If not re-encoding video, copy video and audio
+                command += ['-c:v','copy', '-c:a', 'copy']
 
-        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"]
+        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"] # Set subtitle codec (e.g., copy, mov_text)
 
+# START OF MODIFIED BLOCK
+        # Apply Global and Fixed Metadata for Softmux
+        custom_metadata_text = get_data()[process_status.user_id].get('metadata', '')
+        is_custom_metadata_enabled = get_data()[process_status.user_id].get('custom_metadata', False)
+
+        if is_custom_metadata_enabled and custom_metadata_text:
+            LOGGER.info(f"Applying User's Global Metadata Text to Softmux: '{custom_metadata_text}'")
+            command += ['-metadata', f'title={custom_metadata_text}']
+            command += ['-metadata', f'author={custom_metadata_text}']
+            command += ['-metadata', f'encoded_by={custom_metadata_text}']
+            command += ['-metadata', f'comment={custom_metadata_text}']
+            command += ['-metadata:s:v:0', f'title={custom_metadata_text}']
+            command += ['-metadata:s:a', f'title={custom_metadata_text}']
+            # For softmux, subtitles are separate streams, apply title to them if desired
+            # This will apply to all output subtitle streams
+            command += ['-metadata:s:s', f'title={custom_metadata_text}']
+
+
+        command += ['-metadata', 'description=Visit TG-@Eliteflix_Official']
+        command += ['-metadata', 'telegram=Downloaded From @Eliteflix_Official']
+        LOGGER.info("Applied fixed metadata (Description, Telegram) to Softmux.")
+# END OF MODIFIED BLOCK
+        command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
     # REMOVED: SoftReMux command block
@@ -152,7 +197,7 @@ def get_commands(process_status):
             convert_encoder = get_data()[process_status.user_id]['video']['encude']
             convert_copysub = get_data()[process_status.user_id]['convert']['copy_sub']
             convert_sync = get_data()[process_status.user_id]['convert']['sync']
-            convert_encode = get_data()[process_status.user_id]['convert']['encode'] # Video, Audio, Both
+            convert_encode_mode = get_data()[process_status.user_id]['convert']['encode'] # Renamed to avoid conflict
             convert_quality = get_data()[process_status.user_id]['video']['qubality'] # e.g., '720p [1280x720]'
             convert_type = get_data()[process_status.user_id]['convert']['type'] # CRF or VBR or ABR or CBR
             convert_crf = get_data()[process_status.user_id]['crf'] if get_data()[process_status.user_id]['use_crf'] else None # Use custom if enabled
@@ -188,62 +233,62 @@ def get_commands(process_status):
                                             '-i', f'{input_file}']
 
 # START OF MODIFIED BLOCK
+            _final_audio_codec_for_calc = convert_acodec # To store potentially overridden audio codec for target size
+            _final_audio_bitrate_str_for_calc = convert_abit # To store potentially overridden audio bitrate for target size
             # --- Start of Target File Size Logic ---
             if use_target_size and target_size_mb > 0 and file_duration > 0:
                 process_status.update_process_message(f"🎯Calculating for Target Size: {target_size_mb}MB\n{process_status.get_task_details()}")
                 LOGGER.info(f"Target Size Mode: Aiming for ~{target_size_mb} MB for {input_file}.") # Use LOGGER
 
-                _final_audio_codec_for_calc = convert_acodec
-                _final_audio_bitrate_str_for_calc = convert_abit
-                _default_forced_audio_codec = "aac" # Default if audio is 'copy' or bitrate not set
-                _default_forced_audio_bitrate = "128k" # Default audio bitrate if not set
+                # Use local copies for calculation to avoid modifying original settings if calculation fails
+                _calc_audio_codec = convert_acodec
+                _calc_audio_bitrate = convert_abit
+                _default_forced_audio_codec = "aac"
+                _default_forced_audio_bitrate = "128k"
 
-                if _final_audio_codec_for_calc.lower() == "copy":
+                if _calc_audio_codec.lower() == "copy":
                     LOGGER.warning(f"Target Size Mode: Audio codec was 'copy', overriding to '{_default_forced_audio_codec}' for calculation.") # Use LOGGER
-                    _final_audio_codec_for_calc = _default_forced_audio_codec
-                    if not _final_audio_bitrate_str_for_calc:
-                        _final_audio_bitrate_str_for_calc = _default_forced_audio_bitrate
-                        LOGGER.info(f"Target Size Mode: Audio bitrate for 'copy' not set, using default '{_final_audio_bitrate_str_for_calc}'.") # Use LOGGER
-                elif not _final_audio_bitrate_str_for_calc: # Audio re-encode selected, but no bitrate
-                    LOGGER.warning(f"Target Size Mode: Audio codec is '{_final_audio_codec_for_calc}', but no audio bitrate. Using default '{_default_forced_audio_bitrate}'.") # Use LOGGER
-                    _final_audio_bitrate_str_for_calc = _default_forced_audio_bitrate
+                    _calc_audio_codec = _default_forced_audio_codec
+                    if not _calc_audio_bitrate: # If audio was copy AND no custom abit was set
+                        _calc_audio_bitrate = _default_forced_audio_bitrate
+                        LOGGER.info(f"Target Size Mode: Audio bitrate for 'copy' not set, using default '{_calc_audio_bitrate}'.") # Use LOGGER
+                elif not _calc_audio_bitrate: # Audio re-encode selected, but no bitrate
+                    LOGGER.warning(f"Target Size Mode: Audio codec is '{_calc_audio_codec}', but no audio bitrate. Using default '{_default_forced_audio_bitrate}'.") # Use LOGGER
+                    _calc_audio_bitrate = _default_forced_audio_bitrate
+                
+                _final_audio_codec_for_calc = _calc_audio_codec
+                _final_audio_bitrate_str_for_calc = _calc_audio_bitrate
+
 
                 target_total_bits = target_size_mb * 1024 * 1024 * 8
                 audio_bitrate_bps_for_calc = 0
                 try:
-                    if not _final_audio_bitrate_str_for_calc: # Should not happen due to logic above, but as a safeguard
+                    if not _final_audio_bitrate_str_for_calc:
                         raise ValueError("Audio bitrate for calculation is unexpectedly empty.")
                     if 'k' in _final_audio_bitrate_str_for_calc.lower():
                         audio_bitrate_bps_for_calc = int(_final_audio_bitrate_str_for_calc.lower().replace('k', '')) * 1000
-                    elif 'm' in _final_audio_bitrate_str_for_calc.lower(): # Support 'm' for megabits
+                    elif 'm' in _final_audio_bitrate_str_for_calc.lower():
                         audio_bitrate_bps_for_calc = int(float(_final_audio_bitrate_str_for_calc.lower().replace('m', '')) * 1000000)
-                    else: # Assume bps if no suffix
+                    else:
                         audio_bitrate_bps_for_calc = int(_final_audio_bitrate_str_for_calc)
                 except ValueError as e_parse_audio_br:
                     LOGGER.error(f"Target Size Mode: Error parsing determined audio bitrate '{_final_audio_bitrate_str_for_calc}': {e_parse_audio_br}. Using fallback 128kbps for calculation.") # Use LOGGER
                     audio_bitrate_bps_for_calc = 128 * 1000
-                    # Update the actual audio settings if they were problematic
-                    convert_abit = "128k" # This will be used by the audio encoding part later
-                    if convert_acodec.lower() == "copy": convert_acodec = _default_forced_audio_codec # This will be used by audio encoding part
+                    _final_audio_bitrate_str_for_calc = "128k" # Ensure this is updated for FFmpeg command
+                    if _final_audio_codec_for_calc.lower() == "copy": # Should have been caught above, but defensive
+                         _final_audio_codec_for_calc = _default_forced_audio_codec
 
 
-                # Consider number of audio channels for audio_total_bits if needed, but FFmpeg handles this.
-                # For simplicity, we use the single audio_bitrate_bps_for_calc.
                 audio_total_bits_for_file = audio_bitrate_bps_for_calc * file_duration
-
-                # Estimate overhead (muxing, metadata, etc.) - e.g., 2-5% of target size
-                # This is a rough estimate and can vary.
-                overhead_factor = 0.03 # 3% overhead
+                overhead_factor = 0.03 
                 estimated_overhead_bits = target_total_bits * overhead_factor
-
                 remaining_bits_for_video = target_total_bits - audio_total_bits_for_file - estimated_overhead_bits
 
                 if remaining_bits_for_video > 0:
                     calculated_video_bitrate_bps = int(remaining_bits_for_video / file_duration)
-                    # Ensure a minimum video bitrate (e.g., 100kbps) to avoid issues
                     min_video_bitrate_bps = 100 * 1000
                     calculated_video_bitrate_bps = max(calculated_video_bitrate_bps, min_video_bitrate_bps)
-                    calculated_video_bitrate_str = f"{calculated_video_bitrate_bps // 1000}k" # Convert to kbps string
+                    calculated_video_bitrate_str = f"{calculated_video_bitrate_bps // 1000}k"
 
                     LOGGER.info(f"Target Size Mode: Calculated target video bitrate: {calculated_video_bitrate_str}") # Use LOGGER
                     LOGGER.info(f"Target Size Mode: Audio will be: '{_final_audio_codec_for_calc}' at '{_final_audio_bitrate_str_for_calc}' (used for calculation).") # Use LOGGER
@@ -254,14 +299,14 @@ def get_commands(process_status):
 
             elif use_target_size and target_size_mb > 0 and file_duration <= 0:
                 LOGGER.warning("Target Size Mode: Cannot determine video duration. Target file size feature disabled for this conversion.") # Use LOGGER
-            elif use_target_size and target_size_mb <= 0:
+            elif use_target_size and target_size_mb <= 0: # User explicitly set target to 0 or less
                 LOGGER.info("Target Size Mode: Disabled by user (Target MB is 0 or less).") # Use LOGGER
             # --- End of Target File Size Logic ---
 # END OF MODIFIED BLOCK
 
             # --- Start of VFBITMOD-update Command Logic ---
             # Video Encoding Part
-            if convert_encode == 'Video' or convert_encode == 'Video Audio [Both]':
+            if convert_encode_mode == 'Video' or convert_encode_mode == 'Video Audio [Both]': # Use renamed variable
                 # Resolution Scaling
                 if convert_quality=='480p [720x360]':
                     command+=['-vf', 'scale=720:360']
@@ -383,56 +428,56 @@ def get_commands(process_status):
                      command += ['-b:v', '1500k', '-minrate', '1500k', '-maxrate', '1500k', '-bufsize', '3000k'] # Example default
 # End of highlighted change
 
-            else: # Only Audio encode or no video encode
+            else: # Only Audio encode or no video encode (i.e. convert_encode_mode == 'Audio')
                 command+=['-c:v', 'copy']
 
 # START OF MODIFIED BLOCK
             # Audio Encoding Part - Respect Target Size Mode decisions for audio
-            if convert_encode == 'Audio' or convert_encode == 'Video Audio [Both]':
+            if convert_encode_mode == 'Audio' or convert_encode_mode == 'Video Audio [Both]':
                 _actual_audio_codec_to_use = convert_acodec
                 _actual_audio_bitrate_to_use = convert_abit
 
-                if use_target_size and target_size_mb > 0 and file_duration > 0:
+                if use_target_size and target_size_mb > 0 and file_duration > 0 and use_calculated_abr_for_video: # Ensure target size was active AND successfully calculated
                     # Use the potentially overridden audio settings from target size calculation
-                    _actual_audio_codec_to_use = _final_audio_codec_for_calc # From target size logic
-                    _actual_audio_bitrate_to_use = _final_audio_bitrate_str_for_calc # From target size logic
-                    LOGGER.info(f"Target Size Mode: Applying audio codec '{_actual_audio_codec_to_use}' and bitrate '{_actual_audio_bitrate_to_use}' for FFmpeg.") # Use LOGGER
+                    _actual_audio_codec_to_use = _final_audio_codec_for_calc
+                    _actual_audio_bitrate_to_use = _final_audio_bitrate_str_for_calc
+                    LOGGER.info(f"Target Size Mode: Applying audio codec '{_actual_audio_codec_to_use}' and bitrate '{_actual_audio_bitrate_to_use}' for FFmpeg.")
 
 
-                if _actual_audio_codec_to_use.lower() == 'copy' and not (use_target_size and target_size_mb > 0 and file_duration > 0) : # only copy if not overridden by target size
+                if _actual_audio_codec_to_use.lower() == 'copy' and not (use_target_size and target_size_mb > 0 and file_duration > 0 and use_calculated_abr_for_video) : # only copy if not overridden by target size
                     command += ['-c:a', 'copy']
                 else:
                     # Audio Codec
                     if _actual_audio_codec_to_use.lower()=='opus':
                         codec = 'libopus'
-                    elif _actual_audio_codec_to_use.lower()=='dd':
+                    elif _actual_audio_codec_to_use.lower()=='dd': # Dolby Digital (AC3)
                         codec = 'ac3'
-                    elif _actual_audio_codec_to_use.lower()=='ddp':
+                    elif _actual_audio_codec_to_use.lower()=='ddp': # Dolby Digital Plus (E-AC3)
                         codec = 'eac3'
                     else: # Default AAC or user-specified if not copy
                         codec = 'aac'
                     command += ['-c:a', codec]
 
                     # Audio Bitrate (only if custom is enabled or set by target size)
-                    if _actual_audio_bitrate_to_use: # This will be set if use_abit is true OR by target_size logic
+                    if _actual_audio_bitrate_to_use:
                         command += ['-b:a', f'{str(_actual_audio_bitrate_to_use)}']
 
-                # Audio Channels (always apply user's choice unless it was 'copy' and overridden)
+                # Audio Channels (always apply user's choice unless it was 'copy' and overridden by target size logic needing re-encode)
                 if convert_achannel.lower() != "copy":
                     command += ['-ac', f'{str(convert_achannel)}']
-                # If convert_achannel is 'copy' AND target size mode forced re-encode, FFmpeg will pick channels.
-                # If convert_achannel is 'copy' AND audio is copied, then channels are copied.
-            else: # No audio encode (video only or copy all)
+                # If convert_achannel is 'copy' AND target size mode forced re-encode, FFmpeg will pick channels or use source.
+                # If convert_achannel is 'copy' AND audio is copied (no target size override), then channels are copied.
+            else: # No audio encode (video only, or if convert_encode_mode was 'Video' and target size was not active)
                 command+= ['-c:a', 'copy']
 # END OF MODIFIED BLOCK
 
             # Common Settings
             if convert_map:
                 command+=['-map','0:v?',
-                                            '-map',f'{str(process_status.amap_options)}?',
-                                            "-map", "0:s?"]
+                                            '-map',f'{str(process_status.amap_options)}?', # This maps the audio selected by user/default
+                                            "-map", "0:s?"] # Map all subtitle streams from input 0
             if convert_copysub:
-                command+= ["-c:s", "copy"]
+                command+= ["-c:s", "copy"] # Copy subtitle streams if enabled
 
             convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
             if convert_use_queue_size:
@@ -445,6 +490,28 @@ def get_commands(process_status):
             if convert_encoder != 'VP9':
                 command+= ['-preset', convert_preset]
 # End of highlighted change
+
+# START OF MODIFIED BLOCK
+            # Metadata part for Convert
+            custom_metadata_text = get_data()[process_status.user_id].get('metadata', '')
+            is_custom_metadata_enabled = get_data()[process_status.user_id].get('custom_metadata', False)
+
+            if is_custom_metadata_enabled and custom_metadata_text:
+                LOGGER.info(f"Applying User's Global Metadata Text to Convert: '{custom_metadata_text}'")
+                command += ['-metadata', f'title={custom_metadata_text}']
+                command += ['-metadata', f'author={custom_metadata_text}']
+                command += ['-metadata', f'encoded_by={custom_metadata_text}']
+                command += ['-metadata', f'comment={custom_metadata_text}']
+                command += ['-metadata:s:v:0', f'title={custom_metadata_text}']
+                command += ['-metadata:s:a', f'title={custom_metadata_text}']
+                if convert_copysub: # Apply to subtitles only if they are being copied
+                    command += ['-metadata:s:s', f'title={custom_metadata_text}']
+
+            command += ['-metadata', 'description=Visit TG-@Eliteflix_Official']
+            command += ['-metadata', 'telegram=Downloaded From @Eliteflix_Official']
+            LOGGER.info("Applied fixed metadata (Description, Telegram) to Convert.")
+# END OF MODIFIED BLOCK
+
             command+= ['-y', f"{output_file}"]
             # --- End of VFBITMOD-update Command Logic ---
 
@@ -462,17 +529,20 @@ def get_commands(process_status):
         file_duration = get_video_duration(input_file)
         sub_loc = process_status.subtitles[-1]
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        command+= ['-vf', f"subtitles='{sub_loc}'",
-                                    '-map','0:v',
-                                    '-map',f'{str(process_status.amap_options)}']
+        command+= ['-vf', f"subtitles='{sub_loc}'", # Subtitles are burned in, so they become part of video stream
+                                    '-map','0:v', # Map video
+                                    '-map',f'{str(process_status.amap_options)}?'] # Map selected/all audio
+                                    # No -map 0:s? needed as subtitles are part of video filter
         if hardmux_encode_video:
                 encoder = get_data()[process_status.user_id]['hardmux']['encoder']
                 if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
+                        command += ['-c:v','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
                 else:
-                        command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-        else:
-                command += ['-c:a','copy']
+                        command += ['-c:v','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
+                command += ['-c:a','copy'] # Audio is copied if video is re-encoded
+        else: # If not encoding video, copy video and audio
+                command += ['-c:v','copy', '-c:a','copy']
+
         hardmux_sync = get_data()[process_status.user_id]['hardmux']['sync']
         hardmux_use_queue_size = get_data()[process_status.user_id]['hardmux']['use_queue_size']
         if hardmux_use_queue_size:
@@ -480,6 +550,27 @@ def get_commands(process_status):
                 command+= ['-max_muxing_queue_size', f'{str(hardmux_queue_size)}']
         if hardmux_sync:
             command+= ['-vsync', '1', '-async', '-1']
+
+# START OF MODIFIED BLOCK
+        # Apply Global and Fixed Metadata for Hardmux
+        custom_metadata_text = get_data()[process_status.user_id].get('metadata', '')
+        is_custom_metadata_enabled = get_data()[process_status.user_id].get('custom_metadata', False)
+
+        if is_custom_metadata_enabled and custom_metadata_text:
+            LOGGER.info(f"Applying User's Global Metadata Text to Hardmux: '{custom_metadata_text}'")
+            command += ['-metadata', f'title={custom_metadata_text}']
+            command += ['-metadata', f'author={custom_metadata_text}']
+            command += ['-metadata', f'encoded_by={custom_metadata_text}']
+            command += ['-metadata', f'comment={custom_metadata_text}']
+            command += ['-metadata:s:v:0', f'title={custom_metadata_text}'] # Video stream title
+            command += ['-metadata:s:a', f'title={custom_metadata_text}']   # Audio stream titles
+            # No -metadata:s:s for hardmux as subtitles are part of the video stream
+
+        command += ['-metadata', 'description=Visit TG-@Eliteflix_Official']
+        command += ['-metadata', 'telegram=Downloaded From @Eliteflix_Official']
+        LOGGER.info("Applied fixed metadata (Description, Telegram) to Hardmux.")
+# END OF MODIFIED BLOCK
+
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
@@ -492,13 +583,26 @@ def get_commands(process_status):
         file_duration = get_video_duration(input_file)
         custom_metadata = process_status.custom_metadata
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        for m in custom_metadata:
-            command+=m
-        # Added global title metadata from VFBITMOD-update
-        custom_metadata_title = get_data()[process_status.user_id]['metadata']
-        command += ['-metadata', f"title={custom_metadata_title}"]
+        # For changeMetadata, only apply what the user specifically provides via the command arguments
+        if custom_metadata: # custom_metadata is a list of lists like [['-metadata:s:a:0', 'language=eng'], ...]
+            for m_list in custom_metadata:
+                command += m_list
+            LOGGER.info(f"Applying user-specified metadata changes for changeMetadata: {custom_metadata}")
+        else: # Fallback if somehow custom_metadata is empty but command was called
+            LOGGER.warning("changeMetadata called but no specific metadata changes provided by user.")
+            # Optionally, apply global title if nothing else is specified, or just copy.
+            # For now, let's stick to only applying user's specific changes for this command.
+            # If user wants global title, they should use /convert or other processes.
+            # custom_metadata_title = get_data()[process_status.user_id]['metadata']
+            # command += ['-metadata', f"title={custom_metadata_title}"]
+            pass
+
+
+        # Added global title metadata from VFBITMOD-update - RECONSIDERED: For changeMetadata, we should only apply user's specific changes.
+        # custom_metadata_title = get_data()[process_status.user_id]['metadata']
+        # command += ['-metadata', f"title={custom_metadata_title}"]
         # End of Added global title metadata
-        command += ["-map", "0", "-c", "copy", '-y', f"{output_file}"]
+        command += ["-map", "0", "-c", "copy", '-y', f"{output_file}"] # Map all streams and copy
         return command, log_file, input_file, output_file, file_duration
 
 
@@ -508,6 +612,7 @@ def get_commands(process_status):
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/index/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
+        # For changeindex, metadata is typically just copied with the streams. No additional global/fixed tags.
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index # Reverted zender -> ffmpeg
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
