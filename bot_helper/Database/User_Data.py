@@ -146,6 +146,10 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['use_abit'] = False
         DATA[user_id]['abit'] = '128k'
         DATA[user_id]['use_crf'] = False
+# START OF MODIFIED BLOCK
+        DATA[user_id]['use_target_size'] = False
+        DATA[user_id]['target_size_mb'] = 700 # Default 700MB
+# END OF MODIFIED BLOCK
         DATA[user_id]['crf'] = '22'
         # End of Added from VFBITMOD-update
         DATA[user_id]['custom_name'] = False
