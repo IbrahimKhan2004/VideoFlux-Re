@@ -149,8 +149,9 @@ def get_progress_bar_string(current,total):
     p_str += UNFINISHED_PROGRESS_STR * (12 - cFull)
     return f"[{p_str}]"
 
-
-def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
+# START OF MODIFIED BLOCK
+def ffmpeg_status_foot(status, user_id, start_time, time_in_us, current_output_size_bytes=0): # Added current_output_size_bytes
+# END OF MODIFIED BLOCK
         status_foot = ""
         if get_data()[user_id]['ffmpeg_ptime']:
                 status_foot+= f"\n**P.Time**: {get_readable_time(time()-start_time)}"
@@ -161,7 +162,20 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us):
                         status_foot+= " | "
                 try:
                         # Added check for time_in_us being zero
-                        if time_in_us != 0 and status.duration > 0: # Also check duration > 0
+# START OF MODIFIED BLOCK
+                        # Use current_output_size_bytes if available and target size is active
+                        use_target_size_for_eta = get_data()[user_id].get('use_target_size', False)
+                        target_mb_for_eta = get_data()[user_id].get('target_size_mb', 0)
+
+                        if use_target_size_for_eta and target_mb_for_eta > 0 and time_in_us != 0 and status.duration > 0 and current_output_size_bytes > 0:
+                            progress_ratio = (time_in_us / 1000000) / status.duration
+                            if progress_ratio > 0:
+                                estimated_total_size = (current_output_size_bytes / progress_ratio)
+                                status_foot += f"**ETA Size**: {str(get_human_size(estimated_total_size))} (Target: {target_mb_for_eta}MB)"
+                            else:
+                                status_foot += f"**ETA Size**: N/A (Target: {target_mb_for_eta}MB)"
+                        elif time_in_us != 0 and status.duration > 0: # Original ETA size logic
+# END OF MODIFIED BLOCK
                             # Estimate ETA size based on current output size and time progress
                             # Use the reliable duration from ffprobe, not the faulty time_in_us for total estimate
                             progress_ratio = (time_in_us / 1000000) / status.duration if status.duration > 0 else 0
@@ -219,6 +233,11 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
 # Highlighted change: Get preset setting
                 convert_preset = get_data()[user_id]['convert']['preset'] # Get preset
 # End of highlighted change
+# START OF MODIFIED BLOCK
+                # Highlighted change: Get target size settings for display
+                use_target_size_disp = get_data()[user_id].get('use_target_size', False)
+                target_size_mb_disp = get_data()[user_id].get('target_size_mb', 0)
+# END OF MODIFIED BLOCK
 
 # Highlighted change: Updated f-string to conditionally display Tune/CBR and show correct preset for VP9
                 text = f"\n**Encoding...**: {encode_mode}\n"\
@@ -243,6 +262,13 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
                 text += f"**SYNC**: {get_data()[user_id]['convert']['sync']} | **Preset**: {convert_preset}\n"\
                           f"**Metadata**: {get_data()[user_id]['metadata']} | **Copy Subtitles**: {get_data()[user_id]['convert']['copy_sub']}\n"\
                           f"{qsize_text} | **MAP**: {get_data()[user_id]['convert']['map']}"
+# START OF MODIFIED BLOCK
+                # Highlighted change: Add Target Size info to status head
+                if use_target_size_disp and target_size_mb_disp > 0:
+                    text += f"\n**Target Size**: {target_size_mb_disp} MB"
+                else:
+                    text += f"\n**Target Size**: Disabled"
+# END OF MODIFIED BLOCK
 # End of highlighted change
                 # --- End of VFBITMOD-update Status Head ---
                 return text
@@ -550,6 +576,9 @@ class ProcessStatus:
                                 if status.returncode:
                                         LOGGER.info('Status Update: Stopping Because ReturnCode Exists.')
                                         break
+# START OF MODIFIED BLOCK
+                                current_output_size_bytes_for_eta = 0 # Initialize
+# END OF MODIFIED BLOCK
                                 if exists(status.log_file):
                                         # Highlighted change: Read frame count as well
                                         current_frame = 0 # Default value
@@ -564,6 +593,14 @@ class ProcessStatus:
                                                 # End of highlighted change
                                                 # bitrate = get_value(refindall("bitrate=(.+)", ffmpeg_text), str, "0")
                                                 # fps = get_value(refindall("fps=(.+)", ffmpeg_text), str, "0")
+# START OF MODIFIED BLOCK
+                                                # Get current output file size for ETA calculation
+                                                if exists(status.output_file):
+                                                    try:
+                                                        current_output_size_bytes_for_eta = getsize(status.output_file)
+                                                    except OSError:
+                                                        current_output_size_bytes_for_eta = 0
+# END OF MODIFIED BLOCK
                                 else:
                                         time_in_us = 1
                                         progress="error"
@@ -644,7 +681,9 @@ class ProcessStatus:
                                                             f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
                                                             f'**Processed**: {get_readable_time(capped_elapsed_time)} of {get_readable_time(status.duration)}\n'\
                                                             f'**Speed**: {speed:.2f}x | **ETA**: {get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"}'\
-                                                            f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us)}\n'\
+# START OF MODIFIED BLOCK
+                                                            f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us, current_output_size_bytes_for_eta)}\n'\
+# END OF MODIFIED BLOCK
                                                             f'`/ffmpeg log {self.process_id}`\n'\
                                                             f"`/cancel process {self.process_id}`"
                                 # End of highlighted change
