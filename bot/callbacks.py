@@ -100,6 +100,12 @@ async def callback(event):
         # Highlighted change: Added check for merge fix_timestamps key
         if 'merge' not in user_data or 'fix_timestamps' not in user_data.get('merge', {}):
              await saveconfig(user_id, 'merge', 'fix_timestamps', False, SAVE_TO_DATABASE)
+# START OF MODIFIED BLOCK
+        # Highlighted change: Added check for target size keys
+        if 'use_target_size' not in user_data:
+            await saveoptions(user_id, 'use_target_size', False, SAVE_TO_DATABASE)
+            await saveoptions(user_id, 'target_size_mb', 700, SAVE_TO_DATABASE) # Default 700MB
+# END OF MODIFIED BLOCK
         # End of highlighted change
         # --- End of Key Check ---
 
@@ -294,7 +300,13 @@ async def callback(event):
             ccbr = get_data().get(user_id, {}).get('cbr', '1500k') # Use .get() with default
             await event.answer(f"❤ Current CBR 🖤: {str(ccbr)}", alert=True)
             return
-
+# START OF MODIFIED BLOCK
+        # Highlighted change: Added target_size_mb value display callback
+        elif txt=="target_size_value":
+            ctargetsize = get_data().get(user_id, {}).get('target_size_mb', 700) # Use .get() with default
+            await event.answer(f"🎯 Current Target Size 🖤: {str(ctargetsize)} MB", alert=True)
+            return
+# END OF MODIFIED BLOCK
         elif txt=="abit_value":
             cabit = get_data().get(user_id, {}).get('abit', '128k') # Use .get() with default
             await event.answer(f"❤ Current AudioBit 🖤: {str(cabit)}", alert=True)
@@ -407,8 +419,19 @@ async def get_abr(chat_id, user_id, event, timeout, message):
                         abr = abr.replace(ele, '')
             # Basic validation (ends with 'k' or 'M') - can be improved
             if not (abr.lower().endswith('k') or abr.lower().endswith('m')):
-                await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
-                return False
+# START OF MODIFIED BLOCK
+                # Highlighted change: Allow integer input for ABR (interpreted as kbps)
+                try:
+                    int_abr = int(abr)
+                    if int_abr > 0:
+                        abr = f"{int_abr}k" # Convert to kbps string
+                    else:
+                        await new_event.reply('❗Invalid format. Use k, M (e.g., 1500k, 2M) or a positive integer for kbps.')
+                        return False
+                except ValueError:
+                # End of highlighted change
+                    await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
+                    return False
             return abr
 
 # Highlighted change: Added CBR input function
@@ -427,9 +450,19 @@ async def get_cbr(chat_id, user_id, event, timeout, message):
                 if ele in cbr:
                         cbr = cbr.replace(ele, '')
             # Basic validation (ends with 'k' or 'M') - can be improved
+            # Highlighted change: Allow integer input for CBR (interpreted as kbps)
             if not (cbr.lower().endswith('k') or cbr.lower().endswith('m')):
-                await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
-                return False
+                try:
+                    int_cbr = int(cbr)
+                    if int_cbr > 0:
+                        cbr = f"{int_cbr}k" # Convert to kbps string
+                    else:
+                        await new_event.reply('❗Invalid format. Use k, M (e.g., 1500k, 2M) or a positive integer for kbps.')
+                        return False
+                except ValueError:
+                # End of highlighted change
+                    await new_event.reply('❗Invalid format. Use k or M (e.g., 1500k, 2M).')
+                    return False
             return cbr
 
 async def get_abit(chat_id, user_id, event, timeout, message):
@@ -446,8 +479,44 @@ async def get_abit(chat_id, user_id, event, timeout, message):
             for ele in punc:
                 if ele in abit:
                         abit = abit.replace(ele, '')
+            # Highlighted change: Allow integer input for audio bitrate (interpreted as kbps)
+            if not (abit.lower().endswith('k')): # Audio bitrate usually in k
+                try:
+                    int_abit = int(abit)
+                    if int_abit > 0:
+                        abit = f"{int_abit}k"
+                    else:
+                        await new_event.reply('❗Invalid format. Use k (e.g., 128k) or a positive integer for kbps.')
+                        return False
+                except ValueError:
+                    await new_event.reply('❗Invalid format. Use k (e.g., 128k) or a positive integer for kbps.')
+                    return False
+# END OF MODIFIED BLOCK
             return abit
 # End of Added from VFBITMOD-update
+# START OF MODIFIED BLOCK
+# Highlighted change: Added get_target_size_mb function
+async def get_target_size_mb(chat_id, user_id, event, timeout, message):
+    async with TELETHON_CLIENT.conversation(chat_id) as conv:
+            handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: e.message.message), timeout=timeout)
+            ask = await event.reply(f'🎯 {str(message)} [{str(timeout)} secs]')
+            try:
+                new_event = await handle
+            except Exception as e:
+                await ask.reply('🤦‍♂️Timed Out! Tasked Has Been Cancelled.')
+                LOGGER.info(e)
+                return False
+            target_size_str = new_event.message.message
+            try:
+                target_mb = int(target_size_str)
+                if target_mb < 0: # Allow 0 to disable, but not negative
+                    await new_event.reply('❗Target size cannot be negative. Send a positive number for MB or 0 to disable.')
+                    return False
+                return target_mb # Return the integer value
+            except ValueError:
+                await new_event.reply('❗Invalid input. Please send a number for MB (e.g., 700).')
+                return False
+# END OF MODIFIED BLOCK
 
 async def get_text_data(chat_id, user_id, event, timeout, message):
     async with TELETHON_CLIENT.conversation(chat_id) as conv:
@@ -808,6 +877,19 @@ async def convert_callback(event, txt, user_id, edit):
             elif txt.startswith("convertsync"):
                 await saveconfig(user_id, 'convert', 'sync', eval(new_position), SAVE_TO_DATABASE)
                 await event.answer(f"✅Convert Use SYNC - {str(new_position)}")
+# START OF MODIFIED BLOCK
+            # Highlighted change: Added handlers for target size settings
+            elif txt.startswith("convertusetargetsize"):
+                await saveoptions(user_id, 'use_target_size', eval(new_position), SAVE_TO_DATABASE)
+                await event.answer(f"✅Use Target File Size - {str(new_position)}")
+            elif txt.startswith("converttargetsizemb"):
+                # This callback is now for the button that says "[Click To Change]"
+                target_size_input = await get_target_size_mb(event.chat.id, user_id, event, 120, "**Send Target File Size in MB**\n\n**Example :** `700`, `1200` etc.\nSet to `0` to disable if 'Use Target Size' is on.")
+                if target_size_input is not False: # Check if not cancelled or timed out
+                    await saveoptions(user_id, 'target_size_mb', int(target_size_input), SAVE_TO_DATABASE) # target_size_input is already int or False
+                    edit = False # Reload menu to show new value
+                # If target_size_input is False, it means user cancelled, timed out, or sent invalid input, so we don't change the value or reload.
+# END OF MODIFIED BLOCK
 
             # Use .get() with defaults
             convert_settings = get_data().get(user_id, {}).get('convert', {})
@@ -819,6 +901,11 @@ async def convert_callback(event, txt, user_id, edit):
             convert_use_queue_size = convert_settings.get('use_queue_size', False)
             convert_queue_size = convert_settings.get('queue_size', '9999')
             convert_sync = convert_settings.get('sync', False)
+# START OF MODIFIED BLOCK
+            # Highlighted change: Get target size settings
+            use_target_size = get_data().get(user_id, {}).get('use_target_size', False)
+            target_size_mb = get_data().get(user_id, {}).get('target_size_mb', 700)
+# END OF MODIFIED BLOCK
 
             # Added from VFBITMOD-update
             KeyBoard.append([Button.inline(f'🎧Encode - {str(convert_encode)}', 'BashAFK')])
@@ -847,6 +934,15 @@ async def convert_callback(event, txt, user_id, edit):
             KeyBoard.append([Button.inline(f'♒Preset - {str(convert_preset)}', 'BashAFK')])
             for board in gen_keyboard(presets_list, convert_preset, "convertpreset", 3, False):
                 KeyBoard.append(board)
+# START OF MODIFIED BLOCK
+            # Highlighted change: Add buttons for target size
+            KeyBoard.append([Button.inline(f'🎯Use Target File Size - {str(use_target_size)}', 'BashAFK')])
+            for board in gen_keyboard(bool_list, use_target_size, "convertusetargetsize", 2, False):
+                KeyBoard.append(board)
+            if use_target_size: # Only show if enabled
+                KeyBoard.append([Button.inline(f'⚖️Target Size - {str(target_size_mb)} MB [Click To Change]', 'converttargetsizemb')])
+            # End of highlighted change
+# END OF MODIFIED BLOCK
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
                 try:
@@ -1107,7 +1203,7 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                 await event.answer(f"❤ CRF 🖤 - {str(new_position)}")
             # Added ABR handling
             elif txt.startswith("vbrcrfabr"):
-                if eval(new_position):
+                if eval(new_position): # If user wants to enable and set ABR
                         metadata = await get_abr(chat_id, user_id, event, 120, "**Send ABR Value**\n\n**Example :** `1500k`, `2M` etc.")
                         if metadata:
                             await saveoptions(user_id, 'abr', metadata, SAVE_TO_DATABASE)
@@ -1118,7 +1214,7 @@ async def vbrcrf_callback(event, txt, user_id, chat_id):
                 await event.answer(f"❤ ABR 🖤 - {str(new_position)}")
             # Highlighted change: Added CBR handling
             elif txt.startswith("vbrcrfcbr"):
-                if eval(new_position):
+                if eval(new_position): # If user wants to enable and set CBR
                         metadata = await get_cbr(chat_id, user_id, event, 120, "**Send CBR Value**\n\n**Example :** `1500k`, `2M` etc.")
                         if metadata:
                             await saveoptions(user_id, 'cbr', metadata, SAVE_TO_DATABASE)
