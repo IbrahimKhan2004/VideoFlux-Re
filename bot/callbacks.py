@@ -852,45 +852,46 @@ async def merge_callback(event, txt, user_id):
 
 ###############------Convert------###############
 async def convert_callback(event, txt, user_id, edit):
-            new_position = txt.split("_", 1)[1]
-            KeyBoard = []
-            # Added from VFBITMOD-update
-            if txt.startswith("convertencode"):
-                await saveconfig(user_id, 'convert', 'encode', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Encode - {str(new_position)}")
-            elif txt.startswith("converttype"):
-                await saveconfig(user_id, 'convert', 'type', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Encode Type - {str(new_position)}")
-            # End of Added from VFBITMOD-update
-            elif txt.startswith("convertpreset"):
-                await saveconfig(user_id, 'convert', 'preset', new_position, SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Preset - {str(new_position)}")
-            elif txt.startswith("convertcopysub"):
-                await saveconfig(user_id, 'convert', 'copy_sub', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Copy Subtitles - {str(new_position)}")
-            elif txt.startswith("convertmap"):
-                await saveconfig(user_id, 'convert', 'map', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Map - {str(new_position)}")
-            elif txt.startswith("convertusequeuesize"):
-                await saveconfig(user_id, 'convert', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Use Queue Size - {str(new_position)}")
-            elif txt.startswith("convertsync"):
-                await saveconfig(user_id, 'convert', 'sync', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Convert Use SYNC - {str(new_position)}")
 # START OF MODIFIED BLOCK
-            # Highlighted change: Added handlers for target size settings
-            elif txt.startswith("convertusetargetsize"):
-                await saveoptions(user_id, 'use_target_size', eval(new_position), SAVE_TO_DATABASE)
-                await event.answer(f"✅Use Target File Size - {str(new_position)}")
-            elif txt.startswith("converttargetsizemb"):
-                # This callback is now for the button that says "[Click To Change]"
+            # Highlighted change: Handle 'converttargetsizemb' before splitting txt
+            if txt == "converttargetsizemb": # Direct match for the button's callback_data
                 target_size_input = await get_target_size_mb(event.chat.id, user_id, event, 120, "**Send Target File Size in MB**\n\n**Example :** `700`, `1200` etc.\nSet to `0` to disable if 'Use Target Size' is on.")
-                if target_size_input is not False: # Check if not cancelled or timed out
-                    await saveoptions(user_id, 'target_size_mb', int(target_size_input), SAVE_TO_DATABASE) # target_size_input is already int or False
+                if target_size_input is not False: # Check if not cancelled or timed out (get_target_size_mb returns False on error/cancel)
+                    await saveoptions(user_id, 'target_size_mb', int(target_size_input), SAVE_TO_DATABASE)
                     edit = False # Reload menu to show new value
-                # If target_size_input is False, it means user cancelled, timed out, or sent invalid input, so we don't change the value or reload.
+                # Fall through to rebuild and display the menu
+            else: # Original logic for other convert_ settings
+                new_position = txt.split("_", 1)[1]
+                # Added from VFBITMOD-update
+                if txt.startswith("convertencode"):
+                    await saveconfig(user_id, 'convert', 'encode', new_position, SAVE_TO_DATABASE)
+                    await event.answer(f"✅Encode - {str(new_position)}")
+                elif txt.startswith("converttype"):
+                    await saveconfig(user_id, 'convert', 'type', new_position, SAVE_TO_DATABASE)
+                    await event.answer(f"✅Encode Type - {str(new_position)}")
+                # End of Added from VFBITMOD-update
+                elif txt.startswith("convertpreset"):
+                    await saveconfig(user_id, 'convert', 'preset', new_position, SAVE_TO_DATABASE)
+                    await event.answer(f"✅Convert Preset - {str(new_position)}")
+                elif txt.startswith("convertcopysub"):
+                    await saveconfig(user_id, 'convert', 'copy_sub', eval(new_position), SAVE_TO_DATABASE)
+                    await event.answer(f"✅Convert Copy Subtitles - {str(new_position)}")
+                elif txt.startswith("convertmap"):
+                    await saveconfig(user_id, 'convert', 'map', eval(new_position), SAVE_TO_DATABASE)
+                    await event.answer(f"✅Convert Map - {str(new_position)}")
+                elif txt.startswith("convertusequeuesize"):
+                    await saveconfig(user_id, 'convert', 'use_queue_size', eval(new_position), SAVE_TO_DATABASE)
+                    await event.answer(f"✅Convert Use Queue Size - {str(new_position)}")
+                elif txt.startswith("convertsync"):
+                    await saveconfig(user_id, 'convert', 'sync', eval(new_position), SAVE_TO_DATABASE)
+                    await event.answer(f"✅Convert Use SYNC - {str(new_position)}")
+    # Highlighted change: Added handlers for target size settings
+                elif txt.startswith("convertusetargetsize"): # This is for the True/False toggle
+                    await saveoptions(user_id, 'use_target_size', eval(new_position), SAVE_TO_DATABASE)
+                    await event.answer(f"✅Use Target File Size - {str(new_position)}")
+                # Note: The 'converttargetsizemb_VALUE' case is handled by the direct 'converttargetsizemb' check now.
 # END OF MODIFIED BLOCK
-
+            KeyBoard = []
             # Use .get() with defaults
             convert_settings = get_data().get(user_id, {}).get('convert', {})
             convert_encode = convert_settings.get('encode', 'Video')
@@ -937,10 +938,10 @@ async def convert_callback(event, txt, user_id, edit):
 # START OF MODIFIED BLOCK
             # Highlighted change: Add buttons for target size
             KeyBoard.append([Button.inline(f'🎯Use Target File Size - {str(use_target_size)}', 'BashAFK')])
-            for board in gen_keyboard(bool_list, use_target_size, "convertusetargetsize", 2, False):
+            for board in gen_keyboard(bool_list, use_target_size, "convertusetargetsize", 2, False): # Callback: convertusetargetsize_True/False
                 KeyBoard.append(board)
             if use_target_size: # Only show if enabled
-                KeyBoard.append([Button.inline(f'⚖️Target Size - {str(target_size_mb)} MB [Click To Change]', 'converttargetsizemb')])
+                KeyBoard.append([Button.inline(f'⚖️Target Size - {str(target_size_mb)} MB [Click To Change]', 'converttargetsizemb')]) # Direct callback: converttargetsizemb
             # End of highlighted change
 # END OF MODIFIED BLOCK
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
