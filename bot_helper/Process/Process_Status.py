@@ -171,9 +171,9 @@ def ffmpeg_status_foot(status, user_id, start_time, time_in_us, current_output_s
                             progress_ratio = (time_in_us / 1000000) / status.duration
                             if progress_ratio > 0:
                                 estimated_total_size = (current_output_size_bytes / progress_ratio)
-                                status_foot += f"**ETA Size**: {str(get_human_size(estimated_total_size))} (Target: {target_mb_for_eta}MB)"
+                                status_foot += f"**Est.FinalSize**: {str(get_human_size(estimated_total_size))}" # Changed "ETA Size" to "Est.FinalSize" and removed target display
                             else:
-                                status_foot += f"**ETA Size**: N/A (Target: {target_mb_for_eta}MB)"
+                                status_foot += f"**Est.FinalSize**: N/A" # Changed "ETA Size" to "Est.FinalSize"
                         elif time_in_us != 0 and status.duration > 0: # Original ETA size logic
 # END OF MODIFIED BLOCK
                             # Estimate ETA size based on current output size and time progress
