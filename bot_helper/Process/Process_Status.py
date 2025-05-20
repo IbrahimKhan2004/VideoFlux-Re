@@ -672,20 +672,19 @@ class ProcessStatus:
                                     capped_elapsed_time = min(elapsed_time, status.duration)
                                     percentage = (capped_elapsed_time / status.duration) * 100 if status.duration > 0 else 0
                                     eta_time = (status.duration - capped_elapsed_time) / speed if speed > 0 else 0
-
+# START OF MODIFIED BLOCK (Indentation Fixed)
                                     text =f'{process_state}\n'\
-                                                            f'`{name}`\n'\
-                                                            f'{get_progress_bar_string(capped_elapsed_time, status.duration)} {percentage:.1f}%\n'\
-                                                            f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
-                                                            f'**Engine**: FFMPEG'\
-                                                            f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
-                                                            f'**Processed**: {get_readable_time(capped_elapsed_time)} of {get_readable_time(status.duration)}\n'\
-                                                            f'**Speed**: {speed:.2f}x | **ETA**: {get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"}'\
-# START OF MODIFIED BLOCK
-                                                            f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us, current_output_size_bytes_for_eta)}\n'\
+                                            f'`{name}`\n'\
+                                            f'{get_progress_bar_string(capped_elapsed_time, status.duration)} {percentage:.1f}%\n'\
+                                            f'**Added By**: {self.added_by} | **ID**: `{self.user_id}`\n'\
+                                            f'**Engine**: FFMPEG'\
+                                            f"{ffmpeg_head if get_data()[self.user_id]['detailed_messages'] else ''}\n"\
+                                            f'**Processed**: {get_readable_time(capped_elapsed_time)} of {get_readable_time(status.duration)}\n'\
+                                            f'**Speed**: {speed:.2f}x | **ETA**: {get_readable_time(floor(eta_time)) if eta_time > 0 else "N/A"}'\
+                                            f'{ffmpeg_status_foot(status, self.user_id, self.start_time, time_in_us, current_output_size_bytes_for_eta)}\n'\
+                                            f'`/ffmpeg log {self.process_id}`\n'\
+                                            f"`/cancel process {self.process_id}`"
 # END OF MODIFIED BLOCK
-                                                            f'`/ffmpeg log {self.process_id}`\n'\
-                                                            f"`/cancel process {self.process_id}`"
                                 # End of highlighted change
                                 self.status_message = text
                                 await asynciosleep(0.5) # Keep sleep reasonable
