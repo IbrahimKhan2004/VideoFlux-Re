@@ -2,15 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "Dockerfile",
-      "use": "@vercel/docker",
-      "config": { "dockerfile": "Dockerfile" }
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "static-build-output" }
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
+  "functions": {
+    "api/index.js": {
+       "runtime": "vercel-docker@0.0.1",
+       "memory": 3008,
+       "maxDuration": 300,
+       "config": {
+          "dockerfilePath": "Dockerfile"
+       }
     }
+  },
+  "routes": [
+     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
