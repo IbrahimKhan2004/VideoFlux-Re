@@ -55,9 +55,6 @@ def get_commands(process_status):
 # END OF MODIFIED BLOCK
             merge_map = get_data()[process_status.user_id]['merge']['map'] # Yeh setting abhi bhi use ho sakti hai decide karne ke liye ki map karna hai ya nahi
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
-# HIGHLIGHTED CHANGE START: Get merge_fix_timestamps setting
-            merge_fix_timestamps = get_data()[process_status.user_id]['merge'].get('fix_timestamps', False)
-# HIGHLIGHTED CHANGE END
             create_direc(f"{process_status.dir}/merge/")
             log_file = f"{process_status.dir}/merge/merge_logs_{process_status.process_id}.txt"
             infile_names = ""
@@ -74,14 +71,8 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
-                                    '-progress', f"{log_file}"]
-# HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
-            fflags_options = "+genpts"
-            if merge_fix_timestamps:
-                fflags_options += "+igndts"
-            command += ['-fflags', fflags_options]
-# HIGHLIGHTED CHANGE END
-            command += [        "-f", "concat",
+                                    '-progress', f"{log_file}",
+                                        "-f", "concat",
                                         "-safe", "0",
                                         "-ignore_unknown"] # Added -ignore_unknown flag
             if merge_fix_blank:
@@ -101,12 +92,6 @@ def get_commands(process_status):
             # Behtar hai ki merge_map hamesha True rakha jaaye merge ke liye aur specific streams map kiye jaayein.
             # For simplicity, assuming merge_map True means we want video, audio, subtitles.
 # END OF MODIFIED BLOCK #####################################################
-# HIGHLIGHTED CHANGE START: Fix for subtitle copying in merge
-            if merge_fix_blank:
-                if not merge_map: # If merge_map was false, subtitles weren't mapped yet by the block above
-                    command += ['-map', '0:s?'] # Map subtitle streams
-                command += ['-c:s', 'copy'] # Ensure subtitle streams are copied
-# HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
                 command+= ["-c", "copy"]
 # START OF MODIFIED BLOCK
@@ -134,11 +119,6 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 and -start_at_zero based on merge_fix_timestamps
-            command += ['-avoid_negative_ts', '1']
-            if merge_fix_timestamps:
-                command += ['-start_at_zero']
-# HIGHLIGHTED CHANGE END
             command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
 
@@ -566,9 +546,6 @@ def get_commands(process_status):
                         command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
                 else:
                         command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-                # HIGHLIGHTED CHANGE START: Ensure audio is copied when video is encoded for hardmux, as per comment intention
-                command += ['-c:a','copy']
-                # HIGHLIGHTED CHANGE END
         else: # If not encoding video, copy audio. If encoding video, audio will be re-encoded by default unless -c:a copy is added.
               # For hardmux, usually audio is copied if video is re-encoded with subtitles.
               # If video is also copied (hardmux_encode_video=False), then audio must be copied.
@@ -668,4 +645,4 @@ def get_commands(process_status):
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
-# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py --- isme merge k baad subtitles ni hore copy jbki video m hai
+# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
