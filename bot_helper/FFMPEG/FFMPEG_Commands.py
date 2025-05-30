@@ -55,6 +55,9 @@ def get_commands(process_status):
 # END OF MODIFIED BLOCK
             merge_map = get_data()[process_status.user_id]['merge']['map'] # Yeh setting abhi bhi use ho sakti hai decide karne ke liye ki map karna hai ya nahi
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
+# HIGHLIGHTED CHANGE START: Get merge_fix_timestamps setting
+            merge_fix_timestamps = get_data()[process_status.user_id]['merge'].get('fix_timestamps', False)
+# HIGHLIGHTED CHANGE END
             create_direc(f"{process_status.dir}/merge/")
             log_file = f"{process_status.dir}/merge/merge_logs_{process_status.process_id}.txt"
             infile_names = ""
@@ -72,8 +75,11 @@ def get_commands(process_status):
             # End of highlighted change
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
                                     '-progress', f"{log_file}"]
-# HIGHLIGHTED CHANGE START: Add -fflags +genpts for concat input to help with unset/improper PTS
-            command += ['-fflags', '+genpts']
+# HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
+            fflags_options = "+genpts"
+            if merge_fix_timestamps:
+                fflags_options += "+igndts"
+            command += ['-fflags', fflags_options]
 # HIGHLIGHTED CHANGE END
             command += [        "-f", "concat",
                                         "-safe", "0",
@@ -128,8 +134,10 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 to handle negative timestamp issues at output
+# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 and -start_at_zero based on merge_fix_timestamps
             command += ['-avoid_negative_ts', '1']
+            if merge_fix_timestamps:
+                command += ['-start_at_zero']
 # HIGHLIGHTED CHANGE END
             command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
