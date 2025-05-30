@@ -109,7 +109,7 @@ def get_commands(process_status):
                 command.extend(['-metadata', f'comment={user_global_metadata_text}'])
 
                 # Fixed fields
-                command.extend(['-metadata', 'encoded_by=BashAFK'])
+                command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
                 command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
                 command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
                 LOGGER.info("MERGE: Applied fixed metadata: encoded_by, description, telegram tags.")
@@ -173,7 +173,7 @@ def get_commands(process_status):
                 command.extend(['-metadata:s:a', f'title={user_global_metadata_text}'])
                 # For softmux, subtitles are separate streams, so apply title to them
                 command.extend(['-metadata:s:s', f'title={user_global_metadata_text}'])
-            command.extend(['-metadata', 'encoded_by=BashAFK'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
             LOGGER.info("SOFTMUX: Applied fixed metadata tags.")
@@ -505,7 +505,7 @@ def get_commands(process_status):
                     if convert_copysub: # Apply to subtitle titles only if copying subtitles
                         command.extend(['-metadata:s:s', f'title={user_global_metadata_text_convert}'])
 
-                command.extend(['-metadata', 'encoded_by=BashAFK'])
+                command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
                 command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
                 command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
                 LOGGER.info("CONVERT: Applied fixed metadata: encoded_by, description, telegram tags.")
@@ -567,7 +567,7 @@ def get_commands(process_status):
                 command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text_hm}'])
                 command.extend(['-metadata:s:a', f'title={user_global_metadata_text_hm}'])
                 # No subtitle stream titles for hardmux as they are burned in
-            command.extend(['-metadata', 'encoded_by=BashAFK'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
             LOGGER.info("HARDMUX: Applied fixed metadata tags.")
@@ -603,7 +603,7 @@ def get_commands(process_status):
                 command.extend(['-metadata', f'title={user_global_metadata_text_cmd}']) # Main file title
                 command.extend(['-metadata', f'author={user_global_metadata_text_cmd}'])
                 command.extend(['-metadata', f'comment={user_global_metadata_text_cmd}'])
-            command.extend(['-metadata', 'encoded_by=BashAFK'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
             LOGGER.info("CHANGEMETADATA: Applied fixed metadata tags.")
@@ -637,7 +637,7 @@ def get_commands(process_status):
                 command.extend(['-metadata', f'title={user_global_metadata_text_ci}'])
                 command.extend(['-metadata', f'author={user_global_metadata_text_ci}'])
                 command.extend(['-metadata', f'comment={user_global_metadata_text_ci}'])
-            command.extend(['-metadata', 'encoded_by=BashAFK'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
             LOGGER.info("CHANGEINDEX: Applied fixed metadata tags.")
