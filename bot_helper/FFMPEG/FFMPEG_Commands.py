@@ -1,5 +1,3 @@
-# --- START OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
-
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
@@ -50,6 +48,11 @@ def get_commands(process_status):
     #     ... (block content removed) ...
 
     if process_status.process_type==Names.merge: # MODIFIED: Changed elif to if
+# START OF MODIFIED BLOCK
+            user_settings = get_data()[process_status.user_id]
+            apply_user_metadata_globally = user_settings.get('custom_metadata', False)
+            user_global_metadata_text = user_settings.get('metadata', "VideoFlux Default Title") # Existing text field
+# END OF MODIFIED BLOCK
             merge_map = get_data()[process_status.user_id]['merge']['map'] # Yeh setting abhi bhi use ho sakti hai decide karne ke liye ki map karna hai ya nahi
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
             create_direc(f"{process_status.dir}/merge/")
@@ -89,16 +92,48 @@ def get_commands(process_status):
             # Behtar hai ki merge_map hamesha True rakha jaaye merge ke liye aur specific streams map kiye jaayein.
             # For simplicity, assuming merge_map True means we want video, audio, subtitles.
 # END OF MODIFIED BLOCK #####################################################
+# HIGHLIGHTED CHANGE START: Fix for subtitle copying in merge
+            if merge_fix_blank:
+                if not merge_map: # If merge_map was false, subtitles weren't mapped yet by the block above
+                    command += ['-map', '0:s?'] # Map subtitle streams
+                command += ['-c:s', 'copy'] # Ensure subtitle streams are copied
+# HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
                 command+= ["-c", "copy"]
-            # Added metadata from VFBITMOD-update
-            custom_metadata_title = get_data()[process_status.user_id]['metadata']
-            command += ['-metadata', f"title={custom_metadata_title}", '-metadata:s:v', f"title={custom_metadata_title}", '-metadata:s:a', f"title={custom_metadata_title}", '-metadata:s:s', f"title={custom_metadata_title}"]
-            # End of Added metadata
+# START OF MODIFIED BLOCK
+            # Apply metadata if user has it enabled
+            if apply_user_metadata_globally:
+                LOGGER.info(f"MERGE: Applying custom metadata. User text: '{user_global_metadata_text}'")
+                # User's text for main title and stream titles (VideoFlux already did this part)
+                command.extend(['-metadata', f'title={user_global_metadata_text}'])
+                command.extend(['-metadata:s:v', f'title={user_global_metadata_text}'])
+                command.extend(['-metadata:s:a', f'title={user_global_metadata_text}'])
+                command.extend(['-metadata:s:s', f'title={user_global_metadata_text}'])
+
+                # User's text for author and comment
+                command.extend(['-metadata', f'author={user_global_metadata_text}'])
+                command.extend(['-metadata', f'comment={user_global_metadata_text}'])
+
+                # Fixed fields
+                command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+                command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+                command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+                LOGGER.info("MERGE: Applied fixed metadata: encoded_by, description, telegram tags.")
+            else:
+                # Fallback to original VideoFlux merge metadata if global custom_metadata is off
+                # This part was already in VideoFlux for merge, using 'metadata' as custom_metadata_title
+                custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
+                command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
+# END OF MODIFIED BLOCK
             command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
 
     elif process_status.process_type==Names.softmux:
+# START OF MODIFIED BLOCK
+        user_settings = get_data()[process_status.user_id]
+        apply_user_metadata_globally = user_settings.get('custom_metadata', False)
+        user_global_metadata_text = user_settings.get('metadata', "VideoFlux Default Title")
+# END OF MODIFIED BLOCK
         softmux_preset =  get_data()[process_status.user_id]['softmux']['preset']
         softmux_crf = get_data()[process_status.user_id]['softmux']['crf']
         softmux_use_crf = get_data()[process_status.user_id]['softmux']['use_crf']
@@ -132,7 +167,24 @@ def get_commands(process_status):
         else:
                 command += ['-c','copy']
 
-        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}", "-y", f"{output_file}"]
+        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"]
+# START OF MODIFIED BLOCK
+        if apply_user_metadata_globally:
+            LOGGER.info(f"SOFTMUX: Applying custom metadata. User text: '{user_global_metadata_text}'")
+            if user_global_metadata_text:
+                command.extend(['-metadata', f'title={user_global_metadata_text}'])
+                command.extend(['-metadata', f'author={user_global_metadata_text}'])
+                command.extend(['-metadata', f'comment={user_global_metadata_text}'])
+                command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text}'])
+                command.extend(['-metadata:s:a', f'title={user_global_metadata_text}'])
+                # For softmux, subtitles are separate streams, so apply title to them
+                command.extend(['-metadata:s:s', f'title={user_global_metadata_text}'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+            LOGGER.info("SOFTMUX: Applied fixed metadata tags.")
+# END OF MODIFIED BLOCK
+        command += ["-y", f"{output_file}"]
 
         return command, log_file, input_file, output_file, file_duration
 
@@ -142,6 +194,11 @@ def get_commands(process_status):
 
 
     elif process_status.process_type==Names.convert:
+# START OF MODIFIED BLOCK
+            user_settings_convert = get_data()[process_status.user_id]
+            apply_user_metadata_convert = user_settings_convert.get('custom_metadata', False)
+            user_global_metadata_text_convert = user_settings_convert.get('metadata', "VideoFlux Default Title")
+# END OF MODIFIED BLOCK
             # --- Start of VFBITMOD-update Integration ---
             convert_preset =  get_data()[process_status.user_id]['convert']['preset']
             convert_vbit = get_data()[process_status.user_id]['video']['vbit']
@@ -418,7 +475,7 @@ def get_commands(process_status):
                         command += ['-b:a', f'{str(_actual_audio_bitrate_to_use)}']
 
                 # Audio Channels (always apply user's choice unless it was 'copy' and overridden)
-                if convert_achannel.lower() != "copy":
+                if convert_achannel.lower() != "copy": # Corrected: was user_settings_convert.get('audio', {}).get('achannel', '2')
                     command += ['-ac', f'{str(convert_achannel)}']
                 # If convert_achannel is 'copy' AND target size mode forced re-encode, FFmpeg will pick channels.
                 # If convert_achannel is 'copy' AND audio is copied, then channels are copied.
@@ -441,6 +498,25 @@ def get_commands(process_status):
             if convert_sync:
                 command+= ['-vsync', '1', '-async', '-1']
 
+# START OF MODIFIED BLOCK
+            # Apply metadata if user has it enabled
+            if apply_user_metadata_convert:
+                LOGGER.info(f"CONVERT: Applying custom metadata. User text: '{user_global_metadata_text_convert}'")
+                if user_global_metadata_text_convert: # Only if text is not empty
+                    command.extend(['-metadata', f'title={user_global_metadata_text_convert}'])
+                    command.extend(['-metadata', f'author={user_global_metadata_text_convert}'])
+                    command.extend(['-metadata', f'comment={user_global_metadata_text_convert}'])
+                    command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text_convert}'])
+                    command.extend(['-metadata:s:a', f'title={user_global_metadata_text_convert}'])
+                    if convert_copysub: # Apply to subtitle titles only if copying subtitles
+                        command.extend(['-metadata:s:s', f'title={user_global_metadata_text_convert}'])
+
+                command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+                command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+                command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+                LOGGER.info("CONVERT: Applied fixed metadata: encoded_by, description, telegram tags.")
+# END OF MODIFIED BLOCK
+
 # Highlighted change: Apply preset only if not VP9
             if convert_encoder != 'VP9':
                 command+= ['-preset', convert_preset]
@@ -452,6 +528,11 @@ def get_commands(process_status):
 
 
     elif process_status.process_type==Names.hardmux:
+# START OF MODIFIED BLOCK
+        user_settings_hm = get_data()[process_status.user_id]
+        apply_user_metadata_hm = user_settings_hm.get('custom_metadata', False)
+        user_global_metadata_text_hm = user_settings_hm.get('metadata', "VideoFlux Default Title")
+# END OF MODIFIED BLOCK
         hardmux_preset =  get_data()[process_status.user_id]['hardmux']['preset']
         hardmux_crf = get_data()[process_status.user_id]['hardmux']['crf']
         hardmux_encode_video = get_data()[process_status.user_id]['hardmux']['encode_video']
@@ -471,8 +552,13 @@ def get_commands(process_status):
                         command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
                 else:
                         command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-        else:
+                # HIGHLIGHTED CHANGE START: Ensure audio is copied when video is encoded for hardmux, as per comment intention
                 command += ['-c:a','copy']
+                # HIGHLIGHTED CHANGE END
+        else: # If not encoding video, copy audio. If encoding video, audio will be re-encoded by default unless -c:a copy is added.
+              # For hardmux, usually audio is copied if video is re-encoded with subtitles.
+              # If video is also copied (hardmux_encode_video=False), then audio must be copied.
+            command += ['-c:a','copy'] # Ensure audio is copied if video is not re-encoded or if user expects audio copy
         hardmux_sync = get_data()[process_status.user_id]['hardmux']['sync']
         hardmux_use_queue_size = get_data()[process_status.user_id]['hardmux']['use_queue_size']
         if hardmux_use_queue_size:
@@ -480,36 +566,92 @@ def get_commands(process_status):
                 command+= ['-max_muxing_queue_size', f'{str(hardmux_queue_size)}']
         if hardmux_sync:
             command+= ['-vsync', '1', '-async', '-1']
+# START OF MODIFIED BLOCK
+        if apply_user_metadata_hm:
+            LOGGER.info(f"HARDMUX: Applying custom metadata. User text: '{user_global_metadata_text_hm}'")
+            if user_global_metadata_text_hm:
+                command.extend(['-metadata', f'title={user_global_metadata_text_hm}'])
+                command.extend(['-metadata', f'author={user_global_metadata_text_hm}'])
+                command.extend(['-metadata', f'comment={user_global_metadata_text_hm}'])
+                command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text_hm}'])
+                command.extend(['-metadata:s:a', f'title={user_global_metadata_text_hm}'])
+                # No subtitle stream titles for hardmux as they are burned in
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+            LOGGER.info("HARDMUX: Applied fixed metadata tags.")
+# END OF MODIFIED BLOCK
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
 
     elif process_status.process_type==Names.changeMetadata:
+# START OF MODIFIED BLOCK
+        # For /changemetadata, we primarily use its own specific logic for stream metadata.
+        # However, we can still add the fixed global tags if custom_metadata is on.
+        user_settings_cmd = get_data()[process_status.user_id]
+        apply_user_metadata_cmd = user_settings_cmd.get('custom_metadata', False)
+        user_global_metadata_text_cmd = user_settings_cmd.get('metadata', "VideoFlux Default Title") # User's main metadata text
+# END OF MODIFIED BLOCK
         create_direc(f"{process_status.dir}/metadata/")
         log_file = f"{process_status.dir}/metadata/metadata_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/metadata/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        custom_metadata = process_status.custom_metadata
+        custom_metadata = process_status.custom_metadata # This is the specific stream metadata from /changemetadata command
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        for m in custom_metadata:
-            command+=m
-        # Added global title metadata from VFBITMOD-update
-        custom_metadata_title = get_data()[process_status.user_id]['metadata']
-        command += ['-metadata', f"title={custom_metadata_title}"]
-        # End of Added global title metadata
+        if custom_metadata: # Apply specific stream changes from the command first
+            for m in custom_metadata:
+                command+=m
+# START OF MODIFIED BLOCK
+        # Then, if global custom_metadata is on, apply the main file title from user's text
+        # and the fixed tags. Author/comment from user's global text can also be added.
+        if apply_user_metadata_cmd:
+            LOGGER.info(f"CHANGEMETADATA: Applying global and fixed metadata. User text: '{user_global_metadata_text_cmd}'")
+            if user_global_metadata_text_cmd:
+                command.extend(['-metadata', f'title={user_global_metadata_text_cmd}']) # Main file title
+                command.extend(['-metadata', f'author={user_global_metadata_text_cmd}'])
+                command.extend(['-metadata', f'comment={user_global_metadata_text_cmd}'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+            LOGGER.info("CHANGEMETADATA: Applied fixed metadata tags.")
+        else: # If global custom_metadata is OFF, VideoFlux's original /changemetadata still sets a global title
+              # using the 'metadata' field. This was the old behavior.
+            original_vf_global_title = get_data()[process_status.user_id]['metadata']
+            command += ['-metadata', f"title={original_vf_global_title}"]
+# END OF MODIFIED BLOCK
         command += ["-map", "0", "-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
 
     elif process_status.process_type==Names.changeindex:
+# START OF MODIFIED BLOCK
+        # For /changeindex, metadata is usually not the primary focus, but we can add
+        # the main file title and fixed tags if custom_metadata is on.
+        user_settings_ci = get_data()[process_status.user_id]
+        apply_user_metadata_ci = user_settings_ci.get('custom_metadata', False)
+        user_global_metadata_text_ci = user_settings_ci.get('metadata', "VideoFlux Default Title")
+# END OF MODIFIED BLOCK
         create_direc(f"{process_status.dir}/index/")
         log_file = f"{process_status.dir}/index/index_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/index/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
         command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index # Reverted zender -> ffmpeg
+# START OF MODIFIED BLOCK
+        if apply_user_metadata_ci:
+            LOGGER.info(f"CHANGEINDEX: Applying global and fixed metadata. User text: '{user_global_metadata_text_ci}'")
+            if user_global_metadata_text_ci:
+                command.extend(['-metadata', f'title={user_global_metadata_text_ci}'])
+                command.extend(['-metadata', f'author={user_global_metadata_text_ci}'])
+                command.extend(['-metadata', f'comment={user_global_metadata_text_ci}'])
+            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
+            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
+            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
+            LOGGER.info("CHANGEINDEX: Applied fixed metadata tags.")
+# END OF MODIFIED BLOCK
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
-# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
+# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py
