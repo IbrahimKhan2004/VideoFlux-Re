@@ -71,8 +71,11 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
-                                    '-progress', f"{log_file}",
-                                        "-f", "concat",
+                                    '-progress', f"{log_file}"]
+# HIGHLIGHTED CHANGE START: Add -fflags +genpts for concat input to help with unset/improper PTS
+            command += ['-fflags', '+genpts']
+# HIGHLIGHTED CHANGE END
+            command += [        "-f", "concat",
                                         "-safe", "0",
                                         "-ignore_unknown"] # Added -ignore_unknown flag
             if merge_fix_blank:
@@ -125,6 +128,9 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
+# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 to handle negative timestamp issues at output
+            command += ['-avoid_negative_ts', '1']
+# HIGHLIGHTED CHANGE END
             command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
             return command, log_file, input_file, output_file, file_duration
 
@@ -654,4 +660,4 @@ def get_commands(process_status):
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
-# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py
+# --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py --- isme merge k baad subtitles ni hore copy jbki video m hai
