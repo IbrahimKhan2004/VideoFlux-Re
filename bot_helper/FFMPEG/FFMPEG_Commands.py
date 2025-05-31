@@ -88,6 +88,7 @@ def get_commands(process_status):
             command += [        "-f", "concat",
                                         "-safe", "0",
                                         "-autorotate", "0", 
+                                        "-fix_sub_duration", 
                                         "-ignore_unknown"] 
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
@@ -135,21 +136,12 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-# <<<< MODIFIED LOGIC FOR TIMESTAMP FLAGS >>>>
-            command += ['-avoid_negative_ts', '1'] # Always avoid negative timestamps
-            if merge_fix_timestamps: # Only add +igndts and -start_at_zero if this user setting is true
-                # fflags_options already set to +igndts above
+            command += ['-avoid_negative_ts', '1'] 
+            if merge_fix_timestamp: 
+                
+                # END OF MODIFIED BLOCK
+                
                 command += ['-start_at_zero']
-            # If merge_fix_timestamps is false, fflags is +genpts and -start_at_zero is not added here
-            # (unless it's desired universally, in which case it would be outside this if)
-
-# <<<< MINIMAL CHANGE: Ensure -start_at_zero is added if merge_fix_blank is FALSE,
-#      as this scenario (standard concat, not the complex fix_blank one) benefits from it
-#      and it complements -avoid_negative_ts 1.
-#      If merge_fix_timestamps is TRUE, it's already added. This covers the FALSE case. >>>>
-            if not merge_fix_blank and not merge_fix_timestamps:
-                 command += ['-start_at_zero']
-# <<<< END OF MINIMAL CHANGE >>>>
 
             command+= ['-y', f'{str(output_file)}'] 
             return command, log_file, input_file, output_file, file_duration
