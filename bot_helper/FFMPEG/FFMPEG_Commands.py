@@ -96,7 +96,7 @@ def get_commands(process_status):
                            '-map','0:s?'] # Subtitle streams map karo (agar hain)
                 # Attachments (0:t) ko yahan explicitly map nahi kiya gaya hai
             # Agar merge_map False hai, toh FFmpeg default stream selection karega (usually best video, best audio)
-            # ya fir agar -c copy hai toh specific mapping zaroori ho jaati hai.
+            # ya fir agar agar -c copy hai toh specific mapping zaroori ho jaati hai.
             # Is case mein, agar merge_map False hai aur -c copy hai, toh FFmpeg error de sakta hai.
             # Behtar hai ki merge_map hamesha True rakha jaaye merge ke liye aur specific streams map kiye jaayein.
             # For simplicity, assuming merge_map True means we want video, audio, subtitles.
@@ -105,10 +105,14 @@ def get_commands(process_status):
             if merge_fix_blank:
                 if not merge_map: # If merge_map was false, subtitles weren't mapped yet by the block above
                     command += ['-map', '0:s?'] # Map subtitle streams
-                command += ['-c:s', 'copy'] # Ensure subtitle streams are copied
+# <<<< MODIFIED LINE START >>>>
+                command += ['-c:s', 'srt'] # Ensure subtitle streams are converted to srt
+# <<<< MODIFIED LINE END >>>>
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
-                command+= ["-c", "copy"]
+# <<<< MODIFIED LINE START >>>>
+                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] # Copy video/audio, convert subtitles to srt
+# <<<< MODIFIED LINE END >>>>
 # START OF MODIFIED BLOCK
             # Apply metadata if user has it enabled
             if apply_user_metadata_globally:
