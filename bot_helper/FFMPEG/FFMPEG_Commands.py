@@ -88,6 +88,7 @@ def get_commands(process_status):
             command += [        "-f", "concat",
                                         "-safe", "0",
                                         "-autorotate", "0", 
+# <<<< MODIFIED LINE: -fix_sub_duration RE-ADDED HERE >>>>
                                         "-fix_sub_duration", 
                                         "-ignore_unknown"] 
             if merge_fix_blank:
@@ -137,11 +138,14 @@ def get_commands(process_status):
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
             command += ['-avoid_negative_ts', '1'] 
-            if merge_fix_timestamp: 
-                
-                # END OF MODIFIED BLOCK
+            if merge_fix_timestamps: 
                 
                 command += ['-start_at_zero']
+            
+# <<<< MODIFIED BLOCK: The following 'if' condition and its content has been REMOVED as per request >>>>
+            # if not merge_fix_blank and not merge_fix_timestamps:
+            #      command += ['-start_at_zero']
+# <<<< END OF MODIFIED BLOCK >>>>
 
             command+= ['-y', f'{str(output_file)}'] 
             return command, log_file, input_file, output_file, file_duration
