@@ -1,3 +1,5 @@
+# --- START OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
+
 from bot_helper.Database.User_Data import get_data
 from bot_helper.Others.Helper_Functions import get_video_duration
 from bot_helper.Others.Names import Names
@@ -74,6 +76,10 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
             command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
+# <<<< MODIFIED LINES START >>>>
+                                    '-analyzeduration', '500M', # Increased analyzeduration for concat
+                                    '-probesize', '500M',       # Increased probesize for concat
+# <<<< MODIFIED LINES END >>>>
                                     '-progress', f"{log_file}"]
 # HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
             fflags_options = "+genpts"
@@ -105,14 +111,10 @@ def get_commands(process_status):
             if merge_fix_blank:
                 if not merge_map: # If merge_map was false, subtitles weren't mapped yet by the block above
                     command += ['-map', '0:s?'] # Map subtitle streams
-# <<<< MODIFIED LINE START >>>>
                 command += ['-c:s', 'srt'] # Ensure subtitle streams are converted to srt
-# <<<< MODIFIED LINE END >>>>
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
-# <<<< MODIFIED LINE START >>>>
                 command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] # Copy video/audio, convert subtitles to srt
-# <<<< MODIFIED LINE END >>>>
 # START OF MODIFIED BLOCK
             # Apply metadata if user has it enabled
             if apply_user_metadata_globally:
