@@ -88,7 +88,6 @@ def get_commands(process_status):
             command += [        "-f", "concat",
                                         "-safe", "0",
                                         "-autorotate", "0", 
-# <<<< MODIFIED LINE: -fix_sub_duration REMOVED >>>>
                                         "-ignore_unknown"] 
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
