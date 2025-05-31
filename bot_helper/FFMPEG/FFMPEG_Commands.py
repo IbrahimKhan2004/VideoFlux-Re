@@ -80,9 +80,9 @@ def get_commands(process_status):
                                     '-probesize', '500M',       
                                     '-progress', f"{log_file}"]
 # HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
-            fflags_options = "+genpts"
+            fflags_options = "+genpts" # Default for when merge_fix_timestamps is False
             if merge_fix_timestamps:
-                fflags_options += "+igndts"
+                fflags_options = "+igndts" # Override if merge_fix_timestamps is True
             command += ['-fflags', fflags_options]
 # HIGHLIGHTED CHANGE END
             command += [        "-f", "concat",
@@ -110,9 +110,7 @@ def get_commands(process_status):
                 command += ['-c:s', 'srt'] 
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
-# <<<< MODIFIED LINE START >>>>
-                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] # Copy video/audio, convert subtitles to srt
-# <<<< MODIFIED LINE END >>>>
+                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] 
 # START OF MODIFIED BLOCK
             # Apply metadata if user has it enabled
             if apply_user_metadata_globally:
@@ -138,11 +136,22 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 and -start_at_zero based on merge_fix_timestamps
-            command += ['-avoid_negative_ts', '1']
-            if merge_fix_timestamps:
+# <<<< MODIFIED LOGIC FOR TIMESTAMP FLAGS >>>>
+            command += ['-avoid_negative_ts', '1'] # Always avoid negative timestamps
+            if merge_fix_timestamps: # Only add +igndts and -start_at_zero if this user setting is true
+                # fflags_options already set to +igndts above
                 command += ['-start_at_zero']
-# HIGHLIGHTED CHANGE END
+            # If merge_fix_timestamps is false, fflags is +genpts and -start_at_zero is not added here
+            # (unless it's desired universally, in which case it would be outside this if)
+
+# <<<< MINIMAL CHANGE: Ensure -start_at_zero is added if merge_fix_blank is FALSE,
+#      as this scenario (standard concat, not the complex fix_blank one) benefits from it
+#      and it complements -avoid_negative_ts 1.
+#      If merge_fix_timestamps is TRUE, it's already added. This covers the FALSE case. >>>>
+            if not merge_fix_blank and not merge_fix_timestamps:
+                 command += ['-start_at_zero']
+# <<<< END OF MINIMAL CHANGE >>>>
+
             command+= ['-y', f'{str(output_file)}'] 
             return command, log_file, input_file, output_file, file_duration
 
