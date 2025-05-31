@@ -75,48 +75,42 @@ def get_commands(process_status):
             base_output_name, _ = os_path_splitext(get_output_name(process_status)) # Get name without extension
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
-            command = ['ffmpeg','-hide_banner', # Reverted zender -> ffmpeg
-# <<<< MODIFIED LINES START >>>>
-                                    '-analyzeduration', '500M', # Increased analyzeduration for concat
-                                    '-probesize', '500M',       # Increased probesize for concat
-# <<<< MODIFIED LINES END >>>>
+            command = ['ffmpeg','-hide_banner', 
+                                    '-analyzeduration', '500M', 
+                                    '-probesize', '500M',       
                                     '-progress', f"{log_file}"]
 # HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
-            fflags_options = "+genpts"
+            fflags_options = "+genpts" # Default for when merge_fix_timestamps is False
             if merge_fix_timestamps:
-                fflags_options += "+igndts"
+                fflags_options = "+igndts" # Override if merge_fix_timestamps is True
             command += ['-fflags', fflags_options]
 # HIGHLIGHTED CHANGE END
             command += [        "-f", "concat",
                                         "-safe", "0",
                                         "-autorotate", "0", 
-                                        "-fix_sub_duration", 
-                                        "-ignore_unknown"] # Added -ignore_unknown flag
+# <<<< MODIFIED LINE: -fix_sub_duration REMOVED >>>>
+                                        "-ignore_unknown"] 
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
             command+=["-i", f'{str(input_file)}']
             if merge_fix_blank:
                 command += ['-vf', 'select=concatdec_select', '-af', 'aselect=concatdec_select,aresample=async=1']
 # START OF MODIFIED BLOCK ###################################################
-            if merge_map: # Agar user ne settings mein map True rakha hai
-                command+=['-map','0:v?', # Video streams map karo (agar hain)
-                           '-map','0:a?', # Audio streams map karo (agar hain)
-                           '-map','0:s?'] # Subtitle streams map karo (agar hain)
-                # Attachments (0:t) ko yahan explicitly map nahi kiya gaya hai
-            # Agar merge_map False hai, toh FFmpeg default stream selection karega (usually best video, best audio)
-            # ya fir agar agar -c copy hai toh specific mapping zaroori ho jaati hai.
-            # Is case mein, agar merge_map False hai aur -c copy hai, toh FFmpeg error de sakta hai.
-            # Behtar hai ki merge_map hamesha True rakha jaaye merge ke liye aur specific streams map kiye jaayein.
-            # For simplicity, assuming merge_map True means we want video, audio, subtitles.
+            if merge_map: 
+                command+=['-map','0:v?', 
+                           '-map','0:a?', 
+                           '-map','0:s?'] 
+                
+            
 # END OF MODIFIED BLOCK #####################################################
 # HIGHLIGHTED CHANGE START: Fix for subtitle copying in merge
             if merge_fix_blank:
-                if not merge_map: # If merge_map was false, subtitles weren't mapped yet by the block above
-                    command += ['-map', '0:s?'] # Map subtitle streams
-                command += ['-c:s', 'srt'] # Ensure subtitle streams are converted to srt
+                if not merge_map: 
+                    command += ['-map', '0:s?'] 
+                command += ['-c:s', 'srt'] 
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
-                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] # Copy video/audio, convert subtitles to srt
+                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] 
 # START OF MODIFIED BLOCK
             # Apply metadata if user has it enabled
             if apply_user_metadata_globally:
@@ -142,12 +136,17 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-# HIGHLIGHTED CHANGE START: Add -avoid_negative_ts 1 and -start_at_zero based on merge_fix_timestamps
-            command += ['-avoid_negative_ts', '1']
-            if merge_fix_timestamps:
+            command += ['-avoid_negative_ts', '1'] 
+            if merge_fix_timestamps: 
+                
                 command += ['-start_at_zero']
-# HIGHLIGHTED CHANGE END
-            command+= ['-y', f'{str(output_file)}'] # Use the modified output_file
+            
+# <<<< MODIFIED BLOCK: Logic for -start_at_zero RE-ADDED as per request >>>>
+            if not merge_fix_blank and not merge_fix_timestamps:
+                 command += ['-start_at_zero']
+# <<<< END OF MODIFIED BLOCK >>>>
+
+            command+= ['-y', f'{str(output_file)}'] 
             return command, log_file, input_file, output_file, file_duration
 
     elif process_status.process_type==Names.softmux:
@@ -172,7 +171,7 @@ def get_commands(process_status):
             input_sub += ['-i', f'{str(subtitle)}']
             sub_map+= ['-map', f'{smap}:0']
             smap +=1
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
+        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] 
         command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
         if softmux_encode:
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
@@ -261,7 +260,7 @@ def get_commands(process_status):
             file_duration = get_video_duration(input_file)
 
             # Highlighted change: Added -nostdin flag
-            command = ['ffmpeg', '-nostdin', '-hide_banner', # Reverted zender -> ffmpeg, Added -nostdin
+            command = ['ffmpeg', '-nostdin', '-hide_banner', 
             # End of highlighted change
                                             '-progress', f"{log_file}",
                                             '-i', f'{input_file}']
