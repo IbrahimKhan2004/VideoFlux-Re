@@ -89,6 +89,7 @@ def get_commands(process_status):
 # HIGHLIGHTED CHANGE END
             command += [        "-f", "concat",
                                         "-safe", "0",
+                                        "-autorotate", "0",
                                         "-ignore_unknown"] # Added -ignore_unknown flag
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
