@@ -1181,7 +1181,7 @@ async def _change_metadata(event):
             LOGGER.info(mdata)
             try:
                 sindex = str(mdata[0]).strip().lower()
-                mlang =  str(mdata[1]).lower()
+                mlang =  str(mdata[1]).strip().capitalize() # MODIFIED LINE
                 mtilte = str(mdata[2])
                 custom_metadata.append([f'-metadata:s:{sindex}', f"language={mlang}", f'-metadata:s:{str(sindex)}', f"title={mtilte}"])
             except Exception as e:
