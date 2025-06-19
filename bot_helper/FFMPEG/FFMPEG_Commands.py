@@ -346,12 +346,16 @@ def get_commands(process_status):
                     command+=['-vf', 'scale=720:360']
                 elif convert_quality=='480p [720x480]':
                     command+=['-vf', 'scale=720:480']
+                elif convert_quality=='480p [720x240]': # ADDED LINE
+                    command+=['-vf', 'scale=720:240'] # ADDED LINE
 # Highlighted change: Added scaling for 576p and 648p
                 elif convert_quality=='576p [1024x576]':
                     command+=['-vf', 'scale=1024:576']
                 elif convert_quality=='648p [1152x648]':
                     command+=['-vf', 'scale=1152:648']
 # End of highlighted change
+                elif convert_quality=='720p [1280x540]': # ADDED LINE
+                    command+=['-vf', 'scale=1280:540'] # ADDED LINE
                 elif convert_quality=='720p [1280x640]':
                     command+=['-vf', 'scale=1280:640']
                 elif convert_quality=='720p [1280x720]':
