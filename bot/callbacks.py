@@ -20,7 +20,7 @@ acodec_list = ['AAC', 'OPUS', 'DD', 'DDP']
 abit_list = ['64k', '96k', '128k', '160k', '192k', '256k', '320k', '512k', '640k', '768k', '960k']
 achannel_list = ['2', '6']
 # Highlighted change: Added 576p and 648p to qubality_list
-qubality_list = ['480p [720x360]', '480p [720x480]', '480p [720x240]', '576p [1024x576]', '648p [1152x648]', '720p [1280x540]', '720p [1280x640]', '720p [1280x720]', '1080p [1920x960]', '1080p [1920x1080]']
+qubality_list = ['480p [720x240]', '480p [720x360]', '480p [720x480]', '540p [960x540]', '576p [1024x576]', '648p [1152x648]', '720p [1280x540]', '720p [1280x640]', '720p [1280x720]', '1080p [1920x960]', '1080p [1920x1080]']
 # End of highlighted change
 encode_list = ['Video', 'Audio', 'Video Audio [Both]']
 # Highlighted change: Removed 'AV1' from encude_list
