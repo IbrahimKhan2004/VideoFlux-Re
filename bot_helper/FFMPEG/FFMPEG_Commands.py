@@ -128,7 +128,7 @@ def get_commands(process_status):
                 command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
                 command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
                 command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-                command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+                command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
                 LOGGER.info("MERGE: Applied fixed metadata: encoded_by, description, telegram tags.")
             else:
                 # Fallback to original VideoFlux merge metadata if global custom_metadata is off
@@ -203,7 +203,7 @@ def get_commands(process_status):
             command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
             LOGGER.info("SOFTMUX: Applied fixed metadata tags.")
 # END OF MODIFIED BLOCK
         command += ["-y", f"{output_file}"]
@@ -542,7 +542,7 @@ def get_commands(process_status):
                 command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
                 command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
                 command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-                command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+                command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
                 LOGGER.info("CONVERT: Applied fixed metadata: encoded_by, description, telegram tags.")
 # END OF MODIFIED BLOCK
 
@@ -608,7 +608,7 @@ def get_commands(process_status):
             command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
             LOGGER.info("HARDMUX: Applied fixed metadata tags.")
 # END OF MODIFIED BLOCK
         command += ["-y", f"{output_file}"]
@@ -645,7 +645,7 @@ def get_commands(process_status):
             command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
             LOGGER.info("CHANGEMETADATA: Applied fixed metadata tags.")
         else: # If global custom_metadata is OFF, VideoFlux's original /changemetadata still sets a global title
               # using the 'metadata' field. This was the old behavior.
@@ -680,7 +680,7 @@ def get_commands(process_status):
             command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
             command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
             command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://ibrahimkhan2004.github.io/BashAFK/'])
+            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
             LOGGER.info("CHANGEINDEX: Applied fixed metadata tags.")
 # END OF MODIFIED BLOCK
         command += ["-c", "copy", '-y', f"{output_file}"]
