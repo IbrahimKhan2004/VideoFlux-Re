@@ -344,8 +344,8 @@ def get_commands(process_status):
                 # Resolution Scaling
                 if convert_quality=='480p [720x360]':
                     command+=['-vf', 'scale=720:360']
-                elif convert_quality=='480p [720x480]':
-                    command+=['-vf', 'scale=720:480']
+                elif convert_quality=='480p [854x480]':
+                    command+=['-vf', 'scale=854:480']
                 elif convert_quality=='480p [720x240]': # ADDED LINE
                     command+=['-vf', 'scale=720:240'] # ADDED LINE
                 elif convert_quality=='540p [960x540]': # ADDED LINE
