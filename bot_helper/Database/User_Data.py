@@ -112,8 +112,9 @@ async def new_user(user_id, dbsave):
         DATA[user_id]['rclone'] = False
         DATA[user_id]['rclone_config_link'] = False
         DATA[user_id]['drive_name'] = False
+        DATA[user_id]['force_srt_conversion'] = False
 # Highlighted change: Added upload_destination setting
-        DATA[user_id]['upload_destination'] = 'Rclone' # Default to Rclone when TG is off
+        DATA[user_id]['upload_destination'] = 'Rclone' # Default to Rclone
 # End of highlighted change
         DATA[user_id]['merge'] = {}
         DATA[user_id]['merge']['map_audio'] = True
