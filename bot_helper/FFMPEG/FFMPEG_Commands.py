@@ -58,6 +58,7 @@ def get_commands(process_status):
             merge_map = get_data()[process_status.user_id]['merge']['map'] # Yeh setting abhi bhi use ho sakti hai decide karne ke liye ki map karna hai ya nahi
             merge_fix_blank = get_data()[process_status.user_id]['merge']['fix_blank']
 # HIGHLIGHTED CHANGE START: Get merge_fix_timestamps setting
+            force_srt_conversion = get_data()[process_status.user_id].get('force_srt_conversion', False) # ADD THIS LINE
             merge_fix_timestamps = get_data()[process_status.user_id]['merge'].get('fix_timestamps', False)
 # HIGHLIGHTED CHANGE END
             create_direc(f"{process_status.dir}/merge/")
@@ -104,12 +105,14 @@ def get_commands(process_status):
 # END OF MODIFIED BLOCK #####################################################
 # HIGHLIGHTED CHANGE START: Fix for subtitle copying in merge
             if merge_fix_blank:
+                subtitle_codec_for_merge = 'srt' if force_srt_conversion else 'copy'
                 if not merge_map: 
                     command += ['-map', '0:s?'] 
-                command += ['-c:s', 'srt'] 
+                command += ['-c:s', subtitle_codec_for_merge] # Use the determined codec
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
-                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'] 
+                subtitle_codec_for_merge = 'srt' if force_srt_conversion else 'copy'
+                command+= ['-c:v', 'copy', '-c:a', 'copy', '-c:s', subtitle_codec_for_merge] # Use the determined codec
 # START OF MODIFIED BLOCK
             # Apply metadata if user has it enabled
             if apply_user_metadata_globally:
@@ -516,8 +519,9 @@ def get_commands(process_status):
                 command+=['-map','0:v?',
                                             '-map',f'{str(process_status.amap_options)}?',
                                             "-map", "0:s?"]
-            if convert_copysub:
-                command+= ["-c:s", "copy"]
+            if convert_copysub: # This check remains, as it determines if subtitles are copied at all
+                subtitle_codec_for_convert = 'srt' if user_settings_convert.get('force_srt_conversion', False) else 'copy'
+                command+= ["-c:s", subtitle_codec_for_convert] # Use the determined codec
 
             convert_use_queue_size = get_data()[process_status.user_id]['convert']['use_queue_size']
             if convert_use_queue_size:
