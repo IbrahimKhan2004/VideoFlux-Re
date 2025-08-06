@@ -99,6 +99,10 @@ async def callback(event):
         if 'upload_destination' not in user_data:
             await saveoptions(user_id, 'upload_destination', 'Rclone', SAVE_TO_DATABASE)
 # End of highlighted change
+# START OF MODIFIED BLOCK
+        if 'force_srt_conversion' not in user_data: # Check at top level
+            await saveoptions(user_id, 'force_srt_conversion', False, SAVE_TO_DATABASE)
+# END OF MODIFIED BLOCK
         # Highlighted change: Added check for merge fix_timestamps key
         if 'merge' not in user_data or 'fix_timestamps' not in user_data.get('merge', {}):
              await saveconfig(user_id, 'merge', 'fix_timestamps', False, SAVE_TO_DATABASE)
@@ -644,6 +648,11 @@ async def general_callback(event, txt, user_id, chat_id):
             # elif txt.startswith("generalmultitasks"):
             #     await saveoptions(user_id, 'multi_tasks', eval(new_position), SAVE_TO_DATABASE)
             #     await event.answer(f"✅Multi Tasks - {str(new_position)}")
+# START OF MODIFIED BLOCK
+            elif txt.startswith("generalforcesrt"): # New callback prefix for general settings
+                await saveoptions(user_id, 'force_srt_conversion', eval(new_position), SAVE_TO_DATABASE)
+                await event.answer(f"✅Force SRT Conversion - {str(new_position)}")
+# END OF MODIFIED BLOCK
 
             # Use .get() with defaults for all settings
             user_data = get_data().get(user_id, {})
@@ -665,6 +674,9 @@ async def general_callback(event, txt, user_id, chat_id):
             gen_ss = user_data.get('gen_ss', False)
             ss_no = user_data.get('ss_no', 5)
             gen_sample = user_data.get('gen_sample', False)
+# START OF MODIFIED BLOCK
+            force_srt_conversion = user_data.get('force_srt_conversion', False) # ADD THIS NEW RETRIEVAL
+# END OF MODIFIED BLOCK
 
             KeyBoard = []
             # REMOVED: Audio selection buttons
@@ -732,6 +744,11 @@ async def general_callback(event, txt, user_id, chat_id):
             #         for board in gen_keyboard(accounts, drive_name, "generaldrivename", 2, False):
             #             KeyBoard.append(board)
             # End of highlighted change
+# START OF MODIFIED BLOCK
+            KeyBoard.append([Button.inline(f'📝Force SRT Subtitle Conversion - {str(force_srt_conversion)}', 'BashAFK')])
+            for board in gen_keyboard(bool_list, force_srt_conversion, "generalforcesrt", 2, False):
+                KeyBoard.append(board)
+# END OF MODIFIED BLOCK
             KeyBoard.append([Button.inline(f'↩Back', 'settings')])
             if edit:
                 try:
