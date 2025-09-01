@@ -24,10 +24,8 @@ from re import findall
 from requests import get
 from bot_helper.Others.SpeedTest import speedtest
 from subprocess import run as srun
-# REMOVED: Heroku import
-# <<<< START OF DELETED BLOCK >>>>
-# from heroku3 import from_key
-# <<<< END OF DELETED BLOCK >>>>
+import sys # Import sys to get Python version
+import subprocess # Import subprocess to run FFmpeg command
 
 
 status_update = {}
@@ -36,7 +34,6 @@ status_update_lock = Lock()
 
 if not isdir('./userdata'):
     makedirs("./userdata")
-
 
 
 
@@ -51,20 +48,6 @@ LOGGER = Config.LOGGER
 SAVE_TO_DATABASE = Config.SAVE_TO_DATABASE
 
 #////////////////////////////////////Functions////////////////////////////////////#
-
-# REMOVED: hardmux_multi_task function
-# async def hardmux_multi_task(multi_process_status, event, chat_id, user_id, process_command):
-#         ... (function content removed) ...
-
-# REMOVED: append_multi_task function
-# async def append_multi_task(process_status, process_name, command, event):
-#     ... (function content removed) ...
-
-# REMOVED: multi_tasks function
-# ###############------Multi-Tasks------###############
-# async def multi_tasks(process_status, command):
-#     ... (function content removed) ...
-
 
 ###############------Create_Dire------###############
 def create_direc(direc):
@@ -90,7 +73,7 @@ def dw_file_from_url(url, filename):
 
 ###############------Download_Rclone_Config------###############
 for user_id in get_data():
-    link = get_data().get(user_id, {}).get('rclone_config_link', False) # MODIFIED: Use .get()
+    link = get_data().get(user_id, {}).get('rclone_config_link', False)
     if link:
         LOGGER.info(f"🔽Downloading Rclone Config For User_ID {user_id} From Link {link}")
         r_config = f'./userdata/{str(user_id)}_rclone.conf'
@@ -250,7 +233,7 @@ async def ask_text_event(chat_id, user_id, event, timeout, message, message_hint
 async def ask_text_list(chat_id, user_id, event, timeout, message, include_list):
     async with TELETHON_CLIENT.conversation(chat_id) as conv:
             handle = conv.wait_event(events.NewMessage(chats=chat_id, incoming=True, from_users=[user_id], func=lambda e: str(e.message.message) in include_list), timeout=timeout)
-            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]') # MODIFIED: Kept original emoji
+            ask = await event.reply(f'*️⃣ {str(message)} [{str(timeout)} secs]')
             try:
                 new_event = await handle
             except Exception as e:
@@ -358,21 +341,6 @@ async def ask_url(event, chat_id, user_id, keywords, message, timeout, s_handle,
                         await ask.reply(f'❌You already started {str(new_event.message.message).replace("/", "")} task. Now send {str(new_event.message.message)} command again')
                         return "cancelled"
 
-# REMOVED: get_thumbnail function
-# ###############------Get_Thumbnail------###############
-# async def get_thumbnail(process_status, keywords, timeout):
-#     ... (function content removed) ...
-
-# REMOVED: ask_watermark function
-# ###############------Ask_WaterMark------###############
-# async def ask_watermark(event, chat_id, user_id, cmd, wt_check, all_handle=False):
-#     ... (function content removed) ...
-
-# REMOVED: ask_thumbnail function (Static handled by ProcessStatus init)
-# ###############------Ask_Thumbnail------###############
-# async def ask_thumbnail(event, chat_id, user_id, cmd):
-#     ... (function content removed) ...
-
 
 async def update_status_message(event):
         reply  = await event.reply("⏳Please Wait")
@@ -396,10 +364,10 @@ async def update_status_message(event):
             if status_update[chat_id]['update_id'] != status_update_id:
                 await reply.delete()
                 break
-            if get_data().get(user_id, {}).get('show_stats', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_stats', True):
                 status_message += f"**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}"
                 status_message += f"\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n"
-            if get_data().get(user_id, {}).get('show_time', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_time', True):
                     status_message+= "**Current Time:** " + get_current_time() + "\n"
             status_message += f"**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}"
             try:
@@ -409,7 +377,7 @@ async def update_status_message(event):
                 break
             except Exception as e:
                 LOGGER.info(f"Status Update Error: {str(e)}")
-            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7)) # MODIFIED: Use .get()
+            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7))
         LOGGER.info(f"Status Updating Complete")
         return
 
@@ -447,7 +415,7 @@ async def _saverclone(event):
             await saveoptions(user_id, 'drive_name', accounts[0], SAVE_TO_DATABASE)
             if link:
                 await saveoptions(user_id, 'rclone_config_link', link, SAVE_TO_DATABASE)
-            await new_event.reply(f"✅Config Saved Successfully\n\n🔶Using {str(get_data().get(user_id, {}).get('drive_name', 'N/A'))} Drive For Uploading.") # MODIFIED: Use .get()
+            await new_event.reply(f"✅Config Saved Successfully\n\n🔶Using {str(get_data().get(user_id, {}).get('drive_name', 'N/A'))} Drive For Uploading.")
         return
 
 
@@ -475,15 +443,6 @@ async def _restart(event):
                 f.truncate(0)
                 f.write(f"{chat_id}\n{reply.id}\n")
         execl(executable, executable, *argv)
-
-
-# REMOVED: Heroku restart handler
-# <<<< START OF DELETED BLOCK >>>>
-# ###############------Restart_Heroku------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/herokurestart', func=lambda e: owner_checker(e)))
-# async def _heroku_restart(event):
-#         ... (function content removed) ...
-# <<<< END OF DELETED BLOCK >>>>
 
 
 ###############------Get_Logs_Message------###############
@@ -528,12 +487,6 @@ async def _resetdb(event):
             ])
         return
 
-# REMOVED: Save Watermark handler
-# ###############------Save_WaterMark_Image------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/savewatermark', func=lambda e: user_auth_checker(e)))
-# async def _savewatermark(event):
-#         ... (function content removed) ...
-
 
 ###############------Save_Thumbnail------###############
 @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/savethumb', func=lambda e: user_auth_checker(e)))
@@ -542,8 +495,6 @@ async def _savethumb(event):
         user_id = event.message.sender.id
         if user_id not in get_data():
                 await new_user(user_id, SAVE_TO_DATABASE)
-        #check_thumbnail = await ask_thumbnail(event, chat_id, user_id, "savethumb") # This function was removed, need to re-evaluate if needed for static thumb
-        # MODIFIED: Replaced ask_thumbnail logic with simple file download
         Thumbnail_path = f'./userdata/{str(user_id)}_Thumbnail.jpg'
         Thumbnail_check = exists(Thumbnail_path)
         if Thumbnail_check:
@@ -555,12 +506,11 @@ async def _savethumb(event):
             await TELETHON_CLIENT.download_media(new_event.message, Thumbnail_path)
             if exists(Thumbnail_path):
                  await event.reply("✅Thumbnail saved successfully.")
-                 return True # Indicate success
+                 return True
             else:
                  await event.reply("❗Failed To Save Thumbnail.")
-                 return False # Indicate failure
+                 return False
         else:
-            # Handle cancellation or timeout if needed, maybe just return False
             return False
 
 
@@ -601,7 +551,25 @@ async def _speed_test(event):
 ###############------Start_Message------###############
 @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/start'))
 async def _startmsg(event):
-    text = f"Hi {get_mention(event)}, I Am Alive."
+    # Get Python version
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+    # Get FFmpeg version
+    ffmpeg_version = "N/A"
+    try:
+        # Run ffmpeg -version and capture stdout
+        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, check=True)
+        # Extract the first line which usually contains the version
+        ffmpeg_version_output = result.stdout.split('\n')[0]
+        ffmpeg_version = ffmpeg_version_output.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        LOGGER.error(f"Error getting FFmpeg version: {e}")
+        ffmpeg_version = "Failed to retrieve"
+
+    text = f"Hi {get_mention(event)}, I Am Alive.\n\n" \
+           f"🐍 Python Version: `{python_version}`\n" \
+           f"🎬 FFmpeg Version: `{ffmpeg_version}`"
+
     await event.reply(text, buttons=[
     [Button.url('⭐ Bot By BashAFK ⭐', 'https://t.me/BashAFK')],
     [Button.url('❤ Join Channel ❤', 'https://t.me/BashAFK')]
@@ -688,12 +656,6 @@ async def _ffmpeg_log(event):
                 await event.reply(f'❗Give Me Process ID.')
         return
 
-# REMOVED: Compress handler
-# ###############------Compress------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/compress', func=lambda e: user_auth_checker(e)))
-# async def _compress_video(event):
-#         ... (function content removed) ...
-
 
 ###############------Status------###############
 @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/status', func=lambda e: user_auth_checker(e)))
@@ -721,10 +683,10 @@ async def _status(event):
             if status_update[chat_id]['update_id'] != status_update_id:
                 await reply.delete()
                 break
-            if get_data().get(user_id, {}).get('show_stats', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_stats', True):
                 status_message += f"**CPU:** {cpu_percent()}% | **FREE:** {get_human_size(disk_usage('/').free)}"
                 status_message += f"\n**RAM:** {virtual_memory().percent}% | **UPTIME:** {get_readable_time(time() - botStartTime)}\n"
-            if get_data().get(user_id, {}).get('show_time', True): # MODIFIED: Use .get()
+            if get_data().get(user_id, {}).get('show_time', True):
                     status_message+= "**Current Time:** " + get_current_time() + "\n"
             status_message += f"**QUEUED:** {get_queued_tasks_len()} | **TASK LIMIT:** {get_task_limit()}"
             try:
@@ -734,7 +696,7 @@ async def _status(event):
                 break
             except Exception as e:
                 LOGGER.info(f"Status Update Error: {str(e)}")
-            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7)) # MODIFIED: Use .get()
+            await asynciosleep(get_data().get(user_id, {}).get('update_time', 7))
         LOGGER.info(f"Status Updating Complete")
         return
 
@@ -750,8 +712,6 @@ async def _settings(event):
         [Button.inline('#️⃣ General', 'general_settings')],
         [Button.inline('❣ Telegram', 'telegram_settings')],
         [Button.inline('📝 Progress Bar', 'progress_settings')],
-        # [Button.inline('🏮 Compression', 'compression_settings')], # REMOVED
-        # [Button.inline('🛺 Watermark', 'watermark_settings')], # REMOVED
         [Button.inline('🍧 Merge', 'merge_settings')],
         [Button.inline('💻 Encode', 'convert_settings')],
         [Button.inline('🎬 Video ', 'video_settings')],
@@ -759,16 +719,9 @@ async def _settings(event):
         [Button.inline('❤ Rate Control (VBR/CRF/ABR/CBR)', 'vbrcrf_settings')],
         [Button.inline('🚍 HardMux', 'hardmux_settings')],
         [Button.inline('🎮 SoftMux', 'softmux_settings')],
-        # [Button.inline('🛩SoftReMux', 'softremux_settings')], # REMOVED
         [Button.inline('⭕Close Settings', 'close_settings')]
     ])
         return
-
-# REMOVED: Watermark handler
-# ###############------Watermark------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/watermark', func=lambda e: user_auth_checker(e)))
-# async def _add_watermark_to_video(event):
-#         ... (function content removed) ...
 
 
 ###############------Merge_Videos------###############
@@ -811,11 +764,6 @@ async def _merge_videos(event):
             del process_status
             await event.reply("❗Atleast 2 Files Required To Merge")
             return
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/merge", "pass"], 120)
-        # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
         await update_status_message(event)
         return
@@ -848,7 +796,7 @@ async def _softmux_subtitles(event):
             if new_event and new_event not in ["cancelled", "stopped", "pass"]:
                 if new_event.message.file:
                     if not str(new_event.message.file.mime_type).startswith("video/") and not str(new_event.message.file.mime_type).startswith("image/"):
-                        if new_event.message.file.size<512000: # MODIFIED: Kept original size limit
+                        if new_event.message.file.size<512000:
                             sub_name = new_event.message.file.name
                             create_direc(f"{process_status.dir}/subtitles")
                             sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
@@ -876,8 +824,6 @@ async def _softmux_subtitles(event):
             del process_status
             await event.reply("❗Atleast 1 Files Required To SoftMux")
             return
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/softmux", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
@@ -885,18 +831,10 @@ async def _softmux_subtitles(event):
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
             task['functions'].append(["TG", [link]])
-        # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
         await update_status_message(event)
         return
 
-# REMOVED: Softremux handler
-# ###############------softremux------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/softremux', func=lambda e: user_auth_checker(e)))
-# async def _softremux_subtitles(event):
-#         ... (function content removed) ...
 
 ###############------Convert------###############
 @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/convert', func=lambda e: user_auth_checker(e)))
@@ -918,8 +856,6 @@ async def _convert_video(event):
         user_name = get_username(event)
         user_first_name = event.message.sender.first_name
         process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.convert, custom_file_name)
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/convert", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
@@ -956,7 +892,7 @@ async def _hardmux_subtitle(event):
         if new_event and new_event not in ["cancelled", "stopped"]:
             if new_event.message.file:
                 if not str(new_event.message.file.mime_type).startswith("video/") and not str(new_event.message.file.mime_type).startswith("image/"):
-                    if new_event.message.file.size<512000: # MODIFIED: Kept original size limit
+                    if new_event.message.file.size<512000:
                         sub_name = new_event.message.file.name
                         create_direc(f"{process_status.dir}/subtitles")
                         sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
@@ -981,8 +917,6 @@ async def _hardmux_subtitle(event):
             del process_status
             await event.reply("❗Atleast 1 Files Required To hardmux")
             return
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, ["/hardmux", "pass"], 120)
         task = {}
         task['process_status'] = process_status
         task['functions'] = []
@@ -990,9 +924,6 @@ async def _hardmux_subtitle(event):
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
             task['functions'].append(["TG", [link]])
-        # REMOVED: Multi-task logic
-        # if get_data()[user_id]['multi_tasks']:
-        #         ... (multi-task logic removed) ...
         create_task(add_task(task))
         await update_status_message(event)
         return
@@ -1181,7 +1112,7 @@ async def _change_metadata(event):
             LOGGER.info(mdata)
             try:
                 sindex = str(mdata[0]).strip().lower()
-                mlang =  str(mdata[1]).strip().capitalize() # MODIFIED LINE
+                mlang =  str(mdata[1]).strip().capitalize()
                 mtilte = str(mdata[2])
                 custom_metadata.append([f'-metadata:s:{sindex}', f"language={mlang}", f'-metadata:s:{str(sindex)}', f"title={mtilte}"])
             except Exception as e:
@@ -1197,8 +1128,6 @@ async def _change_metadata(event):
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
             task['functions'].append(["TG", [link]])
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, [command, "pass"], 120)
         create_task(add_task(task))
         await update_status_message(event)
         return
@@ -1251,79 +1180,8 @@ async def _change_index(event):
                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
         else:
             task['functions'].append(["TG", [link]])
-        # REMOVED: get_thumbnail call
-        # await get_thumbnail(process_status, [command, "pass"], 120)
         create_task(add_task(task))
         await update_status_message(event)
         return
-
-# <<<< START OF DELETED BLOCK >>>>
-# ###############------Leech_File------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/leech', func=lambda e: user_auth_checker(e)))
-# async def _leech_file(event):
-#         chat_id = event.message.chat.id
-#         user_id = event.message.sender.id
-#         if user_id not in get_data():
-#                 await new_user(user_id, SAVE_TO_DATABASE)
-#         link, custom_file_name = await get_link(event)
-#         if link=="invalid":
-#             await event.reply("❗Invalid link")
-#             return
-#         elif not link:
-#             new_event = await ask_url(event, chat_id, user_id, ["/leech", "stop"], "Send Link", 120, True)
-#             if new_event and new_event not in ["cancelled", "stopped"]:
-#                 link = await get_url_from_message(new_event)
-#             else:
-#                 return
-#         user_name = get_username(event)
-#         user_first_name = event.message.sender.first_name
-#         process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.leech, custom_file_name)
-#         task = {}
-#         task['process_status'] = process_status
-#         task['functions'] = []
-#         if type(link)==str:
-#                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
-#         else:
-#             task['functions'].append(["TG", [link]])
-#         # REMOVED: get_thumbnail call
-#         # await get_thumbnail(process_status, ["/leech", "pass"], 120)
-#         create_task(add_task(task))
-#         await update_status_message(event)
-#         return
-#
-#
-# ###############------mirror_File------###############
-# @TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/mirror', func=lambda e: user_auth_checker(e)))
-# async def _mirror_file(event):
-#         chat_id = event.message.chat.id
-#         user_id = event.message.sender.id
-#         if user_id not in get_data():
-#                 await new_user(user_id, SAVE_TO_DATABASE)
-#         link, custom_file_name = await get_link(event)
-#         if link=="invalid":
-#             await event.reply("❗Invalid link")
-#             return
-#         elif not link:
-#             new_event = await ask_url(event, chat_id, user_id, ["/mirror", "stop"], "Send Link", 120, True)
-#             if new_event and new_event not in ["cancelled", "stopped"]:
-#                 link = await get_url_from_message(new_event)
-#             else:
-#                 return
-#         user_name = get_username(event)
-#         user_first_name = event.message.sender.first_name
-#         process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.mirror, custom_file_name)
-#         task = {}
-#         task['process_status'] = process_status
-#         task['functions'] = []
-#         if type(link)==str:
-#                 task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
-#         else:
-#             task['functions'].append(["TG", [link]])
-#         # REMOVED: get_thumbnail call
-#         # await get_thumbnail(process_status, ["/mirror", "pass"], 120)
-#         create_task(add_task(task))
-#         await update_status_message(event)
-#         return
-# <<<< END OF DELETED BLOCK >>>>
 
 # --- END OF FILE VideoFlux-Re-master/bot/start.py ---
