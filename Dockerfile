@@ -1,5 +1,3 @@
---- START OF FILE Dockerfile.txt ---
-
 FROM python:3.9
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,4 +32,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "start.sh"] # Changed to JSON array format for better signal handling
+CMD ["sh", "start.sh"]
