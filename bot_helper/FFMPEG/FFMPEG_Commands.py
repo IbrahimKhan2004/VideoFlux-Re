@@ -266,6 +266,8 @@ def get_commands(process_status):
             # Highlighted change: Added -nostdin flag
             command = ['ffmpeg', '-nostdin', '-hide_banner', 
             # End of highlighted change
+                                            '-analyzeduration', '500M',
+                                            '-probesize', '500M',
                                             '-progress', f"{log_file}",
                                             '-i', f'{input_file}']
 
