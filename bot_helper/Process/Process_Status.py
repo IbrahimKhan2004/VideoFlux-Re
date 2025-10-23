@@ -292,6 +292,10 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
         # elif pmode==Names.softremux:
         #         text = f"\n**Subtitles Codec**: {get_data()[user_id]['softremux']['sub_codec']} | **In.Size**: {get_human_size(input_size)}"
         #         return text
+        elif pmode==Names.addcover:
+                return f"\n**Adding Cover Art** | **In.Size**: {get_human_size(input_size)}"
+        elif pmode==Names.removecover:
+                return f"\n**Removing Cover Art** | **In.Size**: {get_human_size(input_size)}"
         else:
                 return ""
 
@@ -299,9 +303,10 @@ def generate_ffmpeg_status_head(user_id, pmode, input_size):
 
 
 class ProcessStatus:
-        def __init__(self, user_id, chat_id, user_name, user_first_name, event, process_type, file_name=False, thumbnail=False, start_time=False, custom_metadata=False, custom_index=False):
+        def __init__(self, user_id, chat_id, user_name, user_first_name, event, process_type, file_name=False, thumbnail=False, start_time=False, custom_metadata=False, custom_index=False, cover_art=False):
                 self.user_id = user_id
                 self.chat_id = chat_id
+                self.cover_art = cover_art
                 self.amap_options =  '0:a'
                 self.user_name = user_name
                 self.user_first_name = user_first_name
