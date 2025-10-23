@@ -19,8 +19,31 @@ from typing import Union
 # GOFILE_API_TOKEN = "lBZPR77YTHyquQPpDlCoMbiYWh8B0mbK" # Hardcoded API Token
 GOFILE_API_BASE = "https://api.gofile.io/servers" # Still needed for server list if not using upload.gofile.io
 # Gofile API endpoint - Using the main upload endpoint which handles anonymous uploads
-GOFILE_UPLOAD_API = "https://upload.gofile.io/uploadfile"
+GOFILE_UPLOAD_API = "https://{server}.gofile.io/uploadfile"
 # --- End Gofile API Configuration ---
+
+async def get_best_server(session: aiohttp.ClientSession) -> Union[str, None]:
+    """Fetches the best available Gofile server."""
+    try:
+        async with session.get(GOFILE_API_BASE) as response:
+            if response.status == 200:
+                data = await response.json()
+                if data.get("status") == "ok":
+                    servers = data.get("data", {}).get("servers")
+                    if servers:
+                        # Find the server with the highest score
+                        best_server = max(servers, key=lambda s: s.get("score", 0))
+                        server_name = best_server.get("name")
+                        LOGGER.info(f"Best Gofile server found: {server_name}")
+                        return server_name
+                LOGGER.error(f"Failed to get best Gofile server: {data.get('status', 'Unknown error')}")
+                return None
+            else:
+                LOGGER.error(f"Failed to get best Gofile server. HTTP Status: {response.status}, Response: {await response.text()}")
+                return None
+    except Exception as e:
+        LOGGER.error(f"Error fetching best Gofile server: {e}")
+        return None
 
 # Highlighted change: Define a longer timeout (e.g., 30 minutes = 1800 seconds)
 # None means infinite timeout, but setting a large value is often safer.
@@ -120,6 +143,12 @@ async def upload_gofile(process_status):
     # Highlighted change: Set timeout for the session
     timeout = ClientTimeout(total=UPLOAD_TIMEOUT_SECONDS)
     async with aiohttp.ClientSession(timeout=timeout) as session:
+        best_server = await get_best_server(session)
+        if not best_server:
+            await event.reply("❌ Could not find a Gofile server. Please try again later.")
+            return
+
+        upload_url = GOFILE_UPLOAD_API.format(server=best_server)
     # End of highlighted change
         # Highlighted change: Removed fetching root folder ID as it's not needed for anonymous uploads
         # root_folder_id = await get_gofile_root_folder_id(session)
@@ -161,7 +190,7 @@ async def upload_gofile(process_status):
                     # Make the POST request (file is already in FormData)
                     # Highlighted change: Removed Authorization header as it's not needed for anonymous uploads
                     async with session.post(
-                        GOFILE_UPLOAD_API,
+                        upload_url,
                         data=data,
                         # headers={"Authorization": f"Bearer {GOFILE_API_TOKEN}"} # Removed header
                     ) as response:
