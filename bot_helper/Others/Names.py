@@ -27,8 +27,6 @@ class Names:
 # <<<< END OF DELETED BLOCK >>>>
     changeMetadata = 'ChangeMetadata'
     changeindex = "ChangeIndex"
-    addcover = "AddCover"
-    removecover = "RemoveCover"
     STATUS = { # MODIFIED: Removed compress, watermark, softremux entries
                         # compress: "🏮Compressing",
                         # watermark: "🛺Adding Watermark",
@@ -38,10 +36,7 @@ class Names:
                         convert: "🚜 Encoding Video",
                         hardmux: "🚍HardMuxing Subtitle",
                         changeMetadata: "🪀Changing MetaData",
-                        changeindex: "🎨Changing Index",
-                        addcover: "🖼️ Adding Cover",
-                        removecover: "🖼️ Removing Cover"
-                        }
+                        changeindex: "🎨Changing Index"}
     FFMPEG_PROCESSES = [ # MODIFIED: Removed compress, watermark, softremux entries
                                                         # compress,
                                                         # watermark,
@@ -51,9 +46,7 @@ class Names:
                                                         convert,
                                                         hardmux,
                                                         changeMetadata,
-                                                        changeindex,
-                                                        addcover,
-                                                        removecover]
+                                                        changeindex]
     STATUS_UPLOADING = "🔼Uploading"
     STATUS_CLONING= "🧬Cloning"
     STATUS_DOWNLOADING = "🔽Downloading"
