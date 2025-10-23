@@ -720,27 +720,4 @@ def get_commands(process_status):
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
-
-    elif process_status.process_type==Names.addcover:
-        create_direc(f"{process_status.dir}/addcover/")
-        log_file = f"{process_status.dir}/addcover/addcover_logs_{process_status.process_id}.txt"
-        input_file = f'{str(process_status.send_files[-1])}'
-        output_file = f"{process_status.dir}/addcover/{get_output_name(process_status)}"
-        file_duration = get_video_duration(input_file)
-
-        command = ['ffmpeg', '-i', f'{str(input_file)}', '-i', f'{str(process_status.cover_art)}', '-map', '0', '-map', '1', '-c', 'copy', '-c:v:1', 'png', '-disposition:v:1', 'attached_pic', '-y', f"{output_file}"]
-
-        return command, log_file, input_file, output_file, file_duration
-
-    elif process_status.process_type==Names.removecover:
-        create_direc(f"{process_status.dir}/removecover/")
-        log_file = f"{process_status.dir}/removecover/removecover_logs_{process_status.process_id}.txt"
-        input_file = f'{str(process_status.send_files[-1])}'
-        output_file = f"{process_status.dir}/removecover/{get_output_name(process_status)}"
-        file_duration = get_video_duration(input_file)
-
-        command = ['ffmpeg', '-i', f'{str(input_file)}', '-map', '0', '-map', '-0:v:1', '-c', 'copy', '-y', f"{output_file}"]
-
-        return command, log_file, input_file, output_file, file_duration
-
 # --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
