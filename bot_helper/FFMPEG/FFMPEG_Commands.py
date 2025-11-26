@@ -13,6 +13,10 @@ from math import ceil
 from config.config import LOGGER # Import LOGGER
 # END OF MODIFIED BLOCK
 
+# Constants for ffmpeg analysis parameters to avoid "could not find codec parameters" error
+FFMPEG_ANALYZE_DURATION = '20M'
+FFMPEG_PROBE_SIZE = '20M'
+
 def create_direc(direc):
     if not isdir(direc):
         makedirs(direc)
@@ -77,8 +81,8 @@ def get_commands(process_status):
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
             command = ['ffmpeg','-hide_banner', 
-                                    '-analyzeduration', '500M', 
-                                    '-probesize', '500M',       
+                                    '-analyzeduration', FFMPEG_ANALYZE_DURATION,
+                                    '-probesize', FFMPEG_PROBE_SIZE,
                                     '-progress', f"{log_file}"]
 # HIGHLIGHTED CHANGE START: Modify -fflags based on merge_fix_timestamps
             fflags_options = "+genpts" # Default for when merge_fix_timestamps is False
@@ -180,7 +184,7 @@ def get_commands(process_status):
             input_sub += ['-i', f'{str(subtitle)}']
             sub_map+= ['-map', f'{smap}:0']
             smap +=1
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] 
+        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}']
         command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
         if softmux_encode:
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
@@ -278,8 +282,8 @@ def get_commands(process_status):
             # Highlighted change: Added -nostdin flag
             command = ['ffmpeg', '-nostdin', '-hide_banner', 
             # End of highlighted change
-                                            '-analyzeduration', '500M',
-                                            '-probesize', '500M',
+                                            '-analyzeduration', FFMPEG_ANALYZE_DURATION,
+                                            '-probesize', FFMPEG_PROBE_SIZE,
                                             '-progress', f"{log_file}",
                                             '-i', f'{input_file}']
 
@@ -596,7 +600,7 @@ def get_commands(process_status):
         output_file = f"{process_status.dir}/hardmux/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
         sub_loc = process_status.subtitles[-1]
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
+        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         command+= ['-vf', f"subtitles='{sub_loc}'",
                                     '-map','0:v',
                                     '-map',f'{str(process_status.amap_options)}']
@@ -659,7 +663,7 @@ def get_commands(process_status):
         output_file = f"{process_status.dir}/metadata/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
         custom_metadata = process_status.custom_metadata # This is the specific stream metadata from /changemetadata command
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
+        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
         if custom_metadata: # Apply specific stream changes from the command first
             for m in custom_metadata:
                 command+=m
@@ -701,7 +705,8 @@ def get_commands(process_status):
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/index/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index # Reverted zender -> ffmpeg
+        # Increase analysis parameters to handle subtitle streams with delayed headers
+        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index
 # START OF MODIFIED BLOCK
         if apply_user_metadata_ci:
             LOGGER.info(f"CHANGEINDEX: Applying global and fixed metadata. User text: '{user_global_metadata_text_ci}'")
