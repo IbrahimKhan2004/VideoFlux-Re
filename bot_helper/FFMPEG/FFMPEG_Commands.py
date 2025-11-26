@@ -13,6 +13,10 @@ from math import ceil
 from config.config import LOGGER # Import LOGGER
 # END OF MODIFIED BLOCK
 
+# Constants for ffmpeg analysis parameters to avoid "could not find codec parameters" error
+FFMPEG_ANALYZE_DURATION = '20M'
+FFMPEG_PROBE_SIZE = '20M'
+
 def create_direc(direc):
     if not isdir(direc):
         makedirs(direc)
@@ -701,7 +705,8 @@ def get_commands(process_status):
         input_file = f'{str(process_status.send_files[-1])}'
         output_file = f"{process_status.dir}/index/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        command = ['ffmpeg','-hide_banner', '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index # Reverted zender -> ffmpeg
+        # Increase analysis parameters to handle subtitle streams with delayed headers
+        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}', '-map', '0:v?'] + process_status.custom_index
 # START OF MODIFIED BLOCK
         if apply_user_metadata_ci:
             LOGGER.info(f"CHANGEINDEX: Applying global and fixed metadata. User text: '{user_global_metadata_text_ci}'")
