@@ -770,7 +770,7 @@ async def _merge_videos(event):
 
 
 ###############------SoftMux------###############
-@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/(softmux|remux)', func=lambda e: user_auth_checker(e)))
+@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/softmux', func=lambda e: user_auth_checker(e)))
 async def _softmux_subtitles(event):
         chat_id = event.message.chat.id
         user_id = event.message.sender.id
