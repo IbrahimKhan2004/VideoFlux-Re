@@ -12,6 +12,8 @@ from math import ceil
 # START OF MODIFIED BLOCK
 from config.config import LOGGER # Import LOGGER
 # END OF MODIFIED BLOCK
+import subprocess
+import json
 
 # Constants for ffmpeg analysis parameters to avoid "could not find codec parameters" error
 FFMPEG_ANALYZE_DURATION = '20M'
@@ -163,70 +165,126 @@ def get_commands(process_status):
             return command, log_file, input_file, output_file, file_duration
 
     elif process_status.process_type==Names.softmux:
-# START OF MODIFIED BLOCK
         user_settings = get_data()[process_status.user_id]
         apply_user_metadata_globally = user_settings.get('custom_metadata', False)
         user_global_metadata_text = user_settings.get('metadata', "VideoFlux Default Title")
-# END OF MODIFIED BLOCK
-        softmux_preset =  get_data()[process_status.user_id]['softmux']['preset']
+        softmux_preset = get_data()[process_status.user_id]['softmux']['preset']
         softmux_crf = get_data()[process_status.user_id]['softmux']['crf']
         softmux_use_crf = get_data()[process_status.user_id]['softmux']['use_crf']
         softmux_encode = get_data()[process_status.user_id]['softmux']['encode']
-        create_direc(f"{process_status.dir}/softmux/")
-        log_file = f"{process_status.dir}/softmux/softmux_logs_{process_status.process_id}.txt"
+
+        working_dir = f"{process_status.dir}/softmux/"
+        create_direc(working_dir)
+        log_file = f"{working_dir}/softmux_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
-        output_file = f"{process_status.dir}/softmux/{get_output_name(process_status)}"
+        output_file = f"{working_dir}/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
-        input_sub = []
-        sub_map = []
-        smap = 1
-        for subtitle in process_status.subtitles:
-            input_sub += ['-i', f'{str(subtitle)}']
-            sub_map+= ['-map', f'{smap}:0']
-            smap +=1
-        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}']
-        command+= input_sub + sub_map + ['-map','0:v?', '-map',f'{str(process_status.amap_options)}?', '-map','0:s?', '-disposition:s:0','default']
+
+        mks_file = next((s for s in process_status.subtitles if s.lower().endswith('.mks')), None)
+        other_subtitles = [s for s in process_status.subtitles if s != mks_file]
+
+        cover_path = None
+        mks_metadata = {}
+        if mks_file:
+            cover_path, mks_metadata, _ = process_mks_file(mks_file, working_dir)
+
+        command = ['ffmpeg', '-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}"]
+
+        command.extend(['-i', f'{str(input_file)}'])
+        if mks_file:
+            command.extend(['-i', mks_file])
+        for sub in other_subtitles:
+            command.extend(['-i', sub])
+        if cover_path:
+            command.extend(['-i', cover_path])
+
+        command.extend(['-map', '0:v:0', '-map', f'{str(process_status.amap_options)}?', '-map', '0:s?'])
+
+        subtitle_output_index = 0
+        input_file_index = 1
+
+        if mks_file:
+            command.extend(['-map', f'{input_file_index}:s:0?'])
+            command.extend([f'-disposition:s:{subtitle_output_index}', 'default'])
+            subtitle_output_index += 1
+            input_file_index += 1
+
+        for _ in other_subtitles:
+            command.extend(['-map', f'{input_file_index}:s:0?'])
+            input_file_index += 1
+
+        if cover_path:
+            command.extend(['-map', f'{input_file_index}:0'])
+            command.extend(['-disposition:v:1', 'attached_pic'])
+
         if softmux_encode:
-                encoder = get_data()[process_status.user_id]['softmux']['encoder']
-                if softmux_use_crf:
-                        if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
-                        else:
-                                command += ['-vcodec','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+            encoder = get_data()[process_status.user_id]['softmux']['encoder']
+            if softmux_use_crf:
+                if encoder == 'libx265':
+                    command += ['-vcodec', 'libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
                 else:
-                        if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
-                        else:
-                                command += ['-vcodec','libx264', '-preset', softmux_preset]
+                    command += ['-vcodec', 'libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+            else:
+                if encoder == 'libx265':
+                    command += ['-vcodec', 'libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
+                else:
+                    command += ['-vcodec', 'libx264', '-preset', softmux_preset]
+            if cover_path:
+                command.extend(['-c:v:1', 'copy'])
         else:
-                command += ['-c','copy']
+            command += ['-c:v', 'copy']
 
-        command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"]
-# START OF MODIFIED BLOCK
+        command.extend(['-c:a', 'copy'])
+        command.extend(["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"])
+
+        final_metadata = {}
+        if mks_metadata.get('title'):
+            final_metadata['title'] = mks_metadata.get('title')
+        if mks_metadata.get('attached_file_description'):
+            final_metadata['comment'] = mks_metadata.get('attached_file_description')
+
         if apply_user_metadata_globally:
-            LOGGER.info(f"SOFTMUX: Applying custom metadata. User text: '{user_global_metadata_text}'")
+            if 'title' not in final_metadata and user_global_metadata_text:
+                final_metadata['title'] = user_global_metadata_text
+            if 'comment' not in final_metadata and user_global_metadata_text:
+                final_metadata['comment'] = user_global_metadata_text
             if user_global_metadata_text:
-                command.extend(['-metadata', f'title={user_global_metadata_text}'])
-                command.extend(['-metadata', f'author={user_global_metadata_text}'])
-                command.extend(['-metadata', f'comment={user_global_metadata_text}'])
-                command.extend(['-metadata', f'Credit={user_global_metadata_text}'])
-                command.extend(['-metadata', f'channel={user_global_metadata_text}'])
-                command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text}'])
-                command.extend(['-metadata:s:a', f'title={user_global_metadata_text}'])
-                # For softmux, subtitles are separate streams, so apply title to them
-                command.extend(['-metadata:s:s', f'title={user_global_metadata_text}'])
-                command.extend(['-metadata:s:v:0', f'Credit={user_global_metadata_text}'])
-                command.extend(['-metadata:s:v:0', f'channel={user_global_metadata_text}'])
-                command.extend(['-metadata:s:a', f'Credit={user_global_metadata_text}'])
-                command.extend(['-metadata:s:s', f'Credit={user_global_metadata_text}'])
-            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
-            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
-            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
-            LOGGER.info("SOFTMUX: Applied fixed metadata tags.")
-# END OF MODIFIED BLOCK
-        command += ["-y", f"{output_file}"]
+                final_metadata['author'] = user_global_metadata_text
+                final_metadata['Credit'] = user_global_metadata_text
+                final_metadata['channel'] = user_global_metadata_text
 
+        for key, value in final_metadata.items():
+            command.extend(['-metadata', f'{key}={value}'])
+            if key == 'title':
+                command.extend([
+                    '-metadata:s:v:0', f'title={value}',
+                    '-metadata:s:a', f'title={value}',
+                    '-metadata:s:s', f'title={value}'
+                ])
+            if key == 'Credit':
+                command.extend([
+                    '-metadata:s:v:0', f'Credit={value}',
+                    '-metadata:s:a', f'Credit={value}',
+                    '-metadata:s:s', f'Credit={value}'
+                ])
+            if key == 'channel':
+                command.extend([
+                    '-metadata:s:v:0', f'channel={value}',
+                    '-metadata:s:a', f'channel={value}'
+                ])
+
+        if mks_metadata.get('subtitle_track_name'):
+            command.extend(['-metadata:s:s:0', f"title={mks_metadata.get('subtitle_track_name')}"])
+
+        if apply_user_metadata_globally:
+            command.extend([
+                '-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]',
+                '-metadata', 'description=Visit TG-@Eliteflix_Official',
+                '-metadata', 'telegram=Downloaded From @Eliteflix_Official',
+                '-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'
+            ])
+
+        command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
     # REMOVED: SoftReMux command block
@@ -586,65 +644,119 @@ def get_commands(process_status):
 
 
     elif process_status.process_type==Names.hardmux:
-# START OF MODIFIED BLOCK
         user_settings_hm = get_data()[process_status.user_id]
         apply_user_metadata_hm = user_settings_hm.get('custom_metadata', False)
         user_global_metadata_text_hm = user_settings_hm.get('metadata', "VideoFlux Default Title")
-# END OF MODIFIED BLOCK
-        hardmux_preset =  get_data()[process_status.user_id]['hardmux']['preset']
+        hardmux_preset = get_data()[process_status.user_id]['hardmux']['preset']
         hardmux_crf = get_data()[process_status.user_id]['hardmux']['crf']
         hardmux_encode_video = get_data()[process_status.user_id]['hardmux']['encode_video']
-        create_direc(f"{process_status.dir}/hardmux/")
-        log_file = f"{process_status.dir}/hardmux/hardmux_logs_{process_status.process_id}.txt"
+
+        working_dir = f"{process_status.dir}/hardmux/"
+        create_direc(working_dir)
+        log_file = f"{working_dir}/hardmux_logs_{process_status.process_id}.txt"
         input_file = f'{str(process_status.send_files[-1])}'
-        output_file = f"{process_status.dir}/hardmux/{get_output_name(process_status)}"
+        output_file = f"{working_dir}/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
+
         sub_loc = process_status.subtitles[-1]
-        command = ['ffmpeg','-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}", '-i', f'{str(input_file)}'] # Reverted zender -> ffmpeg
-        command+= ['-vf', f"subtitles='{sub_loc}'",
-                                    '-map','0:v',
-                                    '-map',f'{str(process_status.amap_options)}']
+        cover_path = None
+        mks_metadata = {}
+        temp_sub_path = None
+
+        mks_file = next((s for s in process_status.subtitles if s.lower().endswith('.mks')), None)
+
+        if mks_file:
+            cover_path, mks_metadata, subtitle_codec = process_mks_file(mks_file, working_dir)
+
+            sub_ext = 'srt'
+            if subtitle_codec and 'ass' in subtitle_codec.lower():
+                sub_ext = 'ass'
+
+            temp_sub_path = f"{working_dir}/temp_sub.{sub_ext}"
+
+            try:
+                extract_sub_command = ['ffmpeg', '-i', mks_file, '-map', '0:s:0', '-c', 'copy', '-y', temp_sub_path]
+                subprocess.run(extract_sub_command, check=True)
+                sub_loc = temp_sub_path
+            except subprocess.CalledProcessError as e:
+                LOGGER.error(f"Failed to extract subtitle from MKS for hardmux: {e}")
+                raise e
+
+        command = ['ffmpeg', '-hide_banner', '-analyzeduration', FFMPEG_ANALYZE_DURATION, '-probesize', FFMPEG_PROBE_SIZE, '-progress', f"{log_file}"]
+        command.extend(['-i', f'{str(input_file)}'])
+        if cover_path:
+            command.extend(['-i', cover_path])
+
+        command.extend(['-vf', f"subtitles='{sub_loc}'", '-map', '0:v:0', '-map', f'{str(process_status.amap_options)}?'])
+
+        if cover_path:
+            command.extend(['-map', '1:0', '-disposition:v:1', 'attached_pic'])
+
         if hardmux_encode_video:
-                encoder = get_data()[process_status.user_id]['hardmux']['encoder']
-                if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-                else:
-                        command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
-                # HIGHLIGHTED CHANGE START: Ensure audio is copied when video is encoded for hardmux, as per comment intention
-                command += ['-c:a','copy']
-                # HIGHLIGHTED CHANGE END
-        else: # If not encoding video, copy audio. If encoding video, audio will be re-encoded by default unless -c:a copy is added.
-              # For hardmux, usually audio is copied if video is re-encoded with subtitles.
-              # If video is also copied (hardmux_encode_video=False), then audio must be copied.
-            command += ['-c:a','copy'] # Ensure audio is copied if video is not re-encoded or if user expects audio copy
+            encoder = get_data()[process_status.user_id]['hardmux']['encoder']
+            if encoder == 'libx265':
+                command.extend(['-c:v:0', 'libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset])
+            else:
+                command.extend(['-c:v:0', 'libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset])
+        else:
+            command.extend(['-c:v:0', 'copy'])
+
+        command.extend(['-c:a', 'copy'])
+
+        if cover_path:
+            command.extend(['-c:v:1', 'copy'])
+
         hardmux_sync = get_data()[process_status.user_id]['hardmux']['sync']
         hardmux_use_queue_size = get_data()[process_status.user_id]['hardmux']['use_queue_size']
         if hardmux_use_queue_size:
-                hardmux_queue_size = get_data()[process_status.user_id]['hardmux']['queue_size']
-                command+= ['-max_muxing_queue_size', f'{str(hardmux_queue_size)}']
+            hardmux_queue_size = get_data()[process_status.user_id]['hardmux']['queue_size']
+            command += ['-max_muxing_queue_size', f'{str(hardmux_queue_size)}']
         if hardmux_sync:
-            command+= ['-vsync', '1', '-async', '-1']
-# START OF MODIFIED BLOCK
+            command += ['-vsync', '1', '-async', '-1']
+
+        final_metadata = {}
+        if mks_metadata.get('title'):
+            final_metadata['title'] = mks_metadata.get('title')
+        if mks_metadata.get('attached_file_description'):
+            final_metadata['comment'] = mks_metadata.get('attached_file_description')
+
         if apply_user_metadata_hm:
-            LOGGER.info(f"HARDMUX: Applying custom metadata. User text: '{user_global_metadata_text_hm}'")
+            if 'title' not in final_metadata and user_global_metadata_text_hm:
+                final_metadata['title'] = user_global_metadata_text_hm
+            if 'comment' not in final_metadata and user_global_metadata_text_hm:
+                final_metadata['comment'] = user_global_metadata_text_hm
             if user_global_metadata_text_hm:
-                command.extend(['-metadata', f'title={user_global_metadata_text_hm}'])
-                command.extend(['-metadata', f'author={user_global_metadata_text_hm}'])
-                command.extend(['-metadata', f'comment={user_global_metadata_text_hm}'])
-                command.extend(['-metadata', f'Credit={user_global_metadata_text_hm}'])
-                command.extend(['-metadata', f'channel={user_global_metadata_text_hm}'])
-                command.extend(['-metadata:s:v:0', f'title={user_global_metadata_text_hm}'])
-                command.extend(['-metadata:s:a', f'title={user_global_metadata_text_hm}'])
-                # No subtitle stream titles for hardmux as they are burned in
-                command.extend(['-metadata:s:v:0', f'Credit={user_global_metadata_text_hm}'])
-                command.extend(['-metadata:s:v:0', f'channel={user_global_metadata_text_hm}'])
-                command.extend(['-metadata:s:a', f'Credit={user_global_metadata_text_hm}'])
-            command.extend(['-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]'])
-            command.extend(['-metadata', 'description=Visit TG-@Eliteflix_Official'])
-            command.extend(['-metadata', 'telegram=Downloaded From @Eliteflix_Official'])
-            command.extend(['-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'])
+                final_metadata['author'] = user_global_metadata_text_hm
+                final_metadata['Credit'] = user_global_metadata_text_hm
+                final_metadata['channel'] = user_global_metadata_text_hm
+
+        for key, value in final_metadata.items():
+            command.extend(['-metadata', f'{key}={value}'])
+            if key == 'title':
+                command.extend([
+                    '-metadata:s:v:0', f'title={value}',
+                    '-metadata:s:a', f'title={value}'
+                ])
+            if key == 'Credit':
+                command.extend([
+                    '-metadata:s:v:0', f'Credit={value}',
+                    '-metadata:s:a', f'Credit={value}'
+                ])
+            if key == 'channel':
+                command.extend([
+                    '-metadata:s:v:0', f'channel={value}',
+                    '-metadata:s:a', f'channel={value}'
+                ])
+
+        if apply_user_metadata_hm:
+            command.extend([
+                '-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]',
+                '-metadata', 'description=Visit TG-@Eliteflix_Official',
+                '-metadata', 'telegram=Downloaded From @Eliteflix_Official',
+                '-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'
+            ])
             LOGGER.info("HARDMUX: Applied fixed metadata tags.")
-# END OF MODIFIED BLOCK
+
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
@@ -724,5 +836,63 @@ def get_commands(process_status):
 # END OF MODIFIED BLOCK
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
+
+
+def process_mks_file(mks_file_path, working_dir):
+    cover_path = None
+    metadata = {}
+    subtitle_codec = None
+    try:
+        # Run ffprobe to get stream and attachment info
+        ffprobe_command = [
+            'ffprobe',
+            '-v', 'error',
+            '-show_streams',
+            '-show_attachments',
+            '-of', 'json',
+            mks_file_path
+        ]
+        result = subprocess.run(ffprobe_command, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+
+        # Find and extract the first image attachment
+        attachment_stream = next((s for s in data.get('streams', []) if s.get('codec_type') == 'attachment' and s.get('tags', {}).get('mimetype', '').startswith('image/')), None)
+        if attachment_stream:
+            attachment_index = attachment_stream['index']
+            mimetype = attachment_stream.get('tags', {}).get('mimetype', 'image/jpeg')
+            ext = mimetype.split('/')[-1] if '/' in mimetype else 'jpg'
+            cover_path = f"{working_dir}/cover.{ext}"
+            ffmpeg_extract_command = [
+                'ffmpeg',
+                '-i', mks_file_path,
+                '-map', f'0:{attachment_index}',
+                '-c', 'copy',
+                '-y',
+                cover_path
+            ]
+            subprocess.run(ffmpeg_extract_command, check=True)
+
+            # Extract metadata from the attachment stream
+            if 'tags' in attachment_stream:
+                if 'filename' in attachment_stream['tags']:
+                    metadata['attached_file_name'] = attachment_stream['tags']['filename']
+                if 'description' in attachment_stream['tags']:
+                    metadata['attached_file_description'] = attachment_stream['tags']['description']
+
+        # Extract metadata from subtitle stream
+        subtitle_stream = next((s for s in data.get('streams', []) if s.get('codec_type') == 'subtitle'), None)
+        if subtitle_stream:
+            if 'tags' in subtitle_stream and 'title' in subtitle_stream['tags']:
+                metadata['subtitle_track_name'] = subtitle_stream['tags']['title']
+            subtitle_codec = subtitle_stream.get('codec_name')
+
+        # Extract global metadata (Title)
+        if 'format' in data and 'tags' in data['format'] and 'title' in data['format']['tags']:
+            metadata['title'] = data['format']['tags']['title']
+
+    except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError) as e:
+        LOGGER.error(f"Error processing MKS file: {e}")
+
+    return cover_path, metadata, subtitle_codec
 
 # --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
