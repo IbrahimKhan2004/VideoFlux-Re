@@ -180,7 +180,7 @@ def get_commands(process_status):
         output_file = f"{working_dir}/{get_output_name(process_status)}"
         file_duration = get_video_duration(input_file)
 
-        mks_file = next((s for s in process_status.subtitles if s.lower().endswith('.mks')), None)
+        mks_file = next((s for s in process_status.subtitles if s.lower().endswith(('.mks', '.mkv'))), None)
         other_subtitles = [s for s in process_status.subtitles if s != mks_file]
 
         cover_path = None
@@ -198,20 +198,24 @@ def get_commands(process_status):
         if cover_path:
             command.extend(['-i', cover_path])
 
-        command.extend(['-map', '0:v:0', '-map', f'{str(process_status.amap_options)}?', '-map', '0:s?'])
+        command.extend(['-map', '0:v:0', '-map', f'{str(process_status.amap_options)}?'])
 
         subtitle_output_index = 0
         input_file_index = 1
 
+        all_external_subs = []
         if mks_file:
+            all_external_subs.append(mks_file)
+        all_external_subs.extend(other_subtitles)
+
+        for i, sub in enumerate(all_external_subs):
             command.extend(['-map', f'{input_file_index}:s:0?'])
-            command.extend([f'-disposition:s:{subtitle_output_index}', 'default'])
+            if i == 0:
+                command.extend([f'-disposition:s:{subtitle_output_index}', 'default'])
             subtitle_output_index += 1
             input_file_index += 1
 
-        for _ in other_subtitles:
-            command.extend(['-map', f'{input_file_index}:s:0?'])
-            input_file_index += 1
+        command.extend(['-map', '0:s?'])
 
         if cover_path:
             command.extend(['-map', f'{input_file_index}:0'])
@@ -232,57 +236,19 @@ def get_commands(process_status):
             if cover_path:
                 command.extend(['-c:v:1', 'copy'])
         else:
-            command += ['-c:v', 'copy']
+            command += ['-c:v:0', 'copy']
+            if cover_path:
+                command += ['-c:v:1', 'copy']
 
         command.extend(['-c:a', 'copy'])
-        command.extend(["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"])
 
-        final_metadata = {}
-        if mks_metadata.get('title'):
-            final_metadata['title'] = mks_metadata.get('title')
-        if mks_metadata.get('attached_file_description'):
-            final_metadata['comment'] = mks_metadata.get('attached_file_description')
+        output_extension = splitext(output_file)[1].lower()
+        if output_extension == '.mp4':
+            command.extend(["-c:s", "mov_text"])
+        else:
+            command.extend(["-c:s", get_data()[process_status.user_id]['softmux']['sub_codec']])
 
-        if apply_user_metadata_globally:
-            if 'title' not in final_metadata and user_global_metadata_text:
-                final_metadata['title'] = user_global_metadata_text
-            if 'comment' not in final_metadata and user_global_metadata_text:
-                final_metadata['comment'] = user_global_metadata_text
-            if user_global_metadata_text:
-                final_metadata['author'] = user_global_metadata_text
-                final_metadata['Credit'] = user_global_metadata_text
-                final_metadata['channel'] = user_global_metadata_text
-
-        for key, value in final_metadata.items():
-            command.extend(['-metadata', f'{key}={value}'])
-            if key == 'title':
-                command.extend([
-                    '-metadata:s:v:0', f'title={value}',
-                    '-metadata:s:a', f'title={value}',
-                    '-metadata:s:s', f'title={value}'
-                ])
-            if key == 'Credit':
-                command.extend([
-                    '-metadata:s:v:0', f'Credit={value}',
-                    '-metadata:s:a', f'Credit={value}',
-                    '-metadata:s:s', f'Credit={value}'
-                ])
-            if key == 'channel':
-                command.extend([
-                    '-metadata:s:v:0', f'channel={value}',
-                    '-metadata:s:a', f'channel={value}'
-                ])
-
-        if mks_metadata.get('subtitle_track_name'):
-            command.extend(['-metadata:s:s:0', f"title={mks_metadata.get('subtitle_track_name')}"])
-
-        if apply_user_metadata_globally:
-            command.extend([
-                '-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]',
-                '-metadata', 'description=Visit TG-@Eliteflix_Official',
-                '-metadata', 'telegram=Downloaded From @Eliteflix_Official',
-                '-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'
-            ])
+        command = _apply_custom_metadata(command, user_settings, mks_metadata, True)
 
         command += ["-y", f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
@@ -661,9 +627,8 @@ def get_commands(process_status):
         sub_loc = process_status.subtitles[-1]
         cover_path = None
         mks_metadata = {}
-        temp_sub_path = None
 
-        mks_file = next((s for s in process_status.subtitles if s.lower().endswith('.mks')), None)
+        mks_file = next((s for s in process_status.subtitles if s.lower().endswith(('.mks', '.mkv'))), None)
 
         if mks_file:
             cover_path, mks_metadata, subtitle_codec = process_mks_file(mks_file, working_dir)
@@ -714,51 +679,16 @@ def get_commands(process_status):
         if hardmux_sync:
             command += ['-vsync', '1', '-async', '-1']
 
-        final_metadata = {}
-        if mks_metadata.get('title'):
-            final_metadata['title'] = mks_metadata.get('title')
-        if mks_metadata.get('attached_file_description'):
-            final_metadata['comment'] = mks_metadata.get('attached_file_description')
-
-        if apply_user_metadata_hm:
-            if 'title' not in final_metadata and user_global_metadata_text_hm:
-                final_metadata['title'] = user_global_metadata_text_hm
-            if 'comment' not in final_metadata and user_global_metadata_text_hm:
-                final_metadata['comment'] = user_global_metadata_text_hm
-            if user_global_metadata_text_hm:
-                final_metadata['author'] = user_global_metadata_text_hm
-                final_metadata['Credit'] = user_global_metadata_text_hm
-                final_metadata['channel'] = user_global_metadata_text_hm
-
-        for key, value in final_metadata.items():
-            command.extend(['-metadata', f'{key}={value}'])
-            if key == 'title':
-                command.extend([
-                    '-metadata:s:v:0', f'title={value}',
-                    '-metadata:s:a', f'title={value}'
-                ])
-            if key == 'Credit':
-                command.extend([
-                    '-metadata:s:v:0', f'Credit={value}',
-                    '-metadata:s:a', f'Credit={value}'
-                ])
-            if key == 'channel':
-                command.extend([
-                    '-metadata:s:v:0', f'channel={value}',
-                    '-metadata:s:a', f'channel={value}'
-                ])
-
-        if apply_user_metadata_hm:
-            command.extend([
-                '-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]',
-                '-metadata', 'description=Visit TG-@Eliteflix_Official',
-                '-metadata', 'telegram=Downloaded From @Eliteflix_Official',
-                '-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'
-            ])
-            LOGGER.info("HARDMUX: Applied fixed metadata tags.")
+        command = _apply_custom_metadata(command, user_settings_hm, mks_metadata, False)
 
         command += ["-y", f"{output_file}"]
-        return command, log_file, input_file, output_file, file_duration
+
+        try:
+            return command, log_file, input_file, output_file, file_duration
+        finally:
+            if mks_file and sub_loc.startswith(working_dir):
+                if exists(sub_loc):
+                    remove(sub_loc)
 
 
     elif process_status.process_type==Names.changeMetadata:
@@ -870,7 +800,7 @@ def process_mks_file(mks_file_path, working_dir):
                 '-y',
                 cover_path
             ]
-            subprocess.run(ffmpeg_extract_command, check=True)
+            subprocess.run(ffmpeg_extract_command, check=True, capture_output=True)
 
             # Extract metadata from the attachment stream
             if 'tags' in attachment_stream:
@@ -894,5 +824,55 @@ def process_mks_file(mks_file_path, working_dir):
         LOGGER.error(f"Error processing MKS file: {e}")
 
     return cover_path, metadata, subtitle_codec
+
+
+def _apply_custom_metadata(command, user_settings, mks_metadata, is_softmux):
+    apply_user_metadata = user_settings.get('custom_metadata', False)
+    user_global_metadata_text = user_settings.get('metadata', "VideoFlux Default Title")
+
+    final_metadata = {}
+    if mks_metadata.get('title'):
+        final_metadata['title'] = mks_metadata.get('title')
+    if mks_metadata.get('attached_file_description'):
+        final_metadata['comment'] = mks_metadata.get('attached_file_description')
+
+    if apply_user_metadata:
+        if 'title' not in final_metadata and user_global_metadata_text:
+            final_metadata['title'] = user_global_metadata_text
+        if 'comment' not in final_metadata and user_global_metadata_text:
+            final_metadata['comment'] = user_global_metadata_text
+        if user_global_metadata_text:
+            final_metadata['author'] = user_global_metadata_text
+            final_metadata['Credit'] = user_global_metadata_text
+            final_metadata['channel'] = user_global_metadata_text
+
+    for key, value in final_metadata.items():
+        command.extend(['-metadata', f'{key}={value}'])
+        if key == 'title':
+            command.extend(['-metadata:s:v:0', f'title={value}'])
+            command.extend(['-metadata:s:a', f'title={value}'])
+            if is_softmux:
+                command.extend(['-metadata:s:s', f'title={value}'])
+        if key == 'Credit':
+            command.extend(['-metadata:s:v:0', f'Credit={value}'])
+            command.extend(['-metadata:s:a', f'Credit={value}'])
+            if is_softmux:
+                command.extend(['-metadata:s:s', f'Credit={value}'])
+        if key == 'channel':
+            command.extend(['-metadata:s:v:0', f'channel={value}'])
+            command.extend(['-metadata:s:a', f'channel={value}'])
+
+    if is_softmux and mks_metadata.get('subtitle_track_name'):
+        command.extend(['-metadata:s:s:0', f"title={mks_metadata.get('subtitle_track_name')}"])
+
+    if apply_user_metadata:
+        command.extend([
+            '-metadata', 'encoded_by=[ BashAFK ~ TG_Eliteflix_Official ]',
+            '-metadata', 'description=Visit TG-@Eliteflix_Official',
+            '-metadata', 'telegram=Downloaded From @Eliteflix_Official',
+            '-metadata', 'WEBSITE=https://t.me/Eliteflix_Official'
+        ])
+
+    return command
 
 # --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
