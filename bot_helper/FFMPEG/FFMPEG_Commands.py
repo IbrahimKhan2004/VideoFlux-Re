@@ -725,4 +725,38 @@ def get_commands(process_status):
         command += ["-c", "copy", '-y', f"{output_file}"]
         return command, log_file, input_file, output_file, file_duration
 
+
+    elif process_status.process_type==Names.mks:
+        create_direc(f"{process_status.dir}/mks/")
+        log_file = f"{process_status.dir}/mks/mks_logs_{process_status.process_id}.txt"
+        input_file = f'{str(process_status.send_files[-1])}'
+        output_file = f"{process_status.dir}/mks/{get_output_name(process_status)}"
+        file_duration = get_video_duration(input_file)
+
+        # Input 0: Video file
+        # Input 1: MKS file (stored in subtitles list)
+        mks_file = process_status.subtitles[0]
+
+        command = ['ffmpeg','-hide_banner',
+                   '-analyzeduration', FFMPEG_ANALYZE_DURATION,
+                   '-probesize', FFMPEG_PROBE_SIZE,
+                   '-progress', f"{log_file}",
+                   '-i', f'{str(input_file)}',
+                   '-i', f'{str(mks_file)}']
+
+        # -map 0:v -map 0:a? -map 1:s -map 0:s? -map 1:v
+        command += ['-map', '0:v',
+                    '-map', '0:a?',
+                    '-map', '1:s',
+                    '-map', '0:s?',
+                    '-map', '1:v']
+
+        # "Metadata jo mks me ho wo lag jaye" -> Apply global metadata from MKS file (Input 1)
+        command += ['-map_metadata', '1']
+
+        command += ['-c', 'copy']
+        command += ['-y', f"{output_file}"]
+
+        return command, log_file, input_file, output_file, file_duration
+
 # --- END OF FILE VideoFlux-Re-master/bot_helper/FFMPEG/FFMPEG_Commands.py ---
