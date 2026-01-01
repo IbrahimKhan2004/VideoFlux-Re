@@ -1184,4 +1184,62 @@ async def _change_index(event):
         await update_status_message(event)
         return
 
+
+###############------MKS------###############
+@TELETHON_CLIENT.on(events.NewMessage(incoming=True, pattern='/mks', func=lambda e: user_auth_checker(e)))
+async def _mks(event):
+        chat_id = event.message.chat.id
+        user_id = event.message.sender.id
+        if user_id not in get_data():
+                await new_user(user_id, SAVE_TO_DATABASE)
+        link, custom_file_name = await get_link(event)
+        if link=="invalid":
+            await event.reply("❗Invalid link")
+            return
+        elif not link:
+            new_event = await ask_media_OR_url(event, chat_id, user_id, ["/mks", "stop"], "Send Video or URL", 120, "video/", True)
+            if new_event and new_event not in ["cancelled", "stopped"]:
+                link = await get_url_from_message(new_event)
+            else:
+                return
+        user_name = get_username(event)
+        user_first_name = event.message.sender.first_name
+        process_status = ProcessStatus(user_id, chat_id, user_name, user_first_name, event, Names.mks, custom_file_name)
+
+        # Ask for MKS file
+        new_event = await ask_media_OR_url(event, chat_id, user_id, ["/mks", "stop", "cancel"], "Send MKS File", 120, False, False, message_hint=f"🔷Send `stop` To Process MKS\n🔷Send `cancel` To Cancel MKS Process", allow_command=True, allow_magnet=False, allow_url=False, stop_on_url=False)
+
+        if new_event and new_event not in ["cancelled", "stopped", "pass"]:
+            if new_event.message.file:
+                # Check file extension strictly as requested
+                if str(new_event.message.file.name).lower().endswith(".mks"):
+                    sub_name = new_event.message.file.name
+                    create_direc(f"{process_status.dir}/mks_files")
+                    sub_dw_loc = check_file(f"{process_status.dir}/mks_files", sub_name)
+                    sub_path = await new_event.download_media(file=sub_dw_loc)
+                    # Using append_subtitles to store the MKS file as it is conveniently a list
+                    process_status.append_subtitles(sub_path)
+                else:
+                    await event.reply("❌Please send a valid .mks file.")
+                    del process_status
+                    return
+            else:
+                await event.reply("❗Only Telegram File Is Supported")
+                del process_status
+                return
+        else:
+            del process_status
+            return
+
+        task = {}
+        task['process_status'] = process_status
+        task['functions'] = []
+        if type(link)==str:
+                task['functions'].append(["Aria", Aria2.add_aria2c_download, [link, process_status, False, False, False, False]])
+        else:
+            task['functions'].append(["TG", [link]])
+        create_task(add_task(task))
+        await update_status_message(event)
+        return
+
 # --- END OF FILE VideoFlux-Re-master/bot/start.py ---

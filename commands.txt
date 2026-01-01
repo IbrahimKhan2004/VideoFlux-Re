@@ -2,6 +2,7 @@ merge - Merge Video
 convert - Convert Video
 hardmux - Hardmux Video
 softmux - Softmux Video
+mks - Mux MKS File
 gensample - Generate Sample Video
 genss - Generate Screenshots
 changemetadata - Change Video Metadata

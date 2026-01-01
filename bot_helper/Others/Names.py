@@ -18,6 +18,7 @@ class Names:
     rclone = "Rclone"
 # Highlighted change: Added Gofile name
     gofile = "Gofile"
+    mks = "MKS"
 # End of highlighted change
     gensample = "VideoSample"
     genss ="GenSS"
@@ -35,6 +36,7 @@ class Names:
                         # softremux: "🛩SoftReMuxing Subtitles",
                         convert: "🚜 Encoding Video",
                         hardmux: "🚍HardMuxing Subtitle",
+                        mks: "Muxing MKS",
                         changeMetadata: "🪀Changing MetaData",
                         changeindex: "🎨Changing Index"}
     FFMPEG_PROCESSES = [ # MODIFIED: Removed compress, watermark, softremux entries
@@ -45,6 +47,7 @@ class Names:
                                                         # softremux,
                                                         convert,
                                                         hardmux,
+                                                        mks,
                                                         changeMetadata,
                                                         changeindex]
     STATUS_UPLOADING = "🔼Uploading"
