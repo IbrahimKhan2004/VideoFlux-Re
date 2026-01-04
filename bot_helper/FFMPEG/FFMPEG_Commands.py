@@ -190,14 +190,14 @@ def get_commands(process_status):
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
                 if softmux_use_crf:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset, '-threads', '0']
                         else:
-                                command += ['-vcodec','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset]
+                                command += ['-vcodec','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset, '-threads', '0']
                 else:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset]
+                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset, '-threads', '0']
                         else:
-                                command += ['-vcodec','libx264', '-preset', softmux_preset]
+                                command += ['-vcodec','libx264', '-preset', softmux_preset, '-threads', '0']
         else:
                 command += ['-c','copy']
 
@@ -396,7 +396,7 @@ def get_commands(process_status):
 
                 # Video Codec
                 if convert_encoder=='HEVC':
-                    command+= ['-vcodec','libx265','-vtag', 'hvc1']
+                    command+= ['-vcodec','libx265','-vtag', 'hvc1', '-threads', '0']
 # Highlighted change: Add VP9 encoder logic with threading
                 elif convert_encoder=='VP9':
                     command+= ['-vcodec','libvpx-vp9']
@@ -420,7 +420,7 @@ def get_commands(process_status):
                         command+= ['-cpu-used', '0']
 # End of highlighted change
                 else: # H.264
-                    command+= ['-vcodec','libx264']
+                    command+= ['-vcodec','libx264', '-threads', '0']
 
 # Highlighted change: Add tune setting if not 'None' and encoder is not VP9
                 # Tune Setting
@@ -607,9 +607,9 @@ def get_commands(process_status):
         if hardmux_encode_video:
                 encoder = get_data()[process_status.user_id]['hardmux']['encoder']
                 if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
+                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset, '-threads', '0']
                 else:
-                        command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset]
+                        command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset, '-threads', '0']
                 # HIGHLIGHTED CHANGE START: Ensure audio is copied when video is encoded for hardmux, as per comment intention
                 command += ['-c:a','copy']
                 # HIGHLIGHTED CHANGE END
