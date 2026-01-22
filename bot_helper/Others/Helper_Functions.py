@@ -444,6 +444,7 @@ async def get_host_stats():
     total, used, free, disk_p = disk_usage('/')
     swap = swap_memory()
     memory = virtual_memory()
+    cpu_p = cpu_percent(interval=0.5)
     cpu_model, cpu_freq = get_cpu_specific_info()
 
     # Packages Statistics
@@ -493,6 +494,8 @@ async def get_host_stats():
             f"<b>OS:</b> {html.escape(os_info)}\n" \
             f"<b>Total Cores:</b> {cpu_count(logical=True)}\n" \
             f"<b>Physical Cores:</b> {cpu_count(logical=False)}\n\n" \
+            f"<b>CPU:</b> {get_progress_bar(cpu_p)} {cpu_p}% | {html.escape(cpu_freq)}\n" \
+            f"<b>CPU Model:</b> {html.escape(cpu_model)}\n" \
             f"<b>CPU:</b> {get_progress_bar(cpu_percent(interval=0.5))} {cpu_percent()}% | {html.escape(cpu_freq)}\n" \
             f"<b>RAM:</b> {get_progress_bar(memory.percent)} {memory.percent}%\n" \
             f"<b>DISK:</b> {get_progress_bar(disk_p)} {disk_p}%\n" \
