@@ -1,9 +1,11 @@
 # --- START OF FILE VideoFlux-Re-master/bot_helper/Others/Helper_Functions.py ---
 from time import time
 from os import remove, mkdir
-from shutil import rmtree
+from shutil import rmtree, which
 from asyncio import get_event_loop
 from os.path import exists, isdir
+import platform
+import html
 from subprocess import PIPE as subprocessPIPE, STDOUT as subprocessSTDOUT
 from subprocess import run as subprocessrun, check_output
 from shlex import split as shlexsplit
@@ -241,22 +243,50 @@ def get_video_duration(filename):
 
 
 ###############------Get_Process_Output------###############
-async def execute(cmnd: str) -> Tuple[str, str, int, int]:
+async def execute(cmnd: str) -> str:
     LOGGER.info(cmnd)
-    cmnds = shlexsplit(cmnd)
-    process = await create_subprocess_exec(
-        *cmnds,
-        stdout=PIPE,
-        stderr=PIPE
-    )
-    stdout, _ = await process.communicate()
-    return stdout.decode('utf-8', 'replace').strip()
+    try:
+        cmnds = shlexsplit(cmnd)
+        process = await create_subprocess_exec(
+            *cmnds,
+            stdout=PIPE,
+            stderr=PIPE
+        )
+        stdout, _ = await process.communicate()
+        return stdout.decode('utf-8', 'replace').strip()
+    except Exception as e:
+        LOGGER.error(f"Error executing {cmnd}: {e}")
+        return ""
 
 
 
 #////////////////////////////////////Other_Functions////////////////////////////////////#
 
-# <<<<< MODIFIED/ADDED START >>>>>
+###############------Get_Progress_Bar------###############
+def get_progress_bar(percentage):
+    filled = int(percentage // 8.33)
+    return f"[{'⬢' * filled}{'⬡' * (12 - filled)}]"
+
+
+###############------Get_Package_Version------###############
+async def get_pkg_version(cmd):
+    if not which(shlexsplit(cmd)[0]):
+        return None
+    try:
+        process = await create_subprocess_exec(
+            *shlexsplit(cmd),
+            stdout=PIPE,
+            stderr=PIPE
+        )
+        stdout, stderr = await process.communicate()
+        out = (stdout or stderr).decode('utf-8', 'replace').strip()
+        if out:
+            return out.splitlines()[0]
+    except:
+        pass
+    return None
+
+
 ###############------Get_CPU_Specific_Info------###############
 def get_cpu_specific_info():
     cpu_model_name = "N/A"
@@ -386,33 +416,100 @@ def export_env_file(env_file, env_dict):
 
 ###############------Get_Stats_Message------###############
 async def get_host_stats():
-        if exists('.git'):
-                last_commit = await execute("git log -1 --date=short --pretty=format:'%cd <b>From</b> %cr'")
-        else:
-                last_commit = 'No UPSTREAM_REPO'
-        total, used, free, disk = disk_usage('/')
-        swap = swap_memory()
-        memory = virtual_memory()
-# <<<<< MODIFIED/ADDED START >>>>>
-        cpu_model, cpu_freq = get_cpu_specific_info() # Get CPU model and frequency
-        stats =f'<b>Commit Date:</b> {last_commit}\n\nVersion: {Config.VERSION}\n\n'\
-                    f'<b>Bot Uptime:</b> {get_readable_time(time() - botStartTime)}\n'\
-                    f'<b>OS Uptime:</b> {get_readable_time(time() - boot_time())}\n\n'\
-                    f'<b>Total Disk Space:</b> {get_size(total)}\n'\
-                    f'<b>Used:</b> {get_size(used)} | <b>Free:</b> {get_size(free)}\n\n'\
-                    f'<b>Upload:</b> {get_size(net_io_counters().bytes_sent)}\n'\
-                    f'<b>Download:</b> {get_size(net_io_counters().bytes_recv)}\n\n'\
-                    f'<b>CPU:</b> {cpu_percent(interval=0.5)}% | <b>Model:</b> {cpu_model} | <b>Freq:</b> {cpu_freq}\n'\
-                    f'<b>RAM:</b> {memory.percent}%\n'\
-                    f'<b>DISK:</b> {disk}%\n\n'\
-                    f'<b>Physical Cores:</b> {cpu_count(logical=False)}\n'\
-                    f'<b>Total Cores:</b> {cpu_count(logical=True)}\n\n'\
-                    f'<b>SWAP:</b> {get_size(swap.total)} | <b>Used:</b> {swap.percent}%\n'\
-                    f'<b>Memory Total:</b> {get_size(memory.total)}\n'\
-                    f'<b>Memory Free:</b> {get_size(memory.available)}\n'\
-                    f'<b>Memory Used:</b> {get_size(memory.used)}'
-# <<<<< MODIFIED/ADDED END >>>>>
-        return stats
+    # Repository Statistics
+    if exists('.git'):
+        branch = await execute("git rev-parse --abbrev-ref HEAD")
+        commit_date = await execute("git log -1 --date=short --format=%cd")
+        commit_age = await execute("git log -1 --format=%cr")
+        last_commit_msg = await execute("git log -1 --format=%s")
+    else:
+        branch = 'N/A'
+        commit_date = 'N/A'
+        commit_age = 'N/A'
+        last_commit_msg = 'No UPSTREAM_REPO'
+
+    # OS Statistics
+    os_info = f"{platform.system()}, {platform.machine()}, {platform.release()}"
+    if exists('/etc/os-release'):
+        try:
+            with open('/etc/os-release', 'r') as f:
+                for line in f:
+                    if line.startswith('PRETTY_NAME='):
+                        pretty_os = line.split('=')[1].strip().strip('\"')
+                        os_info = f"{pretty_os}, {platform.release()}"
+                        break
+        except:
+            pass
+
+    total, used, free, disk_p = disk_usage('/')
+    swap = swap_memory()
+    memory = virtual_memory()
+    cpu_model, cpu_freq = get_cpu_specific_info()
+
+    # Packages Statistics
+    packages = []
+    packages.append(f"<b>Python:</b> {platform.python_version()}")
+
+    aria_v = await get_pkg_version("aria2c --version")
+    if aria_v:
+        try:
+            packages.append(f"<b>Aria2:</b> {aria_v.split('version ')[1]}")
+        except:
+            packages.append(f"<b>Aria2:</b> {aria_v}")
+
+    qbit_v = await get_pkg_version("qbittorrent-nox --version")
+    if qbit_v:
+        try:
+            packages.append(f"<b>qBittorrent:</b> {qbit_v.split('v')[1]}")
+        except:
+            packages.append(f"<b>qBittorrent:</b> {qbit_v}")
+
+    ffmpeg_v = await get_pkg_version("ffmpeg -version")
+    if ffmpeg_v:
+        try:
+            packages.append(f"<b>FFmpeg:</b> {ffmpeg_v.split('version ')[1].split(' ')[0]}")
+        except:
+            packages.append(f"<b>FFmpeg:</b> {ffmpeg_v}")
+
+    rclone_v = await get_pkg_version("rclone version")
+    if rclone_v:
+        try:
+            packages.append(f"<b>Rclone:</b> {rclone_v.split('v')[1]}")
+        except:
+            packages.append(f"<b>Rclone:</b> {rclone_v}")
+
+    java_v = await get_pkg_version("java -version")
+    if java_v:
+        packages.append(f"<b>Java:</b> {java_v}")
+
+    pkg_stats = "\n".join(packages)
+
+    stats = f"<b>📦 REPOSITORY STATISTICS</b>\n" \
+            f"<b>Branch:</b> {html.escape(branch)}\n" \
+            f"<b>Commit Date:</b> {html.escape(commit_date)}\n" \
+            f"<b>Commit Age:</b> {html.escape(commit_age)}\n" \
+            f"<b>Last Commit:</b> {html.escape(last_commit_msg)}\n\n" \
+            f"<b>💻 OS STATISTICS</b>\n" \
+            f"<b>OS:</b> {html.escape(os_info)}\n" \
+            f"<b>Total Cores:</b> {cpu_count(logical=True)}\n" \
+            f"<b>Physical Cores:</b> {cpu_count(logical=False)}\n\n" \
+            f"<b>CPU:</b> {get_progress_bar(cpu_percent(interval=0.5))} {cpu_percent()}% | {html.escape(cpu_freq)}\n" \
+            f"<b>RAM:</b> {get_progress_bar(memory.percent)} {memory.percent}%\n" \
+            f"<b>DISK:</b> {get_progress_bar(disk_p)} {disk_p}%\n" \
+            f"<b>SWAP:</b> {get_progress_bar(swap.percent)} {swap.percent}%\n\n" \
+            f"<b>Disk Free:</b> {get_size(free)}\n" \
+            f"<b>Disk Used:</b> {get_size(used)}\n" \
+            f"<b>Disk Space:</b> {get_size(total)}\n\n" \
+            f"<b>Memory Free:</b> {get_size(memory.available)}\n" \
+            f"<b>Memory Used:</b> {get_size(memory.used)}\n" \
+            f"<b>Memory Swap:</b> {get_size(swap.total)}\n" \
+            f"<b>Memory Total:</b> {get_size(memory.total)}\n\n" \
+            f"<b>📚 PACKAGES STATISTICS</b>\n" \
+            f"{pkg_stats}\n\n" \
+            f"<b>Bot Uptime:</b> {getbotuptime()}\n" \
+            f"<b>OS Uptime:</b> {get_readable_time(time() - boot_time())}"
+
+    return stats
 
 
 ###############------Get_Mime_Type------###############
