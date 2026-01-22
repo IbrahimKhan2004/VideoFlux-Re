@@ -80,7 +80,7 @@ def get_commands(process_status):
             base_output_name, _ = os_path_splitext(get_output_name(process_status)) # Get name without extension
             output_file = f"{process_status.dir}/merge/{base_output_name}.mkv" # Force .mkv extension
             # End of highlighted change
-            command = ['ffmpeg','-hide_banner', 
+            command = ['ffmpeg','-hide_banner',
                                     '-analyzeduration', FFMPEG_ANALYZE_DURATION,
                                     '-probesize', FFMPEG_PROBE_SIZE,
                                     '-progress', f"{log_file}"]
@@ -92,26 +92,26 @@ def get_commands(process_status):
 # HIGHLIGHTED CHANGE END
             command += [        "-f", "concat",
                                         "-safe", "0",
-                                        "-autorotate", "0", 
-                                        "-ignore_unknown"] 
+                                        "-autorotate", "0",
+                                        "-ignore_unknown"]
             if merge_fix_blank:
                 command += ['-segment_time_metadata', '1']
             command+=["-i", f'{str(input_file)}']
             if merge_fix_blank:
                 command += ['-vf', 'select=concatdec_select', '-af', 'aselect=concatdec_select,aresample=async=1']
 # START OF MODIFIED BLOCK ###################################################
-            if merge_map: 
-                command+=['-map','0:v?', 
-                           '-map','0:a?', 
-                           '-map','0:s?'] 
-                
-            
+            if merge_map:
+                command+=['-map','0:v?',
+                           '-map','0:a?',
+                           '-map','0:s?']
+
+
 # END OF MODIFIED BLOCK #####################################################
 # HIGHLIGHTED CHANGE START: Fix for subtitle copying in merge
             if merge_fix_blank:
                 subtitle_codec_for_merge = 'srt' if force_srt_conversion else 'copy'
-                if not merge_map: 
-                    command += ['-map', '0:s?'] 
+                if not merge_map:
+                    command += ['-map', '0:s?']
                 command += ['-c:s', subtitle_codec_for_merge] # Use the determined codec
 # HIGHLIGHTED CHANGE END: Fix for subtitle copying in merge
             if not merge_fix_blank:
@@ -149,17 +149,17 @@ def get_commands(process_status):
                 custom_metadata_title_vf = get_data()[process_status.user_id]['metadata'] # This is the same as user_global_metadata_text
                 command += ['-metadata', f"title={custom_metadata_title_vf}", '-metadata:s:v', f"title={custom_metadata_title_vf}", '-metadata:s:a', f"title={custom_metadata_title_vf}", '-metadata:s:s', f"title={custom_metadata_title_vf}"]
 # END OF MODIFIED BLOCK
-            command += ['-avoid_negative_ts', '1'] 
-            if merge_fix_timestamps: 
-                
+            command += ['-avoid_negative_ts', '1']
+            if merge_fix_timestamps:
+
                 command += ['-start_at_zero']
-            
+
 # <<<< MODIFIED BLOCK: Logic for -start_at_zero RE-ADDED as per request >>>>
             if not merge_fix_blank and not merge_fix_timestamps:
                  command += ['-start_at_zero']
 # <<<< END OF MODIFIED BLOCK >>>>
 
-            command+= ['-y', f'{str(output_file)}'] 
+            command+= ['-y', f'{str(output_file)}']
             return command, log_file, input_file, output_file, file_duration
 
     elif process_status.process_type==Names.softmux:
@@ -280,7 +280,7 @@ def get_commands(process_status):
             file_duration = get_video_duration(input_file)
 
             # Highlighted change: Added -nostdin flag
-            command = ['ffmpeg', '-nostdin', '-hide_banner', 
+            command = ['ffmpeg', '-nostdin', '-hide_banner',
             # End of highlighted change
                                             '-analyzeduration', FFMPEG_ANALYZE_DURATION,
                                             '-probesize', FFMPEG_PROBE_SIZE,
@@ -754,7 +754,7 @@ def get_commands(process_status):
         # "Metadata jo mks me ho wo lag jaye" -> Apply global metadata from MKS file (Input 1)
         command += ['-map_metadata', '1']
 
-        command += ['-c', 'copy']
+                command += ['-c', 'copy']
         command += ['-y', f"{output_file}"]
 
         return command, log_file, input_file, output_file, file_duration
