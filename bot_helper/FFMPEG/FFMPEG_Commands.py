@@ -754,7 +754,7 @@ def get_commands(process_status):
         # "Metadata jo mks me ho wo lag jaye" -> Apply global metadata from MKS file (Input 1)
         command += ['-map_metadata', '1']
 
-        command += ['-c', 'copy', '-track_statistics_tags', '0']
+                command += ['-c', 'copy']
         command += ['-y', f"{output_file}"]
 
         return command, log_file, input_file, output_file, file_duration
