@@ -496,7 +496,6 @@ async def get_host_stats():
             f"<b>Physical Cores:</b> {cpu_count(logical=False)}\n\n" \
             f"<b>CPU:</b> {get_progress_bar(cpu_p)} {cpu_p}% | {html.escape(cpu_freq)}\n" \
             f"<b>CPU Model:</b> {html.escape(cpu_model)}\n" \
-            f"<b>CPU:</b> {get_progress_bar(cpu_percent(interval=0.5))} {cpu_percent()}% | {html.escape(cpu_freq)}\n" \
             f"<b>RAM:</b> {get_progress_bar(memory.percent)} {memory.percent}%\n" \
             f"<b>DISK:</b> {get_progress_bar(disk_p)} {disk_p}%\n" \
             f"<b>SWAP:</b> {get_progress_bar(swap.percent)} {swap.percent}%\n\n" \
