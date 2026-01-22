@@ -190,12 +190,12 @@ def get_commands(process_status):
                 encoder = get_data()[process_status.user_id]['softmux']['encoder']
                 if softmux_use_crf:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset, '-threads', '0']
+                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset, '-threads', '0', '-x265-params', 'aq-mode=3']
                         else:
                                 command += ['-vcodec','libx264', '-crf', f'{str(softmux_crf)}', '-preset', softmux_preset, '-threads', '0']
                 else:
                         if encoder=='libx265':
-                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset, '-threads', '0']
+                                command += ['-vcodec','libx265', '-vtag', 'hvc1', '-preset', softmux_preset, '-threads', '0', '-x265-params', 'aq-mode=3']
                         else:
                                 command += ['-vcodec','libx264', '-preset', softmux_preset, '-threads', '0']
         else:
@@ -364,29 +364,29 @@ def get_commands(process_status):
             if convert_encode == 'Video' or convert_encode == 'Video Audio [Both]':
                 # Resolution Scaling
                 if convert_quality=='480p [720x360]':
-                    command+=['-vf', 'scale=720:360']
+                    command+=['-vf', 'scale=720:360:flags=lanczos,setsar=1']
                 elif convert_quality=='480p [854x480]':
-                    command+=['-vf', 'scale=854:480']
+                    command+=['-vf', 'scale=854:480:flags=lanczos,setsar=1']
                 elif convert_quality=='480p [720x240]': # ADDED LINE
-                    command+=['-vf', 'scale=720:240'] # ADDED LINE
+                    command+=['-vf', 'scale=720:240:flags=lanczos,setsar=1'] # ADDED LINE
                 elif convert_quality=='540p [960x540]': # ADDED LINE
-                    command+=['-vf', 'scale=960:540'] # ADDED LINE
+                    command+=['-vf', 'scale=960:540:flags=lanczos,setsar=1'] # ADDED LINE
 # Highlighted change: Added scaling for 576p and 648p
                 elif convert_quality=='576p [1024x576]':
-                    command+=['-vf', 'scale=1024:576']
+                    command+=['-vf', 'scale=1024:576:flags=lanczos,setsar=1']
                 elif convert_quality=='648p [1152x648]':
-                    command+=['-vf', 'scale=1152:648']
+                    command+=['-vf', 'scale=1152:648:flags=lanczos,setsar=1']
 # End of highlighted change
                 elif convert_quality=='720p [1280x540]': # ADDED LINE
-                    command+=['-vf', 'scale=1280:540'] # ADDED LINE
+                    command+=['-vf', 'scale=1280:540:flags=lanczos,setsar=1'] # ADDED LINE
                 elif convert_quality=='720p [1280x640]':
-                    command+=['-vf', 'scale=1280:640']
+                    command+=['-vf', 'scale=1280:640:flags=lanczos,setsar=1']
                 elif convert_quality=='720p [1280x720]':
-                    command+=['-vf', 'scale=1280:720']
+                    command+=['-vf', 'scale=1280:720:flags=lanczos,setsar=1']
                 elif convert_quality=='1080p [1920x960]':
-                    command+=['-vf', 'scale=1920:960']
+                    command+=['-vf', 'scale=1920:960:flags=lanczos,setsar=1']
                 else: # Default to 1080p [1920x1080]
-                     command+=['-vf', 'scale=1920:1080']
+                     command+=['-vf', 'scale=1920:1080:flags=lanczos,setsar=1']
 
                 # Pixel Format (Bit Depth)
                 if convert_vbit=='8Bit':
@@ -396,7 +396,7 @@ def get_commands(process_status):
 
                 # Video Codec
                 if convert_encoder=='HEVC':
-                    command+= ['-vcodec','libx265','-vtag', 'hvc1', '-threads', '0']
+                    command+= ['-vcodec','libx265','-vtag', 'hvc1', '-threads', '0', '-x265-params', 'aq-mode=3']
 # Highlighted change: Add VP9 encoder logic with threading
                 elif convert_encoder=='VP9':
                     command+= ['-vcodec','libvpx-vp9']
@@ -607,7 +607,7 @@ def get_commands(process_status):
         if hardmux_encode_video:
                 encoder = get_data()[process_status.user_id]['hardmux']['encoder']
                 if encoder=='libx265':
-                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset, '-threads', '0']
+                        command += ['-vcodec','libx265', '-vtag', 'hvc1', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset, '-threads', '0', '-x265-params', 'aq-mode=3']
                 else:
                         command += ['-vcodec','libx264', '-crf', f'{str(hardmux_crf)}', '-preset', hardmux_preset, '-threads', '0']
                 # HIGHLIGHTED CHANGE START: Ensure audio is copied when video is encoded for hardmux, as per comment intention
