@@ -202,6 +202,8 @@ def get_commands(process_status):
                 command += ['-c','copy']
 
         command += ["-c:s", f"{get_data()[process_status.user_id]['softmux']['sub_codec']}"]
+        for i, lang in enumerate(process_status.sub_langs):
+            command += [f"-metadata:s:s:{i}", f"language={lang}"]
 # START OF MODIFIED BLOCK
         if apply_user_metadata_globally:
             LOGGER.info(f"SOFTMUX: Applying custom metadata. User text: '{user_global_metadata_text}'")

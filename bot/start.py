@@ -802,6 +802,17 @@ async def _softmux_subtitles(event):
                             sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
                             sub_path = await new_event.download_media(file=sub_dw_loc)
                             process_status.append_subtitles(sub_path)
+                            sub_lang = await ask_text(chat_id, user_id, event, 120, f"Send Language For Subtitle No {file_index}", str)
+                            if sub_lang:
+                                if sub_lang == 'stop':
+                                    break
+                                elif sub_lang == 'cancel':
+                                    Cancel = True
+                                    break
+                                process_status.sub_langs.append(sub_lang)
+                            else:
+                                Cancel = True
+                                break
                             file_index+=1
                         else:
                             await event.reply("❌Subtitle Size Is More Than 500KB, Is This Really A Subtitle File")
