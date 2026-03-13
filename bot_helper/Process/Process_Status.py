@@ -310,6 +310,7 @@ class ProcessStatus:
                 self.send_files = []
                 self.dw_files = []
                 self.subtitles = []
+                self.sub_langs = []
                 self.dw_index = "-/-"
                 self.file_name = file_name
                 self.status_message_id = gen_random_string(5)
