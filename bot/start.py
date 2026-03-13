@@ -802,11 +802,12 @@ async def _softmux_subtitles(event):
                             sub_dw_loc = check_file(f"{process_status.dir}/subtitles", sub_name)
                             sub_path = await new_event.download_media(file=sub_dw_loc)
                             process_status.append_subtitles(sub_path)
-                            sub_lang = await ask_text(chat_id, user_id, event, 120, f"Send Language For Subtitle No {file_index}", str)
-                            if sub_lang:
-                                if sub_lang == 'stop':
+                            sub_lang_event = await ask_text_event(chat_id, user_id, event, 120, f"Send Language for File No {file_index}", message_hint=f"🔷Send `stop` To Process SoftMux\n🔷Send `cancel` To Cancel SoftMux Process")
+                            if sub_lang_event:
+                                sub_lang = str(sub_lang_event.message.message).strip()
+                                if sub_lang.lower() == 'stop':
                                     break
-                                elif sub_lang == 'cancel':
+                                elif sub_lang.lower() == 'cancel':
                                     Cancel = True
                                     break
                                 process_status.sub_langs.append(sub_lang)
